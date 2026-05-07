@@ -86,4 +86,3 @@ The Vite config uses `GITHUB_PAGES=true` in the Pages workflow to set the `/FiTe
 - Use short feature branches such as `feature/session-audio` or `refactor/plan-preview`.
 - Open PRs with a short product reason, implementation summary, verification output, and screenshots/GIFs for UI changes.
 - See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the detailed workflow.
-

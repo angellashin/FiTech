@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write \".\" \"../../README.md\" \"../../CONTRIBUTING.md\" \"../../docs/**/*.md\" \"../../.github/**/*.yml\"",
-    "format:check": "prettier --check \".\" \"../../README.md\" \"../../CONTRIBUTING.md\" \"../../docs/**/*.md\" \"../../.github/**/*.yml\""
+    "format:check": "prettier --check \".\" \"../../README.md\" \"../../CONTRIBUTING.md\" \"../../docs/**/*.md\" \"../../.github/**/*.yml\"",
+    "test": "vitest run"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -86,7 +87,8 @@
     "tailwindcss": "4.1.12",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.59.2",
-    "vite": "6.3.5"
+    "vite": "6.3.5",
+    "vitest": "^4.1.5"
   },
   "pnpm": {
     "overrides": {

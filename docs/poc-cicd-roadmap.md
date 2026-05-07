@@ -470,13 +470,54 @@ The app now has a safe backend integration path while preserving the no-backend 
 
 #### Remaining risk
 
-Anonymous Sign-Ins must be enabled in Supabase Dashboard before remote writes work. GitHub Pages is still local-only until Supabase env values are configured in GitHub Actions.
+Anonymous Sign-Ins must stay enabled in Supabase Dashboard for remote writes. GitHub Pages now receives Supabase repository variables, but the full browser journey still needs automated E2E coverage.
+
+### 2026-05-08 — Live Supabase smoke test and unit-test CI foundation
+
+#### Problem
+
+FiTech had Supabase Auth, RLS, and sync code, but the project still needed evidence that the cloud path actually works and that core workout logic is protected by automated tests.
+
+#### Decision
+
+Validate Supabase with the same publishable browser key and anonymous Auth path, then add Vitest unit tests before starting broader UI or feature refactors.
+
+#### Implementation
+
+- Ran a live Supabase smoke test with anonymous Auth and RLS-protected inserts.
+- Confirmed one smoke session across `profiles`, `workout_sessions`, `session_exercises`, `session_sets`, and `session_events`.
+- Added Vitest as the unit test runner.
+- Added `npm run test`.
+- Added 17 unit tests covering workout plan generation, workout history persistence, progressive overload, and Supabase sync behavior.
+- Added the test step to GitHub Actions CI.
+
+#### Validation
+
+- Live Supabase smoke result: `smoke_1778183348281`
+  - `profiles`: 1 row visible to the anonymous user
+  - `workout_sessions`: 1 row
+  - `session_exercises`: 1 row
+  - `session_sets`: 1 row
+  - `session_events`: 2 rows
+- `npm run lint`
+- `npm run format:check`
+- `npm run test` — 3 files / 17 tests passing
+- `npm run typecheck`
+- `npm run build`
+
+#### Result
+
+The backend PoC is now evidence-backed, and CI can catch behavior regressions instead of only checking formatting, types, and build output.
+
+#### Remaining risk
+
+The full browser journey is still not covered by E2E tests. Add a Playwright smoke test next to prove the deployed user flow from login through workout completion.
 
 ## 8. Improvement Backlog
 
 ### High priority
 
-- Add Vitest tests for workout planner/history logic.
+- Add Vitest tests for workout planner/history logic — done on 2026-05-08.
 - Add Playwright smoke test for the workout flow.
 - Split large generated components, especially `PlanPreview.tsx`.
 - Add mobile screenshots and a short demo recording.
@@ -502,7 +543,7 @@ Anonymous Sign-Ins must be enabled in Supabase Dashboard before remote writes wo
    - Record current deployed URL, CI status, and MVP screenshots.
 2. **Add lint/format CI** — done on 2026-05-08
    - Low risk, high collaboration value.
-3. **Add unit tests for workout logic**
+3. **Add unit tests for workout logic** — done on 2026-05-08
    - Protects core domain behavior before more features are added.
 4. **Add E2E smoke test**
    - Proves the full product journey still works.
