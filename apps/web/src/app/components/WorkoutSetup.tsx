@@ -45,7 +45,10 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
   return (
     <div className="size-full flex flex-col">
       <header className="px-6 py-6 flex items-center gap-4">
-        <button onClick={onBack} className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors">
+        <button
+          onClick={onBack}
+          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
+        >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
@@ -57,9 +60,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
       <div className="flex-1 px-6 pb-6 overflow-auto">
         <div className="space-y-8">
           <div>
-            <label className="text-sm font-medium text-neutral-300 mb-3 block">
-              Workout Goal
-            </label>
+            <label className="text-sm font-medium text-neutral-300 mb-3 block">Workout Goal</label>
             <div className="grid grid-cols-2 gap-3">
               {goals.map((item) => (
                 <button
@@ -99,9 +100,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-neutral-300 mb-3 block">
-              Duration
-            </label>
+            <label className="text-sm font-medium text-neutral-300 mb-3 block">Duration</label>
             <div className="grid grid-cols-4 gap-3">
               {durations.map((min) => (
                 <button

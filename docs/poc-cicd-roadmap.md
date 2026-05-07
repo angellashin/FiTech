@@ -21,6 +21,8 @@ The PoC and CI/CD plan should prove that the product concept works, while keepin
 - GitHub Pages deployment: <https://angellashin.github.io/FiTech/>
 - GitHub Actions CI workflow:
   - install dependencies
+  - ESLint lint check
+  - Prettier format check
   - TypeScript typecheck
   - production build
 - GitHub Pages deploy workflow:
@@ -41,7 +43,6 @@ The PoC and CI/CD plan should prove that the product concept works, while keepin
 
 - No automated unit/component tests yet.
 - No E2E test covering the full workout flow yet.
-- No lint/format CI gate yet.
 - Real Bluetooth earbud gesture events are not supported in the browser MVP; tap semantics are currently simulated in-app.
 - Audio UX is browser-dependent because Web Speech support differs by environment.
 - Analytics are local-only, not backend-synced.
@@ -220,20 +221,23 @@ Prevent code that cannot typecheck or build from silently entering `main`.
 
 ---
 
-### Stage 1 — Add lint and format checks
+### Stage 1 — Lint and format checks
+
+**Status: implemented on 2026-05-08**
 
 **Why**
 
 Generated Figma code and team edits can easily become inconsistent. Linting catches unused imports, risky patterns, and style drift.
 
-**Tasks**
+**Implemented tasks**
 
-- Add ESLint for React + TypeScript.
-- Add Prettier or use ESLint formatting rules.
-- Add scripts:
+- Added ESLint for React + TypeScript.
+- Added Prettier as the project formatter.
+- Added scripts:
   - `npm run lint`
+  - `npm run format`
   - `npm run format:check`
-- Update CI to run lint before build.
+- Updated CI to run lint and format checks before typecheck/build.
 
 **Acceptance criteria**
 
@@ -371,29 +375,74 @@ Use this format for each improvement entry.
 ## YYYY-MM-DD — Improvement title
 
 ### Problem
+
 What was weak, risky, or missing?
 
 ### Decision
+
 What did we change or decide?
 
 ### Implementation
+
 Which files/features changed?
 
 ### Validation
+
 What commands, CI runs, screenshots, or user tests prove it works?
 
 ### Result
+
 What became better for users, developers, or portfolio reviewers?
 
 ### Remaining risk
+
 What still needs improvement?
 ```
 
-## 7. Improvement Backlog
+## 7. Improvement Log
+
+### 2026-05-08 — ESLint and Prettier CI gate
+
+#### Problem
+
+The project had typecheck/build CI, but generated Figma code and future teammate edits could still introduce unused variables, inconsistent formatting, or maintainability drift without failing CI.
+
+#### Decision
+
+Add ESLint as a code-quality gate and Prettier as a formatting gate before TypeScript typecheck and production build. Keep the first lint policy pragmatic so it catches real collaboration issues without forcing a large generated-code refactor immediately.
+
+#### Implementation
+
+- Added `apps/web/eslint.config.js`.
+- Added `apps/web/.prettierrc.json`.
+- Added `apps/web/.prettierignore`.
+- Added npm scripts in `apps/web/package.json`:
+  - `npm run lint`
+  - `npm run format`
+  - `npm run format:check`
+- Updated `.github/workflows/ci.yml` to run lint and format checks before typecheck/build.
+- Removed an unused authentication state variable from `App.tsx` that ESLint correctly caught.
+
+#### Validation
+
+- `npm run lint`
+- `npm run format:check`
+- `npm run typecheck`
+- `npm run build`
+- GitHub Actions CI after push
+
+#### Result
+
+Team changes now have an automated quality gate before they can pass CI. This improves collaboration reliability and gives portfolio reviewers evidence that the project is maintained with a professional delivery workflow, not only manual testing.
+
+#### Remaining risk
+
+The lint policy is intentionally light for the generated UI baseline. Future work should add unit tests and E2E tests, then gradually tighten lint rules as generated components are simplified.
+
+## 8. Improvement Backlog
 
 ### High priority
 
-- Add ESLint + format check to CI.
 - Add Vitest tests for workout planner/history logic.
 - Add Playwright smoke test for the workout flow.
 - Split large generated components, especially `PlanPreview.tsx`.
@@ -414,11 +463,11 @@ What still needs improvement?
 - Add real authentication only after data model and privacy requirements are clear.
 - Add analytics events only after defining ethical/product metrics.
 
-## 8. Suggested Near-Term Execution Order
+## 9. Suggested Near-Term Execution Order
 
 1. **Document current PoC baseline**
    - Record current deployed URL, CI status, and MVP screenshots.
-2. **Add lint/format CI**
+2. **Add lint/format CI** — done on 2026-05-08
    - Low risk, high collaboration value.
 3. **Add unit tests for workout logic**
    - Protects core domain behavior before more features are added.
@@ -429,7 +478,7 @@ What still needs improvement?
 6. **Create first portfolio milestone release**
    - Package problem, demo, validation evidence, and limitations.
 
-## 9. References
+## 10. References
 
 - GitHub Pages can publish either from a branch or a custom GitHub Actions workflow: <https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site>
 - GitHub Actions workflows define automated jobs and can configure token permissions such as `pages: write` and `id-token: write`: <https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax>

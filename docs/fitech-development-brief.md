@@ -567,7 +567,6 @@ apps/web/
 6. 실제 기록 기반 analytics 구현.
 7. landing/README/GIF 정리 후 포트폴리오 링크 공개.
 
-
 ---
 
 ## 12. Ralph 실행 업데이트 — 2026-05-08

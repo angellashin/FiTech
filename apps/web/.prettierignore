@@ -1,0 +1,6 @@
+node_modules
+coverage
+dist
+package-lock.json
+src/imports/**/*.pdf
+src/imports/**/*.png

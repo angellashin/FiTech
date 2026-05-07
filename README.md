@@ -60,6 +60,8 @@ Open the local URL printed by Vite.
 
 ```bash
 cd apps/web
+npm run lint
+npm run format:check
 npm run typecheck
 npm run build
 npm run preview

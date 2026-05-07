@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Volume2, VolumeX, X, Bell } from 'lucide-react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
-import { saveWorkoutHistory, type WorkoutSessionEvent, type WorkoutSessionEventType } from '../utils/workoutHistory';
+import {
+  saveWorkoutHistory,
+  type WorkoutSessionEvent,
+  type WorkoutSessionEventType,
+} from '../utils/workoutHistory';
 import { useAudioCoach } from '../hooks/useAudioCoach';
 
 interface WorkoutSessionProps {
@@ -16,7 +20,9 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const [currentSet, setCurrentSet] = useState(1);
   const [isResting, setIsResting] = useState(false);
   const [restTimeLeft, setRestTimeLeft] = useState(0);
-  const [audioMessage, setAudioMessage] = useState<string>('Audio guidance active. Single tap when you complete your first set.');
+  const [audioMessage, setAudioMessage] = useState<string>(
+    'Audio guidance active. Single tap when you complete your first set.',
+  );
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const [events, setEvents] = useState<WorkoutSessionEvent[]>([]);
   const [startedAt] = useState(() => new Date().toISOString());
@@ -68,15 +74,20 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
 
       return {
         ...exercise,
-        setDetails: exercise.setDetails.map((set, setIndex) => (
-          setIndex === setNumber - 1 ? { ...set, completed: true } : set
-        )),
+        setDetails: exercise.setDetails.map((set, setIndex) =>
+          setIndex === setNumber - 1 ? { ...set, completed: true } : set,
+        ),
       };
     });
   };
 
   const completeSession = (finalExercises: Exercise[], finalEvents: WorkoutSessionEvent[]) => {
-    const completionEvent = createEvent('session_completed', 'Workout complete. Great job staying focused.', null, null);
+    const completionEvent = createEvent(
+      'session_completed',
+      'Workout complete. Great job staying focused.',
+      null,
+      null,
+    );
     const savedEvents = [...finalEvents, completionEvent];
     saveWorkoutHistory(finalExercises, savedEvents, startedAt, {
       goal: plan.goal,
@@ -89,7 +100,9 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   };
 
   const rememberCompletedExercise = (exerciseId: string) => {
-    setCompletedExercises(previous => previous.includes(exerciseId) ? previous : [...previous, exerciseId]);
+    setCompletedExercises((previous) =>
+      previous.includes(exerciseId) ? previous : [...previous, exerciseId],
+    );
   };
 
   const handleSingleTap = () => {
@@ -98,7 +111,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (isResting) {
       const message = `Starting set ${currentSet} of ${currentExercise.name}.`;
       const restSkippedEvent = createEvent('rest_skipped', message);
-      setEvents(previous => [...previous, restSkippedEvent]);
+      setEvents((previous) => [...previous, restSkippedEvent]);
       setIsResting(false);
       setRestTimeLeft(0);
       setAudioMessage(message);
@@ -114,7 +127,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (currentSet < currentExercise.sets) {
       const restMessage = `${setCompleteMessage} Rest for ${currentExercise.restTime} seconds.`;
       const restEvent = createEvent('rest_started', restMessage, currentExercise, currentSet + 1);
-      setEvents(previous => [...previous, setCompletedEvent, restEvent]);
+      setEvents((previous) => [...previous, setCompletedEvent, restEvent]);
       setIsResting(true);
       setRestTimeLeft(currentExercise.restTime);
       setCurrentSet(currentSet + 1);
@@ -122,14 +135,17 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       return;
     }
 
-    const exerciseCompleteEvent = createEvent('exercise_completed', `${currentExercise.name} complete.`);
+    const exerciseCompleteEvent = createEvent(
+      'exercise_completed',
+      `${currentExercise.name} complete.`,
+    );
     rememberCompletedExercise(currentExercise.id);
 
     if (currentExerciseIndex < nextExercises.length - 1) {
       const nextExercise = nextExercises[currentExerciseIndex + 1];
       const transitionMessage = `Exercise complete. Next: ${nextExercise.name}. Rest for ${currentExercise.restTime} seconds.`;
       const restEvent = createEvent('rest_started', transitionMessage, nextExercise, 1);
-      setEvents(previous => [...previous, setCompletedEvent, exerciseCompleteEvent, restEvent]);
+      setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, restEvent]);
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setCurrentSet(1);
       setIsResting(true);
@@ -151,7 +167,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (currentExerciseIndex < exercises.length - 1) {
       const nextExercise = exercises[currentExerciseIndex + 1];
       const message = `${skipMessage} Next: ${nextExercise.name}.`;
-      setEvents(previous => [...previous, skipEvent]);
+      setEvents((previous) => [...previous, skipEvent]);
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setCurrentSet(1);
       setIsResting(false);
@@ -182,7 +198,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     const occupiedEvent = createEvent('equipment_occupied', message, currentEx, undefined);
 
     setExercises(newExercises);
-    setEvents(previous => [...previous, occupiedEvent]);
+    setEvents((previous) => [...previous, occupiedEvent]);
     setCurrentSet(1);
     setIsResting(false);
     setRestTimeLeft(0);
@@ -190,7 +206,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   };
 
   const toggleAudio = () => {
-    setAudioEnabled(previous => {
+    setAudioEnabled((previous) => {
       const next = !previous;
       if (previous) {
         stop();
@@ -214,7 +230,9 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
             Exercise {currentExerciseIndex + 1} of {exercises.length}
             <span className="text-neutral-600 ml-2">({completedExercises.length} completed)</span>
           </div>
-          <div className="text-xs text-neutral-500 mt-1">{plan.goal} • {plan.muscleGroup}</div>
+          <div className="text-xs text-neutral-500 mt-1">
+            {plan.goal} • {plan.muscleGroup}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -224,7 +242,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
           >
             {audioEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </button>
-          <button onClick={onBack} aria-label="Exit workout session" className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors">
+          <button
+            onClick={onBack}
+            aria-label="Exit workout session"
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -237,7 +259,9 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
             <div>
               <div className="text-sm text-blue-100">{audioMessage}</div>
               <div className="text-xs text-blue-300/70 mt-1">
-                {isAudioSupported ? 'Browser speech guidance ready' : 'Speech synthesis unsupported; showing text guidance'}
+                {isAudioSupported
+                  ? 'Browser speech guidance ready'
+                  : 'Speech synthesis unsupported; showing text guidance'}
               </div>
             </div>
           </div>
@@ -246,7 +270,9 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         {isResting ? (
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-6">
-              <Bell className={`w-5 h-5 ${restTimeLeft === 0 ? 'text-orange-500 animate-bounce' : 'text-neutral-500'}`} />
+              <Bell
+                className={`w-5 h-5 ${restTimeLeft === 0 ? 'text-orange-500 animate-bounce' : 'text-neutral-500'}`}
+              />
               <div className="text-neutral-400">Rest Time</div>
             </div>
             <div className="w-48 h-48 rounded-full bg-neutral-900 flex items-center justify-center mb-8 relative">

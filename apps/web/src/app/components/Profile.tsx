@@ -17,10 +17,15 @@ interface ProfileProps {
   onBackToHome: () => void;
 }
 
-const formatDate = (date: string) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(date));
+const formatDate = (date: string) =>
+  new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(
+    new Date(date),
+  );
 
 const getCurrentStreak = (sessionDates: string[]) => {
-  const uniqueDays = Array.from(new Set(sessionDates.map(date => date.slice(0, 10)))).sort().reverse();
+  const uniqueDays = Array.from(new Set(sessionDates.map((date) => date.slice(0, 10))))
+    .sort()
+    .reverse();
   if (uniqueDays.length === 0) return 0;
 
   let streak = 0;
@@ -49,27 +54,67 @@ export function Profile({ onBackToHome }: ProfileProps) {
   const sessions = getAllSessions();
   const history = getAllHistory();
   const userName = localStorage.getItem('fitech_user_name') || 'Kim Minji';
-  const initials = userName.split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() || 'FT';
+  const initials =
+    userName
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'FT';
   const now = new Date();
-  const sessionsThisMonth = sessions.filter(session => {
+  const sessionsThisMonth = sessions.filter((session) => {
     const completedAt = new Date(session.completedAt);
-    return completedAt.getFullYear() === now.getFullYear() && completedAt.getMonth() === now.getMonth();
+    return (
+      completedAt.getFullYear() === now.getFullYear() && completedAt.getMonth() === now.getMonth()
+    );
   });
-  const currentStreak = getCurrentStreak(sessions.map(session => session.completedAt));
-  const bestByExercise = Array.from(history.reduce((records, item) => {
-    const topSet = item.setDetails.reduce((best, set) => set.weight > best.weight ? set : best, item.setDetails[0]);
-    const existing = records.get(item.exerciseName);
-    if (!existing || topSet.weight > existing.weight) {
-      records.set(item.exerciseName, { exercise: item.exerciseName, weight: topSet.weight, reps: topSet.reps, date: item.date });
-    }
-    return records;
-  }, new Map<string, { exercise: string; weight: number; reps: number; date: string }>()).values()).slice(0, 3);
+  const currentStreak = getCurrentStreak(sessions.map((session) => session.completedAt));
+  const bestByExercise = Array.from(
+    history
+      .reduce((records, item) => {
+        const topSet = item.setDetails.reduce(
+          (best, set) => (set.weight > best.weight ? set : best),
+          item.setDetails[0],
+        );
+        const existing = records.get(item.exerciseName);
+        if (!existing || topSet.weight > existing.weight) {
+          records.set(item.exerciseName, {
+            exercise: item.exerciseName,
+            weight: topSet.weight,
+            reps: topSet.reps,
+            date: item.date,
+          });
+        }
+        return records;
+      }, new Map<string, { exercise: string; weight: number; reps: number; date: string }>())
+      .values(),
+  ).slice(0, 3);
 
   const stats = [
-    { label: 'Total Workouts', value: sessions.length.toString(), icon: TrendingUp, color: 'text-blue-500' },
-    { label: 'Current Streak', value: `${currentStreak} days`, icon: Target, color: 'text-green-500' },
-    { label: 'Achievements', value: bestByExercise.length.toString(), icon: Award, color: 'text-yellow-500' },
-    { label: 'This Month', value: sessionsThisMonth.length.toString(), icon: Calendar, color: 'text-purple-500' },
+    {
+      label: 'Total Workouts',
+      value: sessions.length.toString(),
+      icon: TrendingUp,
+      color: 'text-blue-500',
+    },
+    {
+      label: 'Current Streak',
+      value: `${currentStreak} days`,
+      icon: Target,
+      color: 'text-green-500',
+    },
+    {
+      label: 'Achievements',
+      value: bestByExercise.length.toString(),
+      icon: Award,
+      color: 'text-yellow-500',
+    },
+    {
+      label: 'This Month',
+      value: sessionsThisMonth.length.toString(),
+      icon: Calendar,
+      color: 'text-purple-500',
+    },
   ];
 
   const settings = [
@@ -78,17 +123,19 @@ export function Profile({ onBackToHome }: ProfileProps) {
     { label: 'Dark Mode', icon: Moon, enabled: true },
   ];
 
-  const personalRecords = bestByExercise.length > 0
-    ? bestByExercise.map(record => ({
-      exercise: record.exercise,
-      record: record.weight > 0 ? `${record.weight} kg × ${record.reps}` : `${record.reps} reps`,
-      date: formatDate(record.date),
-    }))
-    : [
-      { exercise: 'Squats', record: 'No record yet', date: 'Complete a workout' },
-      { exercise: 'Bench Press', record: 'No record yet', date: 'Complete a workout' },
-      { exercise: 'Deadlift', record: 'No record yet', date: 'Complete a workout' },
-    ];
+  const personalRecords =
+    bestByExercise.length > 0
+      ? bestByExercise.map((record) => ({
+          exercise: record.exercise,
+          record:
+            record.weight > 0 ? `${record.weight} kg × ${record.reps}` : `${record.reps} reps`,
+          date: formatDate(record.date),
+        }))
+      : [
+          { exercise: 'Squats', record: 'No record yet', date: 'Complete a workout' },
+          { exercise: 'Bench Press', record: 'No record yet', date: 'Complete a workout' },
+          { exercise: 'Deadlift', record: 'No record yet', date: 'Complete a workout' },
+        ];
 
   return (
     <div className="size-full flex flex-col bg-neutral-950 overflow-auto">
@@ -111,17 +158,19 @@ export function Profile({ onBackToHome }: ProfileProps) {
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-2xl font-bold shadow-xl shadow-blue-900/50">
                 {initials}
               </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-1">{userName}</h2>
-              <p className="text-sm text-neutral-400">Strength Training • 6 months</p>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold mb-1">{userName}</h2>
+                <p className="text-sm text-neutral-400">Strength Training • 6 months</p>
+              </div>
+              <button className="w-10 h-10 rounded-full bg-neutral-800/60 flex items-center justify-center hover:bg-neutral-700 transition-colors">
+                <Edit className="w-5 h-5" />
+              </button>
             </div>
-            <button className="w-10 h-10 rounded-full bg-neutral-800/60 flex items-center justify-center hover:bg-neutral-700 transition-colors">
-              <Edit className="w-5 h-5" />
-            </button>
-          </div>
             <div className="glass-dark rounded-xl p-4 shadow-lg">
               <div className="text-sm text-neutral-400 mb-2">Current Goal</div>
-              <div className="text-lg font-semibold text-blue-300">Build Muscle & Stay Consistent</div>
+              <div className="text-lg font-semibold text-blue-300">
+                Build Muscle & Stay Consistent
+              </div>
             </div>
           </div>
         </div>
@@ -132,7 +181,10 @@ export function Profile({ onBackToHome }: ProfileProps) {
             {stats.map((stat, index) => {
               const Icon = stat.icon;
               return (
-                <div key={index} className="glass-dark rounded-2xl p-4 shadow-lg hover:bg-white/5 transition-all">
+                <div
+                  key={index}
+                  className="glass-dark rounded-2xl p-4 shadow-lg hover:bg-white/5 transition-all"
+                >
                   <div className="flex items-center gap-2 mb-2">
                     <Icon className={`w-4 h-4 ${stat.color}`} />
                     <div className="text-xs text-neutral-400">{stat.label}</div>

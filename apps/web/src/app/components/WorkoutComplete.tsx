@@ -1,4 +1,12 @@
-import { CheckCircle2, TrendingUp, Flame, ArrowUp, ArrowDown, Minus, BarChart3 } from 'lucide-react';
+import {
+  CheckCircle2,
+  TrendingUp,
+  Flame,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  BarChart3,
+} from 'lucide-react';
 import type { Exercise, ExerciseSet } from '../domain/workout';
 import { calculateTotalVolume, getPreviousExerciseHistory } from '../utils/workoutHistory';
 
@@ -20,49 +28,70 @@ interface ExerciseComparison {
 
 const getTrackedSets = (exercise: Exercise): ExerciseSet[] => {
   if (!exercise.setDetails?.length) return [];
-  const completedSets = exercise.setDetails.filter(set => set.completed);
+  const completedSets = exercise.setDetails.filter((set) => set.completed);
   return completedSets.length > 0 ? completedSets : exercise.setDetails;
 };
 
 const getTopWeight = (sets: ExerciseSet[]) => {
   if (sets.length === 0) return 0;
-  return Math.max(...sets.map(set => set.weight));
+  return Math.max(...sets.map((set) => set.weight));
 };
 
 const buildComparisons = (exercises: Exercise[]): ExerciseComparison[] => {
-  return exercises.flatMap(exercise => {
+  return exercises.flatMap((exercise) => {
     const previous = getPreviousExerciseHistory(exercise.name);
     if (!previous) return [];
 
     const currentWeight = getTopWeight(getTrackedSets(exercise));
     const previousWeight = getTopWeight(previous.setDetails);
     const weightDiff = currentWeight - previousWeight;
-    const weightDiffPercent = previousWeight > 0 ? ((weightDiff / previousWeight) * 100).toFixed(1) : '0.0';
+    const weightDiffPercent =
+      previousWeight > 0 ? ((weightDiff / previousWeight) * 100).toFixed(1) : '0.0';
 
-    return [{
-      name: exercise.name,
-      muscleGroup: exercise.muscleGroup,
-      previousWeight,
-      currentWeight,
-      weightDiff,
-      weightDiffPercent,
-      isImprovement: weightDiff > 0,
-      isEqual: weightDiff === 0,
-    }];
+    return [
+      {
+        name: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        previousWeight,
+        currentWeight,
+        weightDiff,
+        weightDiffPercent,
+        isImprovement: weightDiff > 0,
+        isEqual: weightDiff === 0,
+      },
+    ];
   });
 };
 
 export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProps) {
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
-  const completedSets = exercises.reduce((sum, ex) => sum + getTrackedSets(ex).filter(set => set.completed).length, 0);
+  const completedSets = exercises.reduce(
+    (sum, ex) => sum + getTrackedSets(ex).filter((set) => set.completed).length,
+    0,
+  );
   const totalVolume = calculateTotalVolume(exercises);
   const comparisons = buildComparisons(exercises);
   const hasComparisons = comparisons.length > 0;
 
   const stats = [
-    { label: 'Completed Sets', value: `${completedSets}/${totalSets}`, icon: TrendingUp, color: 'text-green-500' },
-    { label: 'Exercises', value: exercises.length.toString(), icon: Flame, color: 'text-orange-500' },
-    { label: 'Volume Score', value: Math.round(totalVolume).toLocaleString(), icon: BarChart3, color: 'text-blue-500' },
+    {
+      label: 'Completed Sets',
+      value: `${completedSets}/${totalSets}`,
+      icon: TrendingUp,
+      color: 'text-green-500',
+    },
+    {
+      label: 'Exercises',
+      value: exercises.length.toString(),
+      icon: Flame,
+      color: 'text-orange-500',
+    },
+    {
+      label: 'Volume Score',
+      value: Math.round(totalVolume).toLocaleString(),
+      icon: BarChart3,
+      color: 'text-blue-500',
+    },
   ];
 
   return (
@@ -83,7 +112,10 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
               {stats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
-                  <div key={index} className="flex items-center justify-between glass-dark rounded-xl p-4 shadow-lg hover:bg-white/5 transition-all">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between glass-dark rounded-xl p-4 shadow-lg hover:bg-white/5 transition-all"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center shadow-lg">
                         <Icon className={`w-5 h-5 ${stat.color}`} />
@@ -113,9 +145,15 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
                           <div className="font-medium text-white">{comp.name}</div>
                           <div className="text-xs text-neutral-500">{comp.muscleGroup}</div>
                         </div>
-                        <div className={`flex items-center gap-1 text-sm font-semibold ${
-                          comp.isImprovement ? 'text-green-400' : comp.isEqual ? 'text-neutral-400' : 'text-orange-400'
-                        }`}>
+                        <div
+                          className={`flex items-center gap-1 text-sm font-semibold ${
+                            comp.isImprovement
+                              ? 'text-green-400'
+                              : comp.isEqual
+                                ? 'text-neutral-400'
+                                : 'text-orange-400'
+                          }`}
+                        >
                           {comp.isImprovement ? (
                             <ArrowUp className="w-4 h-4" />
                           ) : comp.isEqual ? (
@@ -128,15 +166,24 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <div className="text-neutral-400">
-                          Previous: <span className="text-neutral-300 font-medium">{comp.previousWeight.toFixed(1)} kg</span>
+                          Previous:{' '}
+                          <span className="text-neutral-300 font-medium">
+                            {comp.previousWeight.toFixed(1)} kg
+                          </span>
                         </div>
                         <div className="text-neutral-400">
-                          Today: <span className="text-white font-medium">{comp.currentWeight.toFixed(1)} kg</span>
+                          Today:{' '}
+                          <span className="text-white font-medium">
+                            {comp.currentWeight.toFixed(1)} kg
+                          </span>
                         </div>
                       </div>
                       {comp.weightDiff !== 0 && (
-                        <div className={`text-xs mt-2 ${comp.isImprovement ? 'text-green-400' : 'text-orange-400'}`}>
-                          {comp.isImprovement ? '+' : ''}{comp.weightDiff.toFixed(1)} kg difference
+                        <div
+                          className={`text-xs mt-2 ${comp.isImprovement ? 'text-green-400' : 'text-orange-400'}`}
+                        >
+                          {comp.isImprovement ? '+' : ''}
+                          {comp.weightDiff.toFixed(1)} kg difference
                         </div>
                       )}
                     </div>
@@ -161,7 +208,8 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
                         <span className="font-semibold">First comparable workout recorded!</span>
                       </p>
                       <p className="text-neutral-400">
-                        Repeat these exercises to unlock previous-vs-current progressive overload insights.
+                        Repeat these exercises to unlock previous-vs-current progressive overload
+                        insights.
                       </p>
                     </div>
                   </div>

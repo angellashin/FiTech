@@ -84,7 +84,11 @@ const adaptForGoal = (template: ExerciseTemplate, goal: WorkoutGoal): ExerciseTe
   }
 };
 
-export function generateWorkoutPlan(goal: WorkoutGoal, muscleGroup: MuscleGroup, duration: number): WorkoutPlan {
+export function generateWorkoutPlan(
+  goal: WorkoutGoal,
+  muscleGroup: MuscleGroup,
+  duration: number,
+): WorkoutPlan {
   const templates = exerciseLibrary[muscleGroup] ?? exerciseLibrary['full-body'];
   const selected = templates.slice(0, durationToExerciseCount(duration));
 

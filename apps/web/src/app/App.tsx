@@ -14,10 +14,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<Exercise[] | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
   const handleLogin = () => {
-    setIsAuthenticated(true);
     setCurrentScreen('home');
   };
 
@@ -65,9 +62,7 @@ export default function App() {
 
   return (
     <div className="size-full bg-neutral-950 text-white">
-      {currentScreen === 'login' && (
-        <Login onLogin={handleLogin} />
-      )}
+      {currentScreen === 'login' && <Login onLogin={handleLogin} />}
       {currentScreen === 'home' && (
         <Home onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} />
       )}
@@ -75,17 +70,23 @@ export default function App() {
         <WorkoutSetup onPlanGenerated={handlePlanGenerated} onBack={handleBackFromSetup} />
       )}
       {currentScreen === 'preview' && workoutPlan && (
-        <PlanPreview plan={workoutPlan} onStartSession={handleStartSession} onBack={handleBackFromPreview} />
+        <PlanPreview
+          plan={workoutPlan}
+          onStartSession={handleStartSession}
+          onBack={handleBackFromPreview}
+        />
       )}
       {currentScreen === 'session' && workoutPlan && (
-        <WorkoutSession plan={workoutPlan} onComplete={handleWorkoutComplete} onBack={handleBackFromSession} />
+        <WorkoutSession
+          plan={workoutPlan}
+          onComplete={handleWorkoutComplete}
+          onBack={handleBackFromSession}
+        />
       )}
       {currentScreen === 'complete' && completedWorkout && (
         <WorkoutComplete exercises={completedWorkout} onBackToHome={handleBackToHome} />
       )}
-      {currentScreen === 'profile' && (
-        <Profile onBackToHome={handleBackToHome} />
-      )}
+      {currentScreen === 'profile' && <Profile onBackToHome={handleBackToHome} />}
     </div>
   );
 }

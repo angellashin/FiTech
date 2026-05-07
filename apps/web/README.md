@@ -7,6 +7,8 @@ This is the FiTech React/Vite web app. It started as a Figma Make prototype and 
 ```bash
 npm install
 npm run dev
+npm run lint
+npm run format:check
 npm run typecheck
 npm run build
 npm run preview

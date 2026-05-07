@@ -71,8 +71,20 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
           </div>
         </div>
 
-        <div className="relative rounded-2xl p-6 border border-blue-500/20 shadow-xl overflow-hidden" style={{ backgroundImage: "linear-gradient(129.61deg, rgba(22, 36, 86, 0.4) 0%, rgb(23, 23, 23) 50%, rgb(10, 10, 10) 100%)" }}>
-          <div className="absolute top-0 left-0 w-full h-full pointer-events-none" style={{ backgroundImage: "linear-gradient(129.593deg, rgba(43, 127, 255, 0.05) 0%, rgba(0, 0, 0, 0) 100%)" }} />
+        <div
+          className="relative rounded-2xl p-6 border border-blue-500/20 shadow-xl overflow-hidden"
+          style={{
+            backgroundImage:
+              'linear-gradient(129.61deg, rgba(22, 36, 86, 0.4) 0%, rgb(23, 23, 23) 50%, rgb(10, 10, 10) 100%)',
+          }}
+        >
+          <div
+            className="absolute top-0 left-0 w-full h-full pointer-events-none"
+            style={{
+              backgroundImage:
+                'linear-gradient(129.593deg, rgba(43, 127, 255, 0.05) 0%, rgba(0, 0, 0, 0) 100%)',
+            }}
+          />
           <div className="relative">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center backdrop-blur-sm">
@@ -95,7 +107,10 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/10 flex items-center justify-center flex-shrink-0 relative shadow-lg">
                   <div className="flex gap-1">
                     <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50" style={{ animationDelay: '0.15s' }} />
+                    <div
+                      className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-lg shadow-green-500/50"
+                      style={{ animationDelay: '0.15s' }}
+                    />
                   </div>
                 </div>
                 <div className="flex-1">
@@ -107,13 +122,21 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-600/10 flex items-center justify-center flex-shrink-0 relative shadow-lg">
                   <div className="flex gap-0.5">
                     <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-lg shadow-orange-500/50" />
-                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-lg shadow-orange-500/50" style={{ animationDelay: '0.1s' }} />
-                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-lg shadow-orange-500/50" style={{ animationDelay: '0.2s' }} />
+                    <div
+                      className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-lg shadow-orange-500/50"
+                      style={{ animationDelay: '0.1s' }}
+                    />
+                    <div
+                      className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-lg shadow-orange-500/50"
+                      style={{ animationDelay: '0.2s' }}
+                    />
                   </div>
                 </div>
                 <div className="flex-1">
                   <div className="font-medium mb-0.5 text-sm">Triple Tap</div>
-                  <div className="text-xs text-neutral-400">Move to next position (machine occupied)</div>
+                  <div className="text-xs text-neutral-400">
+                    Move to next position (machine occupied)
+                  </div>
                 </div>
               </div>
             </div>
@@ -140,12 +163,16 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
                 className="glass-dark rounded-xl p-4 flex items-center justify-between hover:bg-white/5 transition-all group shadow-lg"
               >
                 <div>
-                  <div className="font-medium mb-1 group-hover:text-blue-400 transition-colors">{workout.type}</div>
+                  <div className="font-medium mb-1 group-hover:text-blue-400 transition-colors">
+                    {workout.type}
+                  </div>
                   <div className="text-sm text-neutral-400">
                     {workout.duration} • {workout.exercises} exercises
                   </div>
                 </div>
-                <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors">{workout.date}</div>
+                <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors">
+                  {workout.date}
+                </div>
               </div>
             ))}
           </div>

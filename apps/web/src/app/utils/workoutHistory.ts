@@ -47,7 +47,7 @@ export interface WorkoutSessionRecord {
 const HISTORY_KEY = 'fitech_workout_history';
 const SESSION_HISTORY_KEY = 'fitech_workout_sessions';
 
-const safeReadArray = <T,>(key: string): T[] => {
+const safeReadArray = <T>(key: string): T[] => {
   try {
     return JSON.parse(localStorage.getItem(key) || '[]') as T[];
   } catch (error) {
@@ -58,15 +58,17 @@ const safeReadArray = <T,>(key: string): T[] => {
 
 const getCompletedSets = (exercise: Exercise) => {
   if (!exercise.setDetails?.length) return [];
-  return exercise.setDetails.filter(set => set.completed);
+  return exercise.setDetails.filter((set) => set.completed);
 };
 
 export const calculateExerciseVolume = (exercise: Exercise): number => {
-  const sets = exercise.setDetails?.length ? exercise.setDetails : Array.from({ length: exercise.sets }, () => ({
-    weight: 0,
-    reps: exercise.reps,
-    completed: false,
-  }));
+  const sets = exercise.setDetails?.length
+    ? exercise.setDetails
+    : Array.from({ length: exercise.sets }, () => ({
+        weight: 0,
+        reps: exercise.reps,
+        completed: false,
+      }));
 
   return sets.reduce((sum, set) => {
     const effort = set.weight > 0 ? set.weight * set.reps : set.reps;
@@ -90,7 +92,7 @@ export const saveWorkoutHistory = (
     const completedAt = new Date().toISOString();
     const sessionId = `session_${completedAt}`;
 
-    exercises.forEach(exercise => {
+    exercises.forEach((exercise) => {
       const completedSetDetails = getCompletedSets(exercise);
       if (completedSetDetails.length > 0) {
         const record: WorkoutHistory = {
@@ -106,7 +108,10 @@ export const saveWorkoutHistory = (
       }
     });
 
-    const completedSets = exercises.reduce((sum, exercise) => sum + getCompletedSets(exercise).length, 0);
+    const completedSets = exercises.reduce(
+      (sum, exercise) => sum + getCompletedSets(exercise).length,
+      0,
+    );
     const sessionRecord: WorkoutSessionRecord = {
       id: sessionId,
       schemaVersion: 1,
@@ -135,7 +140,7 @@ export const getExerciseHistory = (exerciseName: string): WorkoutHistory | null 
     const history = safeReadArray<WorkoutHistory>(HISTORY_KEY);
 
     const exerciseRecords = history
-      .filter(record => record.exerciseName.toLowerCase() === exerciseName.toLowerCase())
+      .filter((record) => record.exerciseName.toLowerCase() === exerciseName.toLowerCase())
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return exerciseRecords[0] || null;
@@ -150,7 +155,7 @@ export const getPreviousExerciseHistory = (exerciseName: string): WorkoutHistory
     const history = safeReadArray<WorkoutHistory>(HISTORY_KEY);
 
     const exerciseRecords = history
-      .filter(record => record.exerciseName.toLowerCase() === exerciseName.toLowerCase())
+      .filter((record) => record.exerciseName.toLowerCase() === exerciseName.toLowerCase())
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return exerciseRecords[1] || null;
@@ -162,12 +167,13 @@ export const getPreviousExerciseHistory = (exerciseName: string): WorkoutHistory
 
 export const getAllHistory = (): WorkoutHistory[] => safeReadArray<WorkoutHistory>(HISTORY_KEY);
 
-export const getAllSessions = (): WorkoutSessionRecord[] => safeReadArray<WorkoutSessionRecord>(SESSION_HISTORY_KEY);
+export const getAllSessions = (): WorkoutSessionRecord[] =>
+  safeReadArray<WorkoutSessionRecord>(SESSION_HISTORY_KEY);
 
 export const applyProgressiveOverload = (previousSets: ExerciseSet[]): ExerciseSet[] => {
-  return previousSets.map(set => ({
+  return previousSets.map((set) => ({
     ...set,
-    weight: set.weight > 0 ? Math.round((set.weight * 1.025) * 2) / 2 : 0,
+    weight: set.weight > 0 ? Math.round(set.weight * 1.025 * 2) / 2 : 0,
     completed: false,
   }));
 };
@@ -183,7 +189,8 @@ const getDefaultWeight = (exerciseName: string): number => {
   if (exerciseLower.includes('hip thrust')) return 50;
 
   if (exerciseLower.includes('bench press')) return 50;
-  if (exerciseLower.includes('shoulder press') || exerciseLower.includes('overhead press')) return 35;
+  if (exerciseLower.includes('shoulder press') || exerciseLower.includes('overhead press'))
+    return 35;
   if (exerciseLower.includes('push')) return 0;
 
   if (exerciseLower.includes('pull up') || exerciseLower.includes('chin up')) return 0;
@@ -193,13 +200,22 @@ const getDefaultWeight = (exerciseName: string): number => {
   if (exerciseLower.includes('bicep curl') || exerciseLower.includes('curl')) return 12;
   if (exerciseLower.includes('tricep')) return 15;
 
-  if (exerciseLower.includes('plank') || exerciseLower.includes('crunch') || exerciseLower.includes('dead bug')) return 0;
+  if (
+    exerciseLower.includes('plank') ||
+    exerciseLower.includes('crunch') ||
+    exerciseLower.includes('dead bug')
+  )
+    return 0;
   if (exerciseLower.includes('russian twist')) return 10;
 
   return 20;
 };
 
-export const getRecommendedSets = (exerciseName: string, defaultSets: number, defaultReps: number): ExerciseSet[] => {
+export const getRecommendedSets = (
+  exerciseName: string,
+  defaultSets: number,
+  defaultReps: number,
+): ExerciseSet[] => {
   const history = exerciseName ? getExerciseHistory(exerciseName) : null;
 
   if (history && history.setDetails.length > 0) {
