@@ -78,6 +78,17 @@ npm run build
 npm run dev
 ```
 
+### Step 6 — Configure GitHub Pages env variables
+
+The workflows already read Supabase values from GitHub Actions repository variables. To make the deployed portfolio URL use Supabase cloud sync:
+
+1. Open **GitHub → FiTech repository → Settings → Secrets and variables → Actions → Variables**.
+2. Add `VITE_SUPABASE_URL` with the Supabase project URL.
+3. Add `VITE_SUPABASE_ANON_KEY` with the public anon/publishable key.
+4. Push a new commit or manually run **Deploy GitHub Pages** from the Actions tab.
+
+Use repository variables, not committed files. The public key will still be bundled into the browser build, so RLS remains the actual security boundary.
+
 ## 3. Current app integration
 
 The app now uses local-first cloud sync:
@@ -91,7 +102,7 @@ Login name submit
 → if Supabase fails, keep app working locally and record local sync status
 ```
 
-The GitHub Pages deployment remains local-only until `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are added as GitHub Actions variables/secrets and the deploy workflow passes them to Vite.
+The GitHub Pages deployment remains local-only until `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are added as GitHub Actions repository variables.
 
 ## 4. Security rules
 
