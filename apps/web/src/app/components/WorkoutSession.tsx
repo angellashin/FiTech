@@ -89,11 +89,14 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       null,
     );
     const savedEvents = [...finalEvents, completionEvent];
-    saveWorkoutHistory(finalExercises, savedEvents, startedAt, {
+    const savedSession = saveWorkoutHistory(finalExercises, savedEvents, startedAt, {
       goal: plan.goal,
       muscleGroup: plan.muscleGroup,
       duration: plan.duration,
     });
+    void import('../services/supabaseWorkoutSync')
+      .then(({ syncWorkoutSessionToSupabase }) => syncWorkoutSessionToSupabase(savedSession))
+      .catch((error) => console.warn('Unable to load Supabase workout sync:', error));
     setEvents(savedEvents);
     setAudioMessage(completionEvent.message);
     onComplete(finalExercises);

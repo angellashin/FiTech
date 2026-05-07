@@ -85,7 +85,7 @@ export const saveWorkoutHistory = (
   events: WorkoutSessionEvent[] = [],
   startedAt: string = new Date().toISOString(),
   planMeta?: { goal?: WorkoutGoal; muscleGroup?: MuscleGroup; duration?: number },
-) => {
+): WorkoutSessionRecord | null => {
   try {
     const history = safeReadArray<WorkoutHistory>(HISTORY_KEY);
     const sessions = safeReadArray<WorkoutSessionRecord>(SESSION_HISTORY_KEY);
@@ -130,8 +130,10 @@ export const saveWorkoutHistory = (
 
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     localStorage.setItem(SESSION_HISTORY_KEY, JSON.stringify(sessions));
+    return sessionRecord;
   } catch (error) {
     console.error('Failed to save workout history:', error);
+    return null;
   }
 };
 

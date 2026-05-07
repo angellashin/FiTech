@@ -439,6 +439,39 @@ Team changes now have an automated quality gate before they can pass CI. This im
 
 The lint policy is intentionally light for the generated UI baseline. Future work should add unit tests and E2E tests, then gradually tighten lint rules as generated components are simplified.
 
+### 2026-05-08 — Supabase local-first workout sync foundation
+
+#### Problem
+
+FiTech could store workout history locally, but the portfolio backend story needed a real authenticated database path for user-owned session records and screenless tap events.
+
+#### Decision
+
+Use Supabase anonymous Auth for the demo flow and keep the product local-first: save workout history to localStorage immediately, then sync to Supabase only when a browser session exists.
+
+#### Implementation
+
+- Added `ensureAnonymousFiTechUser()` for anonymous Supabase Auth.
+- Added `syncWorkoutSessionToSupabase()` to write sessions, exercises, sets, and events.
+- Updated login to create/resume a Supabase user when configured.
+- Updated workout completion to trigger non-blocking cloud sync after local save.
+- Added a Profile cloud sync status card.
+
+#### Validation
+
+- `npm run lint`
+- `npm run format:check`
+- `npm run typecheck`
+- `npm run build`
+
+#### Result
+
+The app now has a safe backend integration path while preserving the no-backend demo fallback. This supports the portfolio narrative of moving from local PoC to authenticated cloud persistence.
+
+#### Remaining risk
+
+Anonymous Sign-Ins must be enabled in Supabase Dashboard before remote writes work. GitHub Pages is still local-only until Supabase env values are configured in GitHub Actions.
+
 ## 8. Improvement Backlog
 
 ### High priority

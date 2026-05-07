@@ -11,6 +11,7 @@ import {
   LogOut,
   Edit,
 } from 'lucide-react';
+import { getLastCloudSyncStatus } from '../services/cloudSyncStatus';
 import { getAllHistory, getAllSessions } from '../utils/workoutHistory';
 
 interface ProfileProps {
@@ -117,6 +118,13 @@ export function Profile({ onBackToHome }: ProfileProps) {
     },
   ];
 
+  const lastCloudSync = getLastCloudSyncStatus();
+  const cloudSyncLabel = lastCloudSync
+    ? lastCloudSync.ok
+      ? `Synced ${formatDate(lastCloudSync.syncedAt ?? new Date().toISOString())}`
+      : lastCloudSync.message
+    : 'Complete a workout to sync';
+
   const settings = [
     { label: 'Audio Guidance', icon: Headphones, enabled: true },
     { label: 'Rest Notifications', icon: Bell, enabled: true },
@@ -193,6 +201,18 @@ export function Profile({ onBackToHome }: ProfileProps) {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
+          <h3 className="text-lg font-semibold mb-4">Cloud Sync</h3>
+          <div className="glass-dark rounded-xl p-4 shadow-lg">
+            <div className="text-sm text-neutral-400 mb-1">Supabase status</div>
+            <div
+              className={lastCloudSync?.ok ? 'text-green-400 font-semibold' : 'text-neutral-300'}
+            >
+              {cloudSyncLabel}
+            </div>
           </div>
         </div>
 

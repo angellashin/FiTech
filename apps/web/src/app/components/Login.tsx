@@ -8,17 +8,30 @@ interface LoginProps {
 export function Login({ onLogin }: LoginProps) {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const displayName = name.trim();
+    if (!displayName) return;
 
     setIsLoading(true);
-    setTimeout(() => {
-      localStorage.setItem('fitech_user_name', name);
+    setSyncMessage('Preparing cloud sync...');
+    localStorage.setItem('fitech_user_name', displayName);
+
+    try {
+      const { ensureAnonymousFiTechUser } = await import('../services/supabaseAuth');
+      const result = await ensureAnonymousFiTechUser(displayName);
+      setSyncMessage(result.message);
+    } catch (error) {
+      console.warn('Failed to initialize Supabase cloud sync:', error);
+      setSyncMessage('Cloud sync setup failed. FiTech will continue local-only.');
+    }
+
+    window.setTimeout(() => {
       setIsLoading(false);
       onLogin();
-    }, 800);
+    }, 400);
   };
 
   return (
@@ -65,6 +78,12 @@ export function Login({ onLogin }: LoginProps) {
               )}
             </button>
           </form>
+
+          {syncMessage && (
+            <div className="mb-6 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+              {syncMessage}
+            </div>
+          )}
 
           <div className="mt-12 glass-dark rounded-2xl p-6 border border-neutral-800/50 shadow-lg">
             <h3 className="font-semibold mb-3 text-center">AI 기반 스마트 피트니스</h3>

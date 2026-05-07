@@ -22,7 +22,17 @@ https://kqrqrahstuhvosnwbydp.supabase.co
 
 ## 2. What you need to do in Supabase Dashboard
 
-### Step 1 — Apply the SQL migration
+### Step 1 — Enable Anonymous Sign-Ins
+
+FiTech currently uses anonymous Supabase Auth for the portfolio/demo flow. This creates a real authenticated user without collecting email or password, so RLS can protect each user's workout records.
+
+1. Go to **Authentication → Sign In / Providers** or **Authentication → Settings**.
+2. Enable **Allow anonymous sign-ins** / **Anonymous Sign-Ins**.
+3. Keep this as demo-only until abuse prevention such as CAPTCHA/Turnstile is added.
+
+If this is not enabled, the app will still work locally, but Supabase cloud sync will stay inactive.
+
+### Step 2 — Apply the SQL migration
 
 1. Open Supabase Dashboard.
 2. Go to **SQL Editor**.
@@ -40,13 +50,13 @@ Expected result:
 
 All five public tables should exist with RLS enabled.
 
-### Step 2 — Copy the public anon/publishable key
+### Step 3 — Copy the public anon/publishable key
 
 1. Go to **Project Settings → API**.
 2. Copy the public `anon` / `publishable` key.
 3. Do **not** copy the `service_role` key into the frontend.
 
-### Step 3 — Create local env file
+### Step 4 — Create local env file
 
 Create `apps/web/.env.local`:
 
@@ -57,7 +67,7 @@ VITE_SUPABASE_ANON_KEY=PASTE_PUBLIC_ANON_OR_PUBLISHABLE_KEY_HERE
 
 `.env.local` must stay uncommitted.
 
-### Step 4 — Verify local build still works
+### Step 5 — Verify local build still works
 
 ```bash
 cd apps/web
@@ -68,18 +78,20 @@ npm run build
 npm run dev
 ```
 
-## 3. Next implementation commit
+## 3. Current app integration
 
-After the migration is applied and `.env.local` is available, the next code change should connect the local workout history repository to Supabase.
-
-Recommended behavior:
+The app now uses local-first cloud sync:
 
 ```txt
-WorkoutSession complete
+Login name submit
+→ create/resume anonymous Supabase user when env is configured
+→ WorkoutSession complete
 → save localStorage immediately
 → if Supabase session exists, sync workout_sessions/session_exercises/session_sets/session_events
-→ if Supabase fails, keep app working locally and show no blocking error
+→ if Supabase fails, keep app working locally and record local sync status
 ```
+
+The GitHub Pages deployment remains local-only until `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are added as GitHub Actions variables/secrets and the deploy workflow passes them to Vite.
 
 ## 4. Security rules
 
@@ -95,7 +107,8 @@ This setup shows a professional backend progression:
 1. local-first MVP
 2. Postgres schema design
 3. RLS-backed browser access
-4. future cloud sync without breaking offline/local behavior
+4. anonymous Auth for demo users
+5. cloud sync without breaking offline/local behavior
 
 Official references:
 
