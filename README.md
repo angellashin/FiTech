@@ -6,6 +6,7 @@ FiTech is a **screenless, voice-first workout web app** for gym users who want t
 - Web app: `apps/web`
 - Product/development brief: [`docs/fitech-development-brief.md`](docs/fitech-development-brief.md)
 - PoC / CI/CD roadmap: [`docs/poc-cicd-roadmap.md`](docs/poc-cicd-roadmap.md)
+- Supabase setup: [`docs/supabase-setup.md`](docs/supabase-setup.md)
 - Reference reports: [`docs/references`](docs/references)
 
 ## Core concept

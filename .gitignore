@@ -13,6 +13,7 @@ apps/*/dist/
 .env
 .env.*
 !.env.example
+!apps/web/.env.example
 
 # logs
 *.log
