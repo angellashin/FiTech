@@ -5,6 +5,7 @@ FiTech is a **screenless, voice-first workout web app** for gym users who want t
 - Repository: <https://github.com/angellashin/FiTech>
 - Web app: `apps/web`
 - Product/development brief: [`docs/fitech-development-brief.md`](docs/fitech-development-brief.md)
+- PoC / CI/CD roadmap: [`docs/poc-cicd-roadmap.md`](docs/poc-cicd-roadmap.md)
 - Reference reports: [`docs/references`](docs/references)
 
 ## Core concept
