@@ -87,8 +87,3 @@ The Vite config uses `GITHUB_PAGES=true` in the Pages workflow to set the `/FiTe
 - Open PRs with a short product reason, implementation summary, verification output, and screenshots/GIFs for UI changes.
 - See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the detailed workflow.
 
-## Portfolio notes
-
-When presenting FiTech, emphasize the problem/solution story:
-
-> FiTech turns a workout app from a screen users must manage into an invisible coach that guides, records, and summarizes training while users stay focused on lifting.
