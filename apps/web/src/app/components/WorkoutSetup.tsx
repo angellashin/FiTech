@@ -9,28 +9,22 @@ interface WorkoutSetupProps {
 }
 
 export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
-  const [goal, setGoal] = useState<WorkoutGoal>('strength');
-  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>('lower-body');
+  const [goal] = useState<WorkoutGoal>('strength');
+  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>('chest');
   const [duration, setDuration] = useState<number>(45);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const goals: { value: WorkoutGoal; label: string }[] = [
-    { value: 'strength', label: 'Strength' },
-    { value: 'endurance', label: 'Endurance' },
-    { value: 'flexibility', label: 'Flexibility' },
-    { value: 'weight-loss', label: 'Weight Loss' },
-  ];
-
   const muscleGroups: { value: MuscleGroup; label: string }[] = [
-    { value: 'full-body', label: 'Full Body' },
-    { value: 'upper-body', label: 'Upper Body' },
-    { value: 'lower-body', label: 'Lower Body' },
-    { value: 'core', label: 'Core' },
-    { value: 'arms', label: 'Arms' },
-    { value: 'legs', label: 'Legs' },
+    { value: 'chest', label: '가슴' },
+    { value: 'back', label: '등' },
+    { value: 'shoulder', label: '어깨' },
+    { value: 'triceps', label: '삼두' },
+    { value: 'biceps', label: '이두' },
+    { value: 'core', label: '복근' },
+    { value: 'lower-body', label: '하체' },
   ];
 
-  const durations = [15, 30, 45, 60];
+  const durations = [30, 45, 60];
 
   const generatePlan = () => {
     setIsGenerating(true);
@@ -60,25 +54,6 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
       <div className="flex-1 px-6 pb-6 overflow-auto">
         <div className="space-y-8">
           <div>
-            <label className="text-sm font-medium text-neutral-300 mb-3 block">Workout Goal</label>
-            <div className="grid grid-cols-2 gap-3">
-              {goals.map((item) => (
-                <button
-                  key={item.value}
-                  onClick={() => setGoal(item.value)}
-                  className={`py-4 px-4 rounded-xl border-2 transition-all ${
-                    goal === item.value
-                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500 text-white shadow-lg shadow-blue-900/50 scale-[1.02]'
-                      : 'glass-dark border-neutral-700/50 text-neutral-300 hover:border-neutral-600 hover:bg-white/5 shadow-lg'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
             <label className="text-sm font-medium text-neutral-300 mb-3 block">
               Target Muscle Group
             </label>
@@ -101,7 +76,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
 
           <div>
             <label className="text-sm font-medium text-neutral-300 mb-3 block">Duration</label>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {durations.map((min) => (
                 <button
                   key={min}

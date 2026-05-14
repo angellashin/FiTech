@@ -1,6 +1,6 @@
 export type WorkoutGoal = 'strength' | 'endurance' | 'flexibility' | 'weight-loss';
 
-export type MuscleGroup = 'full-body' | 'upper-body' | 'lower-body' | 'core' | 'arms' | 'legs';
+export type MuscleGroup = 'chest' | 'back' | 'shoulder' | 'triceps' | 'biceps' | 'core' | 'lower-body';
 
 export interface WorkoutPlan {
   goal: WorkoutGoal;

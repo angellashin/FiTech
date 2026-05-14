@@ -358,12 +358,13 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
   };
 
   const muscleGroupLabels = {
-    'full-body': 'Full Body',
-    'upper-body': 'Upper Body',
-    'lower-body': 'Lower Body',
-    core: 'Core',
-    arms: 'Arms',
-    legs: 'Legs',
+    chest: '가슴',
+    back: '등',
+    shoulder: '어깨',
+    triceps: '삼두',
+    biceps: '이두',
+    core: '복근',
+    'lower-body': '하체',
   };
 
   const handleDeleteExercise = (id: string) => {
