@@ -1,10 +1,13 @@
-import { Dumbbell, History, TrendingUp, Headphones, User } from 'lucide-react';
+import { useState } from 'react';
+import { Dumbbell, History, TrendingUp, Headphones, User, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
 import { getAllSessions } from '../utils/workoutHistory';
 import type { WorkoutSessionRecord } from '../utils/workoutHistory';
+import type { WorkoutPlan } from '../domain/workout';
 
 interface HomeProps {
   onStartWorkout: () => void;
   onGoToProfile: () => void;
+  onLoadPlan: (plan: WorkoutPlan) => void;
 }
 
 const formatDate = (iso: string): string => {
@@ -35,7 +38,26 @@ const getDurationLabel = (session: WorkoutSessionRecord): string => {
   return `${mins} min`;
 };
 
-export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
+const sessionToPlan = (session: WorkoutSessionRecord): WorkoutPlan => {
+  const muscleGroup = Array.isArray(session.muscleGroup)
+    ? session.muscleGroup
+    : session.muscleGroup
+      ? [session.muscleGroup]
+      : ['chest'];
+  return {
+    goal: session.goal ?? 'strength',
+    muscleGroup,
+    duration: session.duration ?? 45,
+    exercises: session.exercises.map((ex) => ({
+      ...ex,
+      setDetails: ex.setDetails?.map((s) => ({ ...s, completed: false })),
+    })),
+  };
+};
+
+export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const allSessions = getAllSessions();
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -85,6 +107,7 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
           </div>
         </button>
 
+        {/* Your Progress */}
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -108,6 +131,72 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
           </div>
         </div>
 
+        {/* Recent Workouts */}
+        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center">
+              <History className="w-5 h-5 text-neutral-400" />
+            </div>
+            <h2 className="text-lg font-semibold">Recent Workouts</h2>
+          </div>
+          <div className="space-y-3">
+            {recentWorkouts.length === 0 ? (
+              <div className="text-center py-6 text-neutral-500 text-sm">
+                No workouts yet. Start your first one!
+              </div>
+            ) : (
+              recentWorkouts.map((session) => {
+                const isExpanded = expandedId === session.id;
+                return (
+                  <div key={session.id} className="glass-dark rounded-xl overflow-hidden shadow-lg">
+                    <button
+                      className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-all group"
+                      onClick={() => setExpandedId(isExpanded ? null : session.id)}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium mb-1 group-hover:text-blue-400 transition-colors">
+                          {getSessionLabel(session)}
+                        </div>
+                        <div className="text-sm text-neutral-400">
+                          {getDurationLabel(session)} • {session.exercises.length} exercises
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm text-neutral-500">{formatDate(session.completedAt)}</div>
+                        {isExpanded
+                          ? <ChevronUp className="w-4 h-4 text-neutral-500" />
+                          : <ChevronDown className="w-4 h-4 text-neutral-500" />
+                        }
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t border-white/5 px-4 pb-4 pt-3">
+                        <div className="space-y-2 mb-4">
+                          {session.exercises.map((ex, i) => (
+                            <div key={i} className="flex items-center justify-between text-sm">
+                              <span className="text-neutral-300">{ex.name}</span>
+                              <span className="text-neutral-500">{ex.sets} sets × {ex.reps} reps</span>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() => onLoadPlan(sessionToPlan(session))}
+                          className="w-full flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl py-3 text-sm font-medium transition-all"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          이 운동 그대로 불러오기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Earbud Controls */}
         <div
           className="relative rounded-2xl p-6 border border-blue-500/20 shadow-xl overflow-hidden"
           style={{
@@ -183,41 +272,6 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
                 <span>Hands-free control for uninterrupted flow</span>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="flex-1 bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center">
-              <History className="w-5 h-5 text-neutral-400" />
-            </div>
-            <h2 className="text-lg font-semibold">Recent Workouts</h2>
-          </div>
-          <div className="space-y-3">
-            {recentWorkouts.length === 0 ? (
-              <div className="text-center py-6 text-neutral-500 text-sm">
-                No workouts yet. Start your first one!
-              </div>
-            ) : (
-              recentWorkouts.map((session) => (
-                <div
-                  key={session.id}
-                  className="glass-dark rounded-xl p-4 flex items-center justify-between hover:bg-white/5 transition-all group shadow-lg"
-                >
-                  <div>
-                    <div className="font-medium mb-1 group-hover:text-blue-400 transition-colors">
-                      {getSessionLabel(session)}
-                    </div>
-                    <div className="text-sm text-neutral-400">
-                      {getDurationLabel(session)} • {session.exercises.length} exercises
-                    </div>
-                  </div>
-                  <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors">
-                    {formatDate(session.completedAt)}
-                  </div>
-                </div>
-              ))
-            )}
           </div>
         </div>
       </div>

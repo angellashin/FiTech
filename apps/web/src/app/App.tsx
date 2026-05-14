@@ -14,6 +14,7 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<Exercise[] | null>(null);
+  const [previewSource, setPreviewSource] = useState<'setup' | 'home'>('setup');
   const handleLogin = () => {
     setCurrentScreen('home');
   };
@@ -24,6 +25,7 @@ export default function App() {
 
   const handlePlanGenerated = (plan: WorkoutPlan) => {
     setWorkoutPlan(plan);
+    setPreviewSource('setup');
     setCurrentScreen('preview');
   };
 
@@ -37,6 +39,12 @@ export default function App() {
   const handleWorkoutComplete = (exercises: Exercise[]) => {
     setCompletedWorkout(exercises);
     setCurrentScreen('complete');
+  };
+
+  const handleLoadPlan = (plan: WorkoutPlan) => {
+    setWorkoutPlan(plan);
+    setPreviewSource('home');
+    setCurrentScreen('preview');
   };
 
   const handleBackToHome = () => {
@@ -53,7 +61,7 @@ export default function App() {
   };
 
   const handleBackFromPreview = () => {
-    setCurrentScreen('setup');
+    setCurrentScreen(previewSource === 'home' ? 'home' : 'setup');
   };
 
   const handleBackFromSession = () => {
@@ -65,7 +73,7 @@ export default function App() {
       <div className="w-full max-w-[430px] relative flex flex-col bg-neutral-950 text-white overflow-hidden h-full">
         {currentScreen === 'login' && <Login onLogin={handleLogin} />}
         {currentScreen === 'home' && (
-          <Home onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} />
+          <Home onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} onLoadPlan={handleLoadPlan} />
         )}
         {currentScreen === 'setup' && (
           <WorkoutSetup onPlanGenerated={handlePlanGenerated} onBack={handleBackFromSetup} />
