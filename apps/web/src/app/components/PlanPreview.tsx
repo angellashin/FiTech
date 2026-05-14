@@ -31,6 +31,7 @@ interface DraggableExerciseItemProps {
   isEditing: boolean;
   onDeleteExercise: (id: string) => void;
   onUpdateSet: (id: string, setIndex: number, field: 'weight' | 'reps', value: number) => void;
+  onUpdateRestTime: (id: string, value: number) => void;
   onAddSet: (id: string) => void;
   onRemoveSet: (id: string, setIndex: number) => void;
   moveExercise: (dragIndex: number, hoverIndex: number) => void;
@@ -42,6 +43,7 @@ const DraggableExerciseItem = ({
   isEditing,
   onDeleteExercise,
   onUpdateSet,
+  onUpdateRestTime,
   onAddSet,
   onRemoveSet,
   moveExercise,
@@ -168,10 +170,15 @@ const DraggableExerciseItem = ({
           <Plus className="w-3.5 h-3.5" />
           Add Set
         </button>
-        <div className="text-center glass-dark rounded-xl p-2 mt-1">
-          <div className="text-sm text-neutral-400">
-            Rest: <span className="text-orange-400 font-semibold">{exercise.restTime}s</span>
-          </div>
+        <div className="flex items-center justify-center gap-2 glass-dark rounded-xl px-3 py-2 mt-1">
+          <span className="text-sm text-neutral-400">Rest:</span>
+          <input
+            type="number"
+            value={exercise.restTime}
+            onChange={(e) => onUpdateRestTime(exercise.id, parseInt(e.target.value) || 0)}
+            className="w-16 bg-transparent text-orange-400 font-semibold text-sm text-center focus:outline-none focus:ring-1 focus:ring-orange-500 rounded"
+          />
+          <span className="text-sm text-neutral-400">s</span>
         </div>
       </div>
     </div>
@@ -215,6 +222,10 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
 
   const handleDeleteExercise = (id: string) => {
     setExercises(exercises.filter((ex) => ex.id !== id));
+  };
+
+  const handleUpdateRestTime = (exerciseId: string, value: number) => {
+    setExercises(exercises.map((ex) => ex.id === exerciseId ? { ...ex, restTime: value } : ex));
   };
 
   const handleUpdateSet = (
@@ -548,6 +559,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                     isEditing={isEditing}
                     onDeleteExercise={handleDeleteExercise}
                     onUpdateSet={handleUpdateSet}
+                    onUpdateRestTime={handleUpdateRestTime}
                     onAddSet={handleAddSet}
                     onRemoveSet={handleRemoveSet}
                     moveExercise={moveExercise}

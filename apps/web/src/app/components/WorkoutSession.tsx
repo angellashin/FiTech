@@ -39,10 +39,28 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     }
   }, [audioMessage, speak]);
 
+  const playBeep = () => {
+    try {
+      const ctx = new AudioContext();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.frequency.value = 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.3);
+    } catch {}
+  };
+
   useEffect(() => {
     if (isResting && restTimeLeft > 0) {
       const timer = setTimeout(() => {
         setRestTimeLeft(restTimeLeft - 1);
+        if (restTimeLeft === 11) {
+          playBeep();
+        }
         if (restTimeLeft === 1) {
           setAudioMessage('Rest complete. Ready for next set.');
         }
