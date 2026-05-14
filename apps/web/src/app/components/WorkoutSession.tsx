@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, X, Bell } from 'lucide-react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
 import {
@@ -7,6 +7,21 @@ import {
   type WorkoutSessionEventType,
 } from '../utils/workoutHistory';
 import { useAudioCoach } from '../hooks/useAudioCoach';
+
+// Capacitor plugin bridge — no-ops when running as a web app
+const getMediaButtonPlugin = () => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { Capacitor, Plugins } = (window as any).CapacitorGlobal ?? {};
+    if (Capacitor?.isNativePlatform?.() && Plugins?.MediaButton) {
+      return Plugins.MediaButton as {
+        startListening: () => Promise<void>;
+        addListener: (event: string, cb: () => void) => { remove: () => void };
+      };
+    }
+  } catch {}
+  return null;
+};
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
@@ -29,6 +44,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const [audioEnabled, setAudioEnabled] = useState(true);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
 
+  // Keep stable refs to tap handlers so plugin listeners always call latest version
+  const singleTapRef = useRef<() => void>(() => {});
+  const doubleTapRef = useRef<() => void>(() => {});
+  const tripleTapRef = useRef<() => void>(() => {});
+
   const currentExercise = exercises[currentExerciseIndex];
   const totalExercises = exercises.length || 1;
   const progress = (completedExercises.length / totalExercises) * 100;
@@ -38,6 +58,19 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       speak(audioMessage);
     }
   }, [audioMessage, speak]);
+
+  // Wire up Capacitor MediaButton plugin when running as Android APK
+  useEffect(() => {
+    const plugin = getMediaButtonPlugin();
+    if (!plugin) return;
+
+    plugin.startListening();
+    const s = plugin.addListener('singleTap', () => singleTapRef.current());
+    const d = plugin.addListener('doubleTap', () => doubleTapRef.current());
+    const t = plugin.addListener('tripleTap', () => tripleTapRef.current());
+
+    return () => { s.remove(); d.remove(); t.remove(); };
+  }, []);
 
   const playTone = (frequency: number, duration: number, volume = 0.35) => {
     try {
@@ -228,6 +261,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     setRestTimeLeft(0);
     setAudioMessage(message);
   };
+
+  // Keep plugin listener refs in sync with latest handlers
+  useEffect(() => { singleTapRef.current = handleSingleTap; });
+  useEffect(() => { doubleTapRef.current = handleDoubleTap; });
+  useEffect(() => { tripleTapRef.current = handleTripleTap; });
 
   const toggleAudio = () => {
     setAudioEnabled((previous) => {

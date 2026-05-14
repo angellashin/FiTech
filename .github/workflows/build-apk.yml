@@ -1,0 +1,88 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [sangjun, main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install web dependencies
+        working-directory: apps/web
+        run: pnpm install
+
+      - name: Install Capacitor packages
+        working-directory: apps/web
+        run: pnpm add @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Build web app (APK mode — base is /)
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          GITHUB_PAGES: 'false'
+
+      - name: Initialize Capacitor
+        working-directory: apps/web
+        run: npx cap init FiTech com.fitech.app --web-dir dist 2>/dev/null || true
+
+      - name: Add Android platform
+        working-directory: apps/web
+        run: npx cap add android 2>/dev/null || true
+
+      - name: Sync Capacitor
+        working-directory: apps/web
+        run: npx cap sync android
+
+      - name: Copy custom plugin files
+        working-directory: apps/web
+        run: |
+          DEST=android/app/src/main/java/com/fitech/app
+          mkdir -p $DEST
+          cp android-src/MediaButtonPlugin.kt $DEST/
+          cp android-src/MainActivity.kt $DEST/
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses 2>/dev/null || true
+
+      - name: Grant Gradle execute permission
+        working-directory: apps/web/android
+        run: chmod +x gradlew
+
+      - name: Build debug APK
+        working-directory: apps/web/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FiTech-debug-${{ github.sha }}
+          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
