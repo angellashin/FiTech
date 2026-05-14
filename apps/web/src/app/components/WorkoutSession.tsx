@@ -39,18 +39,19 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     }
   }, [audioMessage, speak]);
 
-  const playBeep = () => {
+  const playTone = (frequency: number, duration: number, volume = 0.35) => {
     try {
       const ctx = new AudioContext();
-      const oscillator = ctx.createOscillator();
+      const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      oscillator.connect(gain);
+      osc.connect(gain);
       gain.connect(ctx.destination);
-      oscillator.frequency.value = 880;
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.3);
+      osc.type = 'sine';
+      osc.frequency.value = frequency;
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + duration);
     } catch {}
   };
 
@@ -58,10 +59,12 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (isResting && restTimeLeft > 0) {
       const timer = setTimeout(() => {
         setRestTimeLeft(restTimeLeft - 1);
-        if (restTimeLeft === 11) {
-          playBeep();
-        }
+        if (restTimeLeft === 11) playTone(880, 0.35);      // 10s: 띵!
+        if (restTimeLeft === 4)  playTone(660, 0.25);      // 3s: 띵
+        if (restTimeLeft === 3)  playTone(880, 0.25);      // 2s: 띵
+        if (restTimeLeft === 2)  playTone(1100, 0.25);     // 1s: 띵
         if (restTimeLeft === 1) {
+          playTone(440, 1.2, 0.5);                         // 0s: 땅!
           setAudioMessage('Rest complete. Ready for next set.');
         }
       }, 1000);
