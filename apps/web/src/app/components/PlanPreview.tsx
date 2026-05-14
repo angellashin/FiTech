@@ -13,8 +13,9 @@ import {
   GripVertical,
   Minus,
 } from 'lucide-react';
-import type { WorkoutPlan, Exercise, ExerciseSet } from '../domain/workout';
+import type { WorkoutPlan, Exercise, MuscleGroup } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
+import { exerciseLibrary } from '../services/workoutPlanner';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
@@ -179,19 +180,147 @@ const EditRow = ({ exercise, index, onDelete, moveExercise }: EditRowProps) => {
   );
 };
 
+// ── Exercise Picker ───────────────────────────────────────────────────────
+const MUSCLE_GROUPS: { key: MuscleGroup; label: string }[] = [
+  { key: 'chest', label: 'Chest' },
+  { key: 'back', label: 'Back' },
+  { key: 'shoulder', label: 'Shoulder' },
+  { key: 'triceps', label: 'Triceps' },
+  { key: 'biceps', label: 'Biceps' },
+  { key: 'core', label: 'Core' },
+  { key: 'lower-body', label: 'Lower Body' },
+];
+
+interface ExercisePickerProps {
+  existingNames: Set<string>;
+  onAdd: (exercises: Exercise[]) => void;
+  onClose: () => void;
+}
+
+const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) => {
+  const [activeGroup, setActiveGroup] = useState<MuscleGroup | 'all'>('all');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const allExercises = MUSCLE_GROUPS.flatMap(({ key }) =>
+    exerciseLibrary[key].map((ex) => ({ ...ex, groupKey: key }))
+  );
+
+  const filtered = activeGroup === 'all'
+    ? allExercises
+    : allExercises.filter((ex) => ex.groupKey === activeGroup);
+
+  const toggleSelect = (name: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  };
+
+  const handleConfirm = () => {
+    const toAdd: Exercise[] = allExercises
+      .filter((ex) => selected.has(ex.name))
+      .map((ex, i) => ({
+        id: `picker-${Date.now()}-${i}`,
+        name: ex.name,
+        sets: ex.sets,
+        reps: ex.reps,
+        restTime: ex.restTime,
+        muscleGroup: ex.muscleGroup,
+        setDetails: getRecommendedSets(ex.name, ex.sets, ex.reps),
+      }));
+    onAdd(toAdd);
+  };
+
+  return (
+    <div className="absolute inset-0 z-10 bg-neutral-950 flex flex-col">
+      {/* header */}
+      <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-800">
+        <h2 className="text-lg font-semibold">Select Exercises</h2>
+        <button
+          onClick={onClose}
+          className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* muscle group tabs */}
+      <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-none border-b border-neutral-800">
+        <button
+          onClick={() => setActiveGroup('all')}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+            activeGroup === 'all'
+              ? 'bg-white text-neutral-950'
+              : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+          }`}
+        >
+          All
+        </button>
+        {MUSCLE_GROUPS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setActiveGroup(key)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+              activeGroup === key
+                ? 'bg-white text-neutral-950'
+                : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* exercise list */}
+      <div className="flex-1 overflow-y-auto">
+        {filtered.map((ex) => {
+          const isAlready = existingNames.has(ex.name);
+          const isChecked = selected.has(ex.name);
+          return (
+            <button
+              key={ex.name}
+              disabled={isAlready}
+              onClick={() => toggleSelect(ex.name)}
+              className={`w-full flex items-center gap-4 px-5 py-4 border-b border-neutral-800/60 transition-colors text-left ${
+                isAlready ? 'opacity-30 cursor-not-allowed' : 'hover:bg-neutral-800/40'
+              }`}
+            >
+              <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
+                isChecked
+                  ? 'bg-blue-600 border-blue-600'
+                  : 'border-neutral-600'
+              }`}>
+                {isChecked && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white">{ex.name}</div>
+                <div className="text-xs text-neutral-500 mt-0.5">{ex.muscleGroup} · {ex.sets} sets × {ex.reps} reps</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* bottom confirm */}
+      <div className="px-6 py-4 border-t border-neutral-800">
+        <button
+          onClick={handleConfirm}
+          disabled={selected.size === 0}
+          className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-2xl font-semibold text-sm transition-all"
+        >
+          {selected.size === 0 ? 'Select exercises' : `Add ${selected.size} exercise${selected.size > 1 ? 's' : ''}`}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ── Main component ────────────────────────────────────────────────────────
 export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) {
   const [exercises, setExercises] = useState(plan.exercises);
   const [isEditing, setIsEditing] = useState(false);
-  const [showAddExercise, setShowAddExercise] = useState(false);
-
-  const [addForm, setAddForm] = useState({
-    name: '',
-    sets: 3,
-    reps: 10,
-    restTime: 60,
-    muscleGroup: '',
-  });
+  const [showPicker, setShowPicker] = useState(false);
 
   const totalExercises = exercises.length;
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
@@ -244,20 +373,9 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
     }));
   };
 
-  const handleAddExercise = () => {
-    if (!addForm.name) return;
-    const newExercise: Exercise = {
-      id: Date.now().toString(),
-      name: addForm.name,
-      sets: addForm.sets,
-      reps: addForm.reps,
-      restTime: addForm.restTime,
-      muscleGroup: addForm.muscleGroup || 'General',
-      setDetails: getRecommendedSets(addForm.name, addForm.sets, addForm.reps),
-    };
-    setExercises([...exercises, newExercise]);
-    setShowAddExercise(false);
-    setAddForm({ name: '', sets: 3, reps: 10, restTime: 60, muscleGroup: '' });
+  const handlePickerAdd = (picked: Exercise[]) => {
+    setExercises((prev) => [...prev, ...picked]);
+    setShowPicker(false);
   };
 
   const handleStartWorkout = () => {
@@ -290,7 +408,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
             </div>
           </div>
           <button
-            onClick={() => { setIsEditing(!isEditing); setShowAddExercise(false); }}
+            onClick={() => { setIsEditing(!isEditing); setShowPicker(false); }}
             className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-colors ${
               isEditing
                 ? 'bg-blue-600 text-white'
@@ -324,89 +442,31 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                 )}
               </div>
 
-              {showAddExercise ? (
-                <div className="mx-6 bg-neutral-900 rounded-2xl p-4 border-2 border-blue-600">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-sm">New Exercise</h4>
-                    <button
-                      onClick={() => setShowAddExercise(false)}
-                      className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div className="space-y-2.5">
-                    <input
-                      type="text"
-                      placeholder="Exercise name"
-                      value={addForm.name}
-                      onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Muscle group (e.g. Chest)"
-                      value={addForm.muscleGroup}
-                      onChange={(e) => setAddForm({ ...addForm, muscleGroup: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
-                    />
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-xs text-neutral-500 mb-1 block">Sets</label>
-                        <input
-                          type="number"
-                          value={addForm.sets}
-                          onChange={(e) => setAddForm({ ...addForm, sets: parseInt(e.target.value) || 1 })}
-                          className="w-full px-2 py-2 bg-neutral-800 rounded-xl text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-neutral-500 mb-1 block">Reps</label>
-                        <input
-                          type="number"
-                          value={addForm.reps}
-                          onChange={(e) => setAddForm({ ...addForm, reps: parseInt(e.target.value) || 1 })}
-                          className="w-full px-2 py-2 bg-neutral-800 rounded-xl text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-neutral-500 mb-1 block">Rest (s)</label>
-                        <input
-                          type="number"
-                          value={addForm.restTime}
-                          onChange={(e) => setAddForm({ ...addForm, restTime: parseInt(e.target.value) || 0 })}
-                          className="w-full px-2 py-2 bg-neutral-800 rounded-xl text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                        />
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleAddExercise}
-                      disabled={!addForm.name.trim()}
-                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-sm font-medium transition-all"
-                    >
-                      Add Exercise
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowAddExercise(true)}
-                  className="mx-6 w-[calc(100%-3rem)] py-3 border-2 border-dashed border-neutral-700 hover:border-neutral-600 rounded-2xl text-sm text-neutral-500 hover:text-neutral-400 flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Exercise
-                </button>
-              )}
+              <button
+                onClick={() => setShowPicker(true)}
+                className="mx-6 w-[calc(100%-3rem)] py-3 border-2 border-dashed border-neutral-700 hover:border-neutral-600 rounded-2xl text-sm text-neutral-500 hover:text-neutral-400 flex items-center justify-center gap-2 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Exercise
+              </button>
             </div>
 
             <div className="px-6 pt-4 pb-6">
               <button
-                onClick={() => { setIsEditing(false); setShowAddExercise(false); }}
+                onClick={() => { setIsEditing(false); setShowPicker(false); }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-semibold transition-all"
               >
                 Confirm
               </button>
             </div>
+
+            {showPicker && (
+              <ExercisePicker
+                existingNames={new Set(exercises.map((e) => e.name))}
+                onAdd={handlePickerAdd}
+                onClose={() => setShowPicker(false)}
+              />
+            )}
           </div>
         ) : (
           /* ── NORMAL MODE: full cards ────────────────────────────── */

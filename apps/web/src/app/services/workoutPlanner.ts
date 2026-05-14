@@ -1,9 +1,9 @@
 import type { MuscleGroup, WorkoutGoal, WorkoutPlan, Exercise } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 
-type ExerciseTemplate = Omit<Exercise, 'id' | 'setDetails'>;
+export type ExerciseTemplate = Omit<Exercise, 'id' | 'setDetails'>;
 
-const exerciseLibrary: Record<MuscleGroup, ExerciseTemplate[]> = {
+export const exerciseLibrary: Record<MuscleGroup, ExerciseTemplate[]> = {
   chest: [
     { name: 'Barbell Bench Press', sets: 4, reps: 8, restTime: 120, muscleGroup: 'Chest' },
     { name: 'Incline Dumbbell Press', sets: 3, reps: 10, restTime: 90, muscleGroup: 'Chest' },
