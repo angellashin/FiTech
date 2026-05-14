@@ -26,13 +26,9 @@ jobs:
         with:
           version: 9
 
-      - name: Install web dependencies
+      - name: Install web dependencies (including Capacitor)
         working-directory: apps/web
-        run: pnpm install
-
-      - name: Install Capacitor packages
-        working-directory: apps/web
-        run: pnpm add @capacitor/core @capacitor/cli @capacitor/android
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build web app (APK mode — base is /)
         working-directory: apps/web
