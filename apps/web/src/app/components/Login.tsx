@@ -45,19 +45,19 @@ export function Login({ onLogin }: LoginProps) {
             <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-white to-neutral-300 bg-clip-text text-transparent">
               FiTech
             </h1>
-            <p className="text-neutral-400">시작하기</p>
+            <p className="text-neutral-400">Get Started</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 mb-8">
             <div>
               <label className="text-sm font-medium text-neutral-300 mb-2 block">
-                이름을 입력해주세요
+                Enter your name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="홍길동"
+                placeholder="Your name"
                 required
                 className="w-full px-4 py-4 rounded-xl glass-dark border-2 border-neutral-700/50 bg-neutral-900/50 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition-all shadow-lg"
               />
@@ -71,10 +71,10 @@ export function Login({ onLogin }: LoginProps) {
               {isLoading ? (
                 <div className="flex items-center justify-center gap-3">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>시작 중...</span>
+                  <span>Starting...</span>
                 </div>
               ) : (
-                <span>시작하기</span>
+                <span>Get Started</span>
               )}
             </button>
           </form>
@@ -86,19 +86,19 @@ export function Login({ onLogin }: LoginProps) {
           )}
 
           <div className="mt-12 glass-dark rounded-2xl p-6 border border-neutral-800/50 shadow-lg">
-            <h3 className="font-semibold mb-3 text-center">AI 기반 스마트 피트니스</h3>
+            <h3 className="font-semibold mb-3 text-center">AI-Powered Smart Fitness</h3>
             <ul className="space-y-2 text-sm text-neutral-400">
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                이어버드로 핸즈프리 운동 트래킹
+                Hands-free workout tracking with earbuds
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                자동 무게 추천으로 점진적 부하 증가
+                Auto weight suggestions with progressive overload
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                AI 기반 맞춤형 운동 플랜
+                AI-generated personalized workout plans
               </li>
             </ul>
           </div>

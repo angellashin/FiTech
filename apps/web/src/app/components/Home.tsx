@@ -185,7 +185,7 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
                           className="w-full flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl py-3 text-sm font-medium transition-all"
                         >
                           <RotateCcw className="w-4 h-4" />
-                          이 운동 그대로 불러오기
+                          Load This Workout
                         </button>
                       </div>
                     )}
