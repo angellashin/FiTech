@@ -1,6 +1,9 @@
 package com.fitech.app
 
+import android.content.Intent
 import android.media.AudioManager
+import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
@@ -14,11 +17,11 @@ import com.getcapacitor.annotation.CapacitorPlugin
 class MediaButtonPlugin : Plugin() {
 
     companion object {
-        // Time window to wait for additional taps before firing event
         private const val TAP_WINDOW_MS = 400L
         var instance: MediaButtonPlugin? = null
     }
 
+    private var mediaSession: MediaSession? = null
     private var tapCount = 0
     private var lastTapTime = 0L
     private val handler = Handler(Looper.getMainLooper())
@@ -26,31 +29,64 @@ class MediaButtonPlugin : Plugin() {
 
     override fun load() {
         instance = this
-        requestAudioFocus()
+        setupMediaSession()
     }
 
-    private fun requestAudioFocus() {
-        try {
-            val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
-            @Suppress("DEPRECATION")
-            audioManager.requestAudioFocus(
-                { },
-                AudioManager.STREAM_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN
+    private fun setupMediaSession() {
+        val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
+
+        // Request audio focus so the system routes media button events to us
+        @Suppress("DEPRECATION")
+        audioManager.requestAudioFocus(
+            { },
+            AudioManager.STREAM_MUSIC,
+            AudioManager.AUDIOFOCUS_GAIN
+        )
+
+        val session = MediaSession(context, "FiTechSession")
+
+        session.setCallback(object : MediaSession.Callback() {
+            override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
+                val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
+                    ?: return false
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    return handleTap(event.keyCode)
+                }
+                return false
+            }
+
+            // Called by some earbuds for play/pause
+            override fun onPlay() { handleTap(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+            override fun onPause() { handleTap(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+        })
+
+        // Must set an active PlaybackState so Android routes media buttons to this session
+        val state = PlaybackState.Builder()
+            .setActions(
+                PlaybackState.ACTION_PLAY_PAUSE or
+                PlaybackState.ACTION_PLAY or
+                PlaybackState.ACTION_PAUSE
             )
-        } catch (_: Exception) {}
+            .setState(PlaybackState.STATE_PLAYING, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
+            .build()
+
+        session.setPlaybackState(state)
+        session.isActive = true
+        mediaSession = session
     }
 
     @PluginMethod
     fun startListening(call: PluginCall) {
-        requestAudioFocus()
+        if (mediaSession == null) setupMediaSession()
         call.resolve()
     }
 
-    // Called by MainActivity when a media key event is received
-    fun onMediaButton(keyCode: Int): Boolean {
+    // Also called from MainActivity.dispatchKeyEvent as a backup for wired earbuds
+    fun handleTap(keyCode: Int): Boolean {
         if (keyCode != KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE &&
-            keyCode != KeyEvent.KEYCODE_HEADSETHOOK) {
+            keyCode != KeyEvent.KEYCODE_HEADSETHOOK &&
+            keyCode != KeyEvent.KEYCODE_MEDIA_PLAY &&
+            keyCode != KeyEvent.KEYCODE_MEDIA_PAUSE) {
             return false
         }
 
@@ -75,5 +111,12 @@ class MediaButtonPlugin : Plugin() {
         }
         handler.postDelayed(pendingTap!!, TAP_WINDOW_MS)
         return true
+    }
+
+    override fun handleOnDestroy() {
+        mediaSession?.isActive = false
+        mediaSession?.release()
+        mediaSession = null
+        instance = null
     }
 }

@@ -10,10 +10,11 @@ class MainActivity : BridgeActivity() {
         super.onCreate(savedInstanceState)
     }
 
+    // Backup handler for wired earbuds that send direct KeyEvents to the activity
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             val plugin = MediaButtonPlugin.instance
-            if (plugin != null && plugin.onMediaButton(event.keyCode)) {
+            if (plugin != null && plugin.handleTap(event.keyCode)) {
                 return true
             }
         }
