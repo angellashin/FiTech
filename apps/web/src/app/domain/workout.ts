@@ -4,7 +4,7 @@ export type MuscleGroup = 'chest' | 'back' | 'shoulder' | 'triceps' | 'biceps' |
 
 export interface WorkoutPlan {
   goal: WorkoutGoal;
-  muscleGroup: MuscleGroup;
+  muscleGroup: MuscleGroup[];
   duration: number;
   exercises: Exercise[];
 }

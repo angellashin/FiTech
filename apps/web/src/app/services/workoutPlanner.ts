@@ -128,24 +128,27 @@ const adaptForGoal = (template: ExerciseTemplate, goal: WorkoutGoal): ExerciseTe
 
 export function generateWorkoutPlan(
   goal: WorkoutGoal,
-  muscleGroup: MuscleGroup,
+  muscleGroups: MuscleGroup[],
   duration: number,
 ): WorkoutPlan {
-  const templates = exerciseLibrary[muscleGroup] ?? exerciseLibrary['full-body'];
-  const selected = templates.slice(0, durationToExerciseCount(duration));
+  const totalCount = durationToExerciseCount(duration);
+  const perGroup = Math.ceil(totalCount / muscleGroups.length);
 
-  const exercises = selected.map((template, index) => {
-    const adapted = adaptForGoal(template, goal);
-    return {
-      id: `${muscleGroup}-${goal}-${index + 1}`,
-      ...adapted,
-      setDetails: getRecommendedSets(adapted.name, adapted.sets, adapted.reps),
-    };
-  });
+  const exercises = muscleGroups.flatMap((group, groupIndex) => {
+    const templates = exerciseLibrary[group] ?? [];
+    return templates.slice(0, perGroup).map((template, index) => {
+      const adapted = adaptForGoal(template, goal);
+      return {
+        id: `${group}-${goal}-${groupIndex}-${index + 1}`,
+        ...adapted,
+        setDetails: getRecommendedSets(adapted.name, adapted.sets, adapted.reps),
+      };
+    });
+  }).slice(0, totalCount);
 
   return {
     goal,
-    muscleGroup,
+    muscleGroup: muscleGroups,
     duration,
     exercises,
   };

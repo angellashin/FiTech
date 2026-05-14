@@ -555,7 +555,9 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                 </div>
                 <div className="flex items-center gap-2 glass-dark px-3 py-1.5 rounded-lg">
                   <div className="w-2 h-2 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50" />
-                  <span className="text-neutral-300">{muscleGroupLabels[plan.muscleGroup]}</span>
+                  <span className="text-neutral-300">
+                    {plan.muscleGroup.map((g) => muscleGroupLabels[g]).join(' · ')}
+                  </span>
                 </div>
               </div>
             </div>

@@ -10,11 +10,11 @@ interface WorkoutSetupProps {
 
 export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
   const [goal] = useState<WorkoutGoal>('strength');
-  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup>('chest');
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>(['chest']);
   const [duration, setDuration] = useState<number>(45);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const muscleGroups: { value: MuscleGroup; label: string }[] = [
+  const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
     { value: 'chest', label: 'Chest' },
     { value: 'back', label: 'Back' },
     { value: 'shoulder', label: 'Shoulder' },
@@ -26,11 +26,19 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
 
   const durations = [30, 45, 60];
 
+  const toggleMuscleGroup = (value: MuscleGroup) => {
+    setMuscleGroups((prev) =>
+      prev.includes(value)
+        ? prev.length > 1 ? prev.filter((g) => g !== value) : prev
+        : [...prev, value]
+    );
+  };
+
   const generatePlan = () => {
     setIsGenerating(true);
 
     setTimeout(() => {
-      const plan: WorkoutPlan = generateWorkoutPlan(goal, muscleGroup, duration);
+      const plan: WorkoutPlan = generateWorkoutPlan(goal, muscleGroups, duration);
       setIsGenerating(false);
       onPlanGenerated(plan);
     }, 800);
@@ -58,12 +66,12 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
               Target Muscle Group
             </label>
             <div className="grid grid-cols-2 gap-3">
-              {muscleGroups.map((item) => (
+              {muscleGroupOptions.map((item) => (
                 <button
                   key={item.value}
-                  onClick={() => setMuscleGroup(item.value)}
+                  onClick={() => toggleMuscleGroup(item.value)}
                   className={`py-4 px-4 rounded-xl border-2 transition-all ${
-                    muscleGroup === item.value
+                    muscleGroups.includes(item.value)
                       ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500 text-white shadow-lg shadow-blue-900/50 scale-[1.02]'
                       : 'glass-dark border-neutral-700/50 text-neutral-300 hover:border-neutral-600 hover:bg-white/5 shadow-lg'
                   }`}
