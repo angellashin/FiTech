@@ -350,7 +350,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                   <div className="text-sm text-neutral-400">Reps</div>
                 </div>
                 <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
-                  <div className="text-3xl font-bold text-orange-400 mb-2 leading-tight">
+                  <div className={`font-bold text-orange-400 mb-2 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
                     {currentExercise?.restTime}s
                   </div>
                   <div className="text-sm text-neutral-400">Rest</div>
