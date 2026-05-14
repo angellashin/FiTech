@@ -1,16 +1,53 @@
 import { Dumbbell, History, TrendingUp, Headphones, User } from 'lucide-react';
+import { getAllSessions } from '../utils/workoutHistory';
+import type { WorkoutSessionRecord } from '../utils/workoutHistory';
 
 interface HomeProps {
   onStartWorkout: () => void;
   onGoToProfile: () => void;
 }
 
+const formatDate = (iso: string): string => {
+  const date = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+const getSessionLabel = (session: WorkoutSessionRecord): string => {
+  const groups = Array.isArray(session.muscleGroup)
+    ? session.muscleGroup
+    : session.muscleGroup
+      ? [session.muscleGroup]
+      : [];
+  const groupLabel = groups
+    .map((g) => g.charAt(0).toUpperCase() + g.slice(1).replace('-', ' '))
+    .join(' & ');
+  return groupLabel ? `${groupLabel} Workout` : 'Workout';
+};
+
+const getDurationLabel = (session: WorkoutSessionRecord): string => {
+  const start = new Date(session.startedAt).getTime();
+  const end = new Date(session.completedAt).getTime();
+  const mins = Math.round((end - start) / 60000);
+  return `${mins} min`;
+};
+
 export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
-  const recentWorkouts = [
-    { date: 'Today', type: 'Lower Body Strength', duration: '45 min', exercises: 5 },
-    { date: 'Yesterday', type: 'Upper Body Strength', duration: '32 min', exercises: 5 },
-    { date: 'Apr 26', type: 'Full Body Endurance', duration: '30 min', exercises: 4 },
-  ];
+  const allSessions = getAllSessions();
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const thisWeekCount = allSessions.filter((s) => new Date(s.completedAt) >= weekAgo).length;
+  const thisMonthCount = allSessions.filter((s) => new Date(s.completedAt) >= monthAgo).length;
+  const totalCount = allSessions.length;
+
+  const recentWorkouts = [...allSessions]
+    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+    .slice(0, 3);
 
   return (
     <div className="size-full flex flex-col bg-gradient-to-b from-[#0a0a0a] from-[8%] to-[#707070] to-[95%] overflow-auto">
@@ -57,15 +94,15 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center bg-blue-500/5 rounded-xl p-3 border border-blue-500/10">
-              <div className="text-2xl font-bold text-blue-400">12</div>
+              <div className="text-2xl font-bold text-blue-400">{thisWeekCount}</div>
               <div className="text-xs text-neutral-400 mt-1">This Week</div>
             </div>
             <div className="text-center bg-green-500/5 rounded-xl p-3 border border-green-500/10">
-              <div className="text-2xl font-bold text-green-400">48</div>
+              <div className="text-2xl font-bold text-green-400">{thisMonthCount}</div>
               <div className="text-xs text-neutral-400 mt-1">This Month</div>
             </div>
             <div className="text-center bg-purple-500/5 rounded-xl p-3 border border-purple-500/10">
-              <div className="text-2xl font-bold text-purple-400">127</div>
+              <div className="text-2xl font-bold text-purple-400">{totalCount}</div>
               <div className="text-xs text-neutral-400 mt-1">Total</div>
             </div>
           </div>
@@ -157,24 +194,30 @@ export function Home({ onStartWorkout, onGoToProfile }: HomeProps) {
             <h2 className="text-lg font-semibold">Recent Workouts</h2>
           </div>
           <div className="space-y-3">
-            {recentWorkouts.map((workout, index) => (
-              <div
-                key={index}
-                className="glass-dark rounded-xl p-4 flex items-center justify-between hover:bg-white/5 transition-all group shadow-lg"
-              >
-                <div>
-                  <div className="font-medium mb-1 group-hover:text-blue-400 transition-colors">
-                    {workout.type}
-                  </div>
-                  <div className="text-sm text-neutral-400">
-                    {workout.duration} • {workout.exercises} exercises
-                  </div>
-                </div>
-                <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors">
-                  {workout.date}
-                </div>
+            {recentWorkouts.length === 0 ? (
+              <div className="text-center py-6 text-neutral-500 text-sm">
+                No workouts yet. Start your first one!
               </div>
-            ))}
+            ) : (
+              recentWorkouts.map((session) => (
+                <div
+                  key={session.id}
+                  className="glass-dark rounded-xl p-4 flex items-center justify-between hover:bg-white/5 transition-all group shadow-lg"
+                >
+                  <div>
+                    <div className="font-medium mb-1 group-hover:text-blue-400 transition-colors">
+                      {getSessionLabel(session)}
+                    </div>
+                    <div className="text-sm text-neutral-400">
+                      {getDurationLabel(session)} • {session.exercises.length} exercises
+                    </div>
+                  </div>
+                  <div className="text-sm text-neutral-500 group-hover:text-neutral-400 transition-colors">
+                    {formatDate(session.completedAt)}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
