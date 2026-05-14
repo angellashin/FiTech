@@ -227,7 +227,7 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
         reps: ex.reps,
         restTime: ex.restTime,
         muscleGroup: ex.muscleGroup,
-        setDetails: getRecommendedSets(ex.name, ex.sets, ex.reps),
+        setDetails: getRecommendedSets(ex.name, ex.sets, ex.reps, ex.muscleGroup),
       }));
     onAdd(toAdd);
   };

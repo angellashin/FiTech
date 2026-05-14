@@ -180,54 +180,77 @@ export const applyProgressiveOverload = (previousSets: ExerciseSet[]): ExerciseS
   }));
 };
 
-const getDefaultWeight = (exerciseName: string): number => {
-  const exerciseLower = exerciseName.toLowerCase();
+const isBodyweightExercise = (exerciseName: string): boolean => {
+  const lower = exerciseName.toLowerCase();
+  return (
+    lower.includes('pull up') ||
+    lower.includes('chin up') ||
+    lower.includes('push up') ||
+    lower.includes('dip') ||
+    lower.includes('plank') ||
+    lower.includes('crunch') ||
+    lower.includes('dead bug') ||
+    lower.includes('mountain climber') ||
+    lower.includes('bicycle crunch') ||
+    lower.includes('leg raise') ||
+    lower.includes('hanging knee raise')
+  );
+};
 
-  if (exerciseLower.includes('squat')) return 60;
-  if (exerciseLower.includes('deadlift')) return 70;
-  if (exerciseLower.includes('leg press')) return 100;
-  if (exerciseLower.includes('lunge')) return 40;
-  if (exerciseLower.includes('calf')) return 35;
-  if (exerciseLower.includes('hip thrust')) return 50;
+const getMuscleGroupReferenceWeight = (muscleGroup: string): number | null => {
+  const history = safeReadArray<WorkoutHistory>(HISTORY_KEY);
+  const groupRecords = history.filter(
+    (r) => r.muscleGroup.toLowerCase() === muscleGroup.toLowerCase(),
+  );
+  if (groupRecords.length === 0) return null;
 
-  if (exerciseLower.includes('bench press')) return 50;
-  if (exerciseLower.includes('shoulder press') || exerciseLower.includes('overhead press'))
-    return 35;
-  if (exerciseLower.includes('push')) return 0;
+  const weights = groupRecords
+    .flatMap((r) => r.setDetails)
+    .filter((s) => s.completed && s.weight > 0)
+    .map((s) => s.weight);
 
-  if (exerciseLower.includes('pull up') || exerciseLower.includes('chin up')) return 0;
-  if (exerciseLower.includes('row')) return 45;
-  if (exerciseLower.includes('lat pulldown')) return 50;
+  if (weights.length === 0) return null;
 
-  if (exerciseLower.includes('bicep curl') || exerciseLower.includes('curl')) return 12;
-  if (exerciseLower.includes('tricep')) return 15;
-
-  if (
-    exerciseLower.includes('plank') ||
-    exerciseLower.includes('crunch') ||
-    exerciseLower.includes('dead bug')
-  )
-    return 0;
-  if (exerciseLower.includes('russian twist')) return 10;
-
-  return 20;
+  const avg = weights.reduce((a, b) => a + b, 0) / weights.length;
+  return Math.round(avg / 2.5) * 2.5;
 };
 
 export const getRecommendedSets = (
   exerciseName: string,
   defaultSets: number,
   defaultReps: number,
+  muscleGroup?: string,
 ): ExerciseSet[] => {
+  // 1. Specific exercise history → progressive overload
   const history = exerciseName ? getExerciseHistory(exerciseName) : null;
-
   if (history && history.setDetails.length > 0) {
     return applyProgressiveOverload(history.setDetails);
   }
 
-  const defaultWeight = getDefaultWeight(exerciseName);
+  // Bodyweight exercises always stay at 0
+  if (isBodyweightExercise(exerciseName)) {
+    return Array.from({ length: defaultSets }, () => ({
+      weight: 0,
+      reps: defaultReps,
+      completed: false,
+    }));
+  }
 
+  // 2. Same muscle group has history → use that group's average weight
+  if (muscleGroup) {
+    const refWeight = getMuscleGroupReferenceWeight(muscleGroup);
+    if (refWeight !== null) {
+      return Array.from({ length: defaultSets }, () => ({
+        weight: refWeight,
+        reps: defaultReps,
+        completed: false,
+      }));
+    }
+  }
+
+  // 3. First time for this muscle group → start at 20kg
   return Array.from({ length: defaultSets }, () => ({
-    weight: defaultWeight,
+    weight: 20,
     reps: defaultReps,
     completed: false,
   }));

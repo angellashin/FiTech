@@ -141,7 +141,7 @@ export function generateWorkoutPlan(
       return {
         id: `${group}-${goal}-${groupIndex}-${index + 1}`,
         ...adapted,
-        setDetails: getRecommendedSets(adapted.name, adapted.sets, adapted.reps),
+        setDetails: getRecommendedSets(adapted.name, adapted.sets, adapted.reps, adapted.muscleGroup),
       };
     });
   }).slice(0, totalCount);
