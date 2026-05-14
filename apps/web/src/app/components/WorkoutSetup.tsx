@@ -15,13 +15,13 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const muscleGroups: { value: MuscleGroup; label: string }[] = [
-    { value: 'chest', label: '가슴' },
-    { value: 'back', label: '등' },
-    { value: 'shoulder', label: '어깨' },
-    { value: 'triceps', label: '삼두' },
-    { value: 'biceps', label: '이두' },
-    { value: 'core', label: '복근' },
-    { value: 'lower-body', label: '하체' },
+    { value: 'chest', label: 'Chest' },
+    { value: 'back', label: 'Back' },
+    { value: 'shoulder', label: 'Shoulder' },
+    { value: 'triceps', label: 'Triceps' },
+    { value: 'biceps', label: 'Biceps' },
+    { value: 'core', label: 'Core' },
+    { value: 'lower-body', label: 'Lower Body' },
   ];
 
   const durations = [30, 45, 60];

@@ -358,13 +358,13 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
   };
 
   const muscleGroupLabels = {
-    chest: '가슴',
-    back: '등',
-    shoulder: '어깨',
-    triceps: '삼두',
-    biceps: '이두',
-    core: '복근',
-    'lower-body': '하체',
+    chest: 'Chest',
+    back: 'Back',
+    shoulder: 'Shoulder',
+    triceps: 'Triceps',
+    biceps: 'Biceps',
+    core: 'Core',
+    'lower-body': 'Lower Body',
   };
 
   const handleDeleteExercise = (id: string) => {
