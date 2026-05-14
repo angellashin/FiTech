@@ -182,17 +182,17 @@ const DraggableExerciseItem = ({
           <div className="bg-neutral-900/50 rounded-xl p-3">
             <div className="text-sm text-neutral-400 mb-3">Set Details</div>
 
-            <div className="grid grid-cols-[50px_1fr_1fr_40px] gap-2 mb-2 text-xs text-neutral-500 px-2">
+            <div className="grid grid-cols-[40px_1fr_1fr_36px] gap-1.5 mb-2 text-xs text-neutral-500 px-1">
               <div>Set</div>
               <div>kg</div>
               <div>Reps</div>
               <div></div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {editForm.setDetails.map((set: ExerciseSet, idx: number) => (
-                <div key={idx} className="grid grid-cols-[50px_1fr_1fr_40px] gap-2 items-center">
-                  <div className="bg-neutral-800 rounded-lg px-3 py-2 text-center font-medium text-sm">
+                <div key={idx} className="grid grid-cols-[40px_1fr_1fr_36px] gap-1.5 items-center">
+                  <div className="bg-neutral-800 rounded-lg py-1.5 text-center font-medium text-sm">
                     {idx + 1}
                   </div>
                   <input
@@ -201,14 +201,14 @@ const DraggableExerciseItem = ({
                     onChange={(e) =>
                       onUpdateSetDetail(idx, 'weight', parseInt(e.target.value) || 0)
                     }
-                    className="px-3 py-2 bg-neutral-800 rounded-lg text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                     placeholder="0"
                   />
                   <input
                     type="number"
                     value={set.reps}
                     onChange={(e) => onUpdateSetDetail(idx, 'reps', parseInt(e.target.value) || 0)}
-                    className="px-3 py-2 bg-neutral-800 rounded-lg text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                     placeholder="0"
                   />
                   <button
@@ -224,7 +224,7 @@ const DraggableExerciseItem = ({
 
             <button
               onClick={onAddSet}
-              className="w-full mt-3 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Add Set

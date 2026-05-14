@@ -61,32 +61,34 @@ export default function App() {
   };
 
   return (
-    <div className="size-full bg-neutral-950 text-white">
-      {currentScreen === 'login' && <Login onLogin={handleLogin} />}
-      {currentScreen === 'home' && (
-        <Home onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} />
-      )}
-      {currentScreen === 'setup' && (
-        <WorkoutSetup onPlanGenerated={handlePlanGenerated} onBack={handleBackFromSetup} />
-      )}
-      {currentScreen === 'preview' && workoutPlan && (
-        <PlanPreview
-          plan={workoutPlan}
-          onStartSession={handleStartSession}
-          onBack={handleBackFromPreview}
-        />
-      )}
-      {currentScreen === 'session' && workoutPlan && (
-        <WorkoutSession
-          plan={workoutPlan}
-          onComplete={handleWorkoutComplete}
-          onBack={handleBackFromSession}
-        />
-      )}
-      {currentScreen === 'complete' && completedWorkout && (
-        <WorkoutComplete exercises={completedWorkout} onBackToHome={handleBackToHome} />
-      )}
-      {currentScreen === 'profile' && <Profile onBackToHome={handleBackToHome} />}
+    <div className="size-full bg-neutral-950 flex justify-center">
+      <div className="w-full max-w-[430px] relative flex flex-col bg-neutral-950 text-white overflow-hidden h-full">
+        {currentScreen === 'login' && <Login onLogin={handleLogin} />}
+        {currentScreen === 'home' && (
+          <Home onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} />
+        )}
+        {currentScreen === 'setup' && (
+          <WorkoutSetup onPlanGenerated={handlePlanGenerated} onBack={handleBackFromSetup} />
+        )}
+        {currentScreen === 'preview' && workoutPlan && (
+          <PlanPreview
+            plan={workoutPlan}
+            onStartSession={handleStartSession}
+            onBack={handleBackFromPreview}
+          />
+        )}
+        {currentScreen === 'session' && workoutPlan && (
+          <WorkoutSession
+            plan={workoutPlan}
+            onComplete={handleWorkoutComplete}
+            onBack={handleBackFromSession}
+          />
+        )}
+        {currentScreen === 'complete' && completedWorkout && (
+          <WorkoutComplete exercises={completedWorkout} onBackToHome={handleBackToHome} />
+        )}
+        {currentScreen === 'profile' && <Profile onBackToHome={handleBackToHome} />}
+      </div>
     </div>
   );
 }
