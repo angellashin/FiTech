@@ -1,4 +1,5 @@
-import type { MuscleGroup, WorkoutGoal, WorkoutPlan, Exercise } from '../domain/workout';
+import type { MuscleGroup, WorkoutGoal, WorkoutPlan, Exercise, WorkoutIntensity } from '../domain/workout';
+import { INTENSITY_MULTIPLIER } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 
 export type ExerciseTemplate = Omit<Exercise, 'id' | 'setDetails'>;
@@ -126,10 +127,23 @@ const adaptForGoal = (template: ExerciseTemplate, goal: WorkoutGoal): ExerciseTe
   }
 };
 
+const applyIntensityToSets = (
+  sets: ReturnType<typeof getRecommendedSets>,
+  intensity: WorkoutIntensity,
+) => {
+  const multiplier = INTENSITY_MULTIPLIER[intensity];
+  if (multiplier === 1.0) return sets;
+  return sets.map((s) => ({
+    ...s,
+    weight: s.weight === 0 ? 0 : Math.round((s.weight * multiplier) / 2.5) * 2.5,
+  }));
+};
+
 export function generateWorkoutPlan(
   goal: WorkoutGoal,
   muscleGroups: MuscleGroup[],
   duration: number,
+  intensity: WorkoutIntensity = 'normal',
 ): WorkoutPlan {
   const totalCount = durationToExerciseCount(duration);
   const perGroup = Math.ceil(totalCount / muscleGroups.length);
@@ -138,10 +152,11 @@ export function generateWorkoutPlan(
     const templates = exerciseLibrary[group] ?? [];
     return templates.slice(0, perGroup).map((template, index) => {
       const adapted = adaptForGoal(template, goal);
+      const rawSets = getRecommendedSets(adapted.name, adapted.sets, adapted.reps, adapted.muscleGroup);
       return {
         id: `${group}-${goal}-${groupIndex}-${index + 1}`,
         ...adapted,
-        setDetails: getRecommendedSets(adapted.name, adapted.sets, adapted.reps, adapted.muscleGroup),
+        setDetails: applyIntensityToSets(rawSets, intensity),
       };
     });
   }).slice(0, totalCount);

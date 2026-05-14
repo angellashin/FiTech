@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Sparkles, ArrowLeft } from 'lucide-react';
-import type { WorkoutGoal, MuscleGroup, WorkoutPlan } from '../domain/workout';
+import type { WorkoutGoal, MuscleGroup, WorkoutPlan, WorkoutIntensity } from '../domain/workout';
 import { generateWorkoutPlan } from '../services/workoutPlanner';
 
 interface WorkoutSetupProps {
@@ -12,6 +12,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
   const [goal] = useState<WorkoutGoal>('strength');
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>(['chest']);
   const [duration, setDuration] = useState<number>(45);
+  const [intensity, setIntensity] = useState<WorkoutIntensity>('normal');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
@@ -26,6 +27,14 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
 
   const durations = [30, 45, 60];
 
+  const intensityOptions: { value: WorkoutIntensity; label: string; sub: string; color: string }[] = [
+    { value: 'very-light', label: 'Very Light', sub: '−20%', color: 'from-sky-700 to-sky-800 border-sky-600' },
+    { value: 'light',      label: 'Light',      sub: '−10%', color: 'from-blue-700 to-blue-800 border-blue-600' },
+    { value: 'normal',     label: 'Normal',     sub: '±0%',  color: 'from-green-700 to-green-800 border-green-600' },
+    { value: 'hard',       label: 'Hard',       sub: '+10%', color: 'from-orange-700 to-orange-800 border-orange-600' },
+    { value: 'very-hard',  label: 'Very Hard',  sub: '+20%', color: 'from-red-700 to-red-800 border-red-600' },
+  ];
+
   const toggleMuscleGroup = (value: MuscleGroup) => {
     setMuscleGroups((prev) =>
       prev.includes(value)
@@ -36,9 +45,8 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
 
   const generatePlan = () => {
     setIsGenerating(true);
-
     setTimeout(() => {
-      const plan: WorkoutPlan = generateWorkoutPlan(goal, muscleGroups, duration);
+      const plan: WorkoutPlan = generateWorkoutPlan(goal, muscleGroups, duration, intensity);
       setIsGenerating(false);
       onPlanGenerated(plan);
     }, 800);
@@ -61,6 +69,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
 
       <div className="flex-1 px-6 pb-6 overflow-auto">
         <div className="space-y-8">
+          {/* Muscle Groups */}
           <div>
             <label className="text-sm font-medium text-neutral-300 mb-3 block">
               Target Muscle Group
@@ -82,6 +91,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
             </div>
           </div>
 
+          {/* Duration */}
           <div>
             <label className="text-sm font-medium text-neutral-300 mb-3 block">Duration</label>
             <div className="grid grid-cols-3 gap-3">
@@ -97,6 +107,33 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
                 >
                   <div className="text-2xl font-bold">{min}</div>
                   <div className="text-xs mt-1 opacity-80">min</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Intensity */}
+          <div>
+            <label className="text-sm font-medium text-neutral-300 mb-3 block">
+              Workout Intensity
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {intensityOptions.map((item) => (
+                <button
+                  key={item.value}
+                  onClick={() => setIntensity(item.value)}
+                  className={`py-3 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all ${
+                    intensity === item.value
+                      ? `bg-gradient-to-br ${item.color} text-white shadow-lg scale-[1.04]`
+                      : 'glass-dark border-neutral-700/50 text-neutral-400 hover:border-neutral-600 hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-[10px] font-semibold leading-tight text-center px-0.5">
+                    {item.label}
+                  </span>
+                  <span className={`text-[10px] ${intensity === item.value ? 'text-white/70' : 'text-neutral-600'}`}>
+                    {item.sub}
+                  </span>
                 </button>
               ))}
             </div>

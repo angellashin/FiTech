@@ -1,5 +1,15 @@
 export type WorkoutGoal = 'strength' | 'endurance' | 'flexibility' | 'weight-loss';
 
+export type WorkoutIntensity = 'very-light' | 'light' | 'normal' | 'hard' | 'very-hard';
+
+export const INTENSITY_MULTIPLIER: Record<WorkoutIntensity, number> = {
+  'very-light': 0.80,
+  'light':      0.90,
+  'normal':     1.00,
+  'hard':       1.10,
+  'very-hard':  1.20,
+};
+
 export type MuscleGroup = 'chest' | 'back' | 'shoulder' | 'triceps' | 'biceps' | 'core' | 'lower-body';
 
 export interface WorkoutPlan {
