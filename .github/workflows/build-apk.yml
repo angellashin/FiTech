@@ -53,6 +53,9 @@ jobs:
         run: |
           DEST=android/app/src/main/java/com/fitech/app
           mkdir -p $DEST
+          # cap add android generates MainActivity.java; remove it so our
+          # MainActivity.kt is the only definition and registerPlugin() runs.
+          rm -f "$DEST/MainActivity.java"
           cp android-src/MediaButtonPlugin.kt $DEST/
           cp android-src/MainActivity.kt $DEST/
 
