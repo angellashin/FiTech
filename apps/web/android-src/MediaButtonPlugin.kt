@@ -29,7 +29,11 @@ class MediaButtonPlugin : Plugin() {
 
     override fun load() {
         instance = this
-        setupMediaSession()
+        try {
+            setupMediaSession()
+        } catch (e: Exception) {
+            android.util.Log.e("MediaButtonPlugin", "setupMediaSession failed", e)
+        }
     }
 
     private fun setupMediaSession() {
@@ -77,7 +81,15 @@ class MediaButtonPlugin : Plugin() {
 
     @PluginMethod
     fun startListening(call: PluginCall) {
-        if (mediaSession == null) setupMediaSession()
+        if (mediaSession == null) {
+            try {
+                setupMediaSession()
+            } catch (e: Exception) {
+                android.util.Log.e("MediaButtonPlugin", "setupMediaSession failed", e)
+                call.reject("MediaSession setup failed: ${e.message}")
+                return
+            }
+        }
         call.resolve()
     }
 
