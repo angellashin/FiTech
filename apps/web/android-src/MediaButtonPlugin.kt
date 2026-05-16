@@ -24,22 +24,20 @@ class MediaButtonPlugin : Plugin() {
     private var mediaSession: MediaSession? = null
     private var tapCount = 0
     private var lastTapTime = 0L
-    private val handler = Handler(Looper.getMainLooper())
+    private var handler: Handler? = null
     private var pendingTap: Runnable? = null
 
     override fun load() {
+        // Keep load() side-effect-free to avoid crashing the app on startup.
+        // MediaSession setup is deferred to startListening() which is called
+        // from JS only after the workout session screen is open.
         instance = this
-        try {
-            setupMediaSession()
-        } catch (e: Exception) {
-            android.util.Log.e("MediaButtonPlugin", "setupMediaSession failed", e)
-        }
+        handler = Handler(Looper.getMainLooper())
     }
 
     private fun setupMediaSession() {
         val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
 
-        // Request audio focus so the system routes media button events to us
         @Suppress("DEPRECATION")
         audioManager.requestAudioFocus(
             { },
@@ -51,6 +49,7 @@ class MediaButtonPlugin : Plugin() {
 
         session.setCallback(object : MediaSession.Callback() {
             override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
+                @Suppress("DEPRECATION")
                 val event = mediaButtonIntent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
                     ?: return false
                 if (event.action == KeyEvent.ACTION_DOWN) {
@@ -59,12 +58,10 @@ class MediaButtonPlugin : Plugin() {
                 return false
             }
 
-            // Called by some earbuds for play/pause
             override fun onPlay() { handleTap(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
             override fun onPause() { handleTap(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
         })
 
-        // Must set an active PlaybackState so Android routes media buttons to this session
         val state = PlaybackState.Builder()
             .setActions(
                 PlaybackState.ACTION_PLAY_PAUSE or
@@ -84,8 +81,8 @@ class MediaButtonPlugin : Plugin() {
         if (mediaSession == null) {
             try {
                 setupMediaSession()
-            } catch (e: Exception) {
-                android.util.Log.e("MediaButtonPlugin", "setupMediaSession failed", e)
+            } catch (e: Throwable) {
+                android.util.Log.e("MediaButtonPlugin", "setupMediaSession failed: $e")
                 call.reject("MediaSession setup failed: ${e.message}")
                 return
             }
@@ -93,7 +90,6 @@ class MediaButtonPlugin : Plugin() {
         call.resolve()
     }
 
-    // Also called from MainActivity.dispatchKeyEvent as a backup for wired earbuds
     fun handleTap(keyCode: Int): Boolean {
         if (keyCode != KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE &&
             keyCode != KeyEvent.KEYCODE_HEADSETHOOK &&
@@ -102,8 +98,9 @@ class MediaButtonPlugin : Plugin() {
             return false
         }
 
+        val h = handler ?: return false
         val now = System.currentTimeMillis()
-        pendingTap?.let { handler.removeCallbacks(it) }
+        pendingTap?.let { h.removeCallbacks(it) }
 
         if (now - lastTapTime < TAP_WINDOW_MS) {
             tapCount++
@@ -121,7 +118,7 @@ class MediaButtonPlugin : Plugin() {
             notifyListeners(eventName, JSObject())
             tapCount = 0
         }
-        handler.postDelayed(pendingTap!!, TAP_WINDOW_MS)
+        h.postDelayed(pendingTap!!, TAP_WINDOW_MS)
         return true
     }
 
@@ -130,5 +127,6 @@ class MediaButtonPlugin : Plugin() {
         mediaSession?.release()
         mediaSession = null
         instance = null
+        handler = null
     }
 }
