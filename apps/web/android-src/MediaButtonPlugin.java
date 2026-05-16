@@ -1,7 +1,9 @@
 package com.fitech.app;
 
 import android.content.Intent;
+import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.os.Handler;
@@ -20,6 +22,7 @@ public class MediaButtonPlugin extends Plugin {
 
     private static final long TAP_WINDOW_MS = 400L;
     private MediaSession mediaSession = null;
+    private AudioTrack silentTrack = null;
     private int tapCount = 0;
     private long lastTapTime = 0L;
     private Handler handler = null;
@@ -31,12 +34,44 @@ public class MediaButtonPlugin extends Plugin {
         handler = new Handler(Looper.getMainLooper());
     }
 
+    private void startSilentAudio() {
+        // Android only routes media buttons to the "current media app" when it's
+        // actively playing audio. We loop a 1-second silent PCM buffer so the OS
+        // treats FiTech as a playing audio app and routes earbud button events here.
+        try {
+            int sampleRate = 8000;
+            int numSamples = sampleRate; // 1 second
+            int bufferBytes = numSamples * 2; // 16-bit PCM = 2 bytes/sample
+
+            silentTrack = new AudioTrack(
+                    AudioManager.STREAM_MUSIC,
+                    sampleRate,
+                    AudioFormat.CHANNEL_OUT_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    bufferBytes,
+                    AudioTrack.MODE_STATIC);
+
+            silentTrack.write(new short[numSamples], 0, numSamples); // all zeros = silence
+            silentTrack.setLoopPoints(0, numSamples, -1);            // loop forever
+            silentTrack.play();
+        } catch (Throwable e) {
+            android.util.Log.w("MediaButtonPlugin", "Silent audio setup failed: " + e);
+        }
+    }
+
     private void setupMediaSession() {
         AudioManager audioManager = (AudioManager)
                 getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
 
         //noinspection deprecation
-        audioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
+        audioManager.requestAudioFocus(
+                focusChange -> { /* no-op: we keep focus */ },
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN);
+
+        // Play silent audio so Android treats us as the active media app and
+        // routes Bluetooth/wired earbud button events to our MediaSession.
+        startSilentAudio();
 
         MediaSession session = new MediaSession(getContext(), "FiTechSession");
 
@@ -123,6 +158,10 @@ public class MediaButtonPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        if (silentTrack != null) {
+            try { silentTrack.stop(); silentTrack.release(); } catch (Throwable e) { /* ignore */ }
+            silentTrack = null;
+        }
         if (mediaSession != null) {
             mediaSession.setActive(false);
             mediaSession.release();
