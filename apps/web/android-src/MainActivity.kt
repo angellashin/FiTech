@@ -6,8 +6,11 @@ import com.getcapacitor.BridgeActivity
 class MainActivity : BridgeActivity() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
-        registerPlugin(MediaButtonPlugin::class.java)
+        // Capacitor's plugin registry is initialized inside BridgeActivity.onCreate,
+        // so registration must happen after super.onCreate (otherwise the plugin
+        // is silently dropped and JS never receives tap events).
         super.onCreate(savedInstanceState)
+        registerPlugin(MediaButtonPlugin::class.java)
     }
 
     // Backup handler for wired earbuds that send direct KeyEvents to the activity
