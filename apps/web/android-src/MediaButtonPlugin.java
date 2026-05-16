@@ -20,7 +20,8 @@ public class MediaButtonPlugin extends Plugin {
 
     public static MediaButtonPlugin instance = null;
 
-    private static final long TAP_WINDOW_MS = 400L;
+    // Wired earbud fallback: counts rapid HEADSETHOOK presses within this window.
+    private static final long TAP_WINDOW_MS = 600L;
     private MediaSession mediaSession = null;
     private AudioTrack silentTrack = null;
     private int tapCount = 0;
@@ -40,8 +41,8 @@ public class MediaButtonPlugin extends Plugin {
         // treats FiTech as a playing audio app and routes earbud button events here.
         try {
             int sampleRate = 8000;
-            int numSamples = sampleRate; // 1 second
-            int bufferBytes = numSamples * 2; // 16-bit PCM = 2 bytes/sample
+            int numSamples = sampleRate;
+            int bufferBytes = numSamples * 2;
 
             silentTrack = new AudioTrack(
                     AudioManager.STREAM_MUSIC,
@@ -51,8 +52,8 @@ public class MediaButtonPlugin extends Plugin {
                     bufferBytes,
                     AudioTrack.MODE_STATIC);
 
-            silentTrack.write(new short[numSamples], 0, numSamples); // all zeros = silence
-            silentTrack.setLoopPoints(0, numSamples, -1);            // loop forever
+            silentTrack.write(new short[numSamples], 0, numSamples);
+            silentTrack.setLoopPoints(0, numSamples, -1);
             silentTrack.play();
         } catch (Throwable e) {
             android.util.Log.w("MediaButtonPlugin", "Silent audio setup failed: " + e);
@@ -65,39 +66,42 @@ public class MediaButtonPlugin extends Plugin {
 
         //noinspection deprecation
         audioManager.requestAudioFocus(
-                focusChange -> { /* no-op: we keep focus */ },
+                focusChange -> { },
                 AudioManager.STREAM_MUSIC,
                 AudioManager.AUDIOFOCUS_GAIN);
 
-        // Play silent audio so Android treats us as the active media app and
-        // routes Bluetooth/wired earbud button events to our MediaSession.
         startSilentAudio();
 
         MediaSession session = new MediaSession(getContext(), "FiTechSession");
 
         session.setCallback(new MediaSession.Callback() {
+            // Bluetooth earbuds send AVRCP commands — the earbud firmware handles
+            // multi-tap detection internally and sends already-interpreted commands:
+            //   1 tap  → onPlay / onPause / onMediaButtonEvent(PLAY_PAUSE)
+            //   2 taps → onSkipToNext / onMediaButtonEvent(MEDIA_NEXT)
+            //   3 taps → onSkipToPrevious / onMediaButtonEvent(MEDIA_PREVIOUS)
+            // Wired earbuds send raw HEADSETHOOK keypresses, so we still count those.
+
             @Override
             public boolean onMediaButtonEvent(Intent mediaButtonIntent) {
                 //noinspection deprecation
                 KeyEvent event = mediaButtonIntent.getParcelableExtra(Intent.EXTRA_KEY_EVENT);
-                if (event == null) return false;
-                if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                    return handleTap(event.getKeyCode());
-                }
-                return false;
+                if (event == null || event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                return handleKeyCode(event.getKeyCode());
             }
 
-            @Override
-            public void onPlay() { handleTap(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE); }
-
-            @Override
-            public void onPause() { handleTap(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE); }
+            @Override public void onPlay()           { fireTap("singleTap"); }
+            @Override public void onPause()          { fireTap("singleTap"); }
+            @Override public void onSkipToNext()     { fireTap("doubleTap"); }
+            @Override public void onSkipToPrevious() { fireTap("tripleTap"); }
         });
 
         PlaybackState state = new PlaybackState.Builder()
                 .setActions(PlaybackState.ACTION_PLAY_PAUSE
                         | PlaybackState.ACTION_PLAY
-                        | PlaybackState.ACTION_PAUSE)
+                        | PlaybackState.ACTION_PAUSE
+                        | PlaybackState.ACTION_SKIP_TO_NEXT
+                        | PlaybackState.ACTION_SKIP_TO_PREVIOUS)
                 .setState(PlaybackState.STATE_PLAYING,
                         PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
                 .build();
@@ -107,30 +111,38 @@ public class MediaButtonPlugin extends Plugin {
         mediaSession = session;
     }
 
-    @PluginMethod
-    public void startListening(PluginCall call) {
-        if (mediaSession == null) {
-            try {
-                setupMediaSession();
-            } catch (Throwable e) {
-                android.util.Log.e("MediaButtonPlugin", "setupMediaSession failed: " + e);
-                call.reject("MediaSession setup failed: " + e.getMessage());
-                return;
-            }
-        }
-        call.resolve();
+    // Called from MediaSession.Callback for already-interpreted AVRCP commands.
+    private void fireTap(String eventName) {
+        if (handler == null) return;
+        handler.post(() -> {
+            notifyListeners(eventName, new JSObject());
+        });
     }
 
-    public boolean handleTap(int keyCode) {
-        if (keyCode != KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
-                && keyCode != KeyEvent.KEYCODE_HEADSETHOOK
-                && keyCode != KeyEvent.KEYCODE_MEDIA_PLAY
-                && keyCode != KeyEvent.KEYCODE_MEDIA_PAUSE) {
-            return false;
+    // Routes a raw keycode. Bluetooth earbuds arriving here are already AVRCP-mapped;
+    // wired HEADSETHOOK is counted within a time window.
+    public boolean handleKeyCode(int keyCode) {
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_MEDIA_NEXT:
+                fireTap("doubleTap");
+                return true;
+            case KeyEvent.KEYCODE_MEDIA_PREVIOUS:
+                fireTap("tripleTap");
+                return true;
+            case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
+            case KeyEvent.KEYCODE_MEDIA_PLAY:
+            case KeyEvent.KEYCODE_MEDIA_PAUSE:
+            case KeyEvent.KEYCODE_HEADSETHOOK:
+                countWiredTap();
+                return true;
+            default:
+                return false;
         }
+    }
 
-        if (handler == null) return false;
-
+    // Tap-counting for wired earbuds that send repeated HEADSETHOOK events.
+    private void countWiredTap() {
+        if (handler == null) return;
         long now = System.currentTimeMillis();
         if (pendingTap != null) handler.removeCallbacks(pendingTap);
 
@@ -145,15 +157,33 @@ public class MediaButtonPlugin extends Plugin {
             @Override
             public void run() {
                 String eventName;
-                if (tapCount >= 3) eventName = "tripleTap";
+                if (tapCount >= 3)    eventName = "tripleTap";
                 else if (tapCount == 2) eventName = "doubleTap";
-                else eventName = "singleTap";
+                else                  eventName = "singleTap";
                 notifyListeners(eventName, new JSObject());
                 tapCount = 0;
             }
         };
         handler.postDelayed(pendingTap, TAP_WINDOW_MS);
-        return true;
+    }
+
+    // Legacy entry point kept for MainActivity.dispatchKeyEvent (wired earbud backup).
+    public boolean handleTap(int keyCode) {
+        return handleKeyCode(keyCode);
+    }
+
+    @PluginMethod
+    public void startListening(PluginCall call) {
+        if (mediaSession == null) {
+            try {
+                setupMediaSession();
+            } catch (Throwable e) {
+                android.util.Log.e("MediaButtonPlugin", "setupMediaSession failed: " + e);
+                call.reject("MediaSession setup failed: " + e.getMessage());
+                return;
+            }
+        }
+        call.resolve();
     }
 
     @Override
