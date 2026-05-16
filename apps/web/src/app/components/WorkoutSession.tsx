@@ -8,6 +8,7 @@ import {
 } from '../utils/workoutHistory';
 import { useAudioCoach } from '../hooks/useAudioCoach';
 import { useEarbudControls } from '../hooks/useEarbudControls';
+import { getUserSettings } from '../utils/userSettings';
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
@@ -27,7 +28,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const [events, setEvents] = useState<WorkoutSessionEvent[]>([]);
   const [startedAt] = useState(() => new Date().toISOString());
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const { audioGuidance: savedAudioGuidance, restNotifications: restNotificationsEnabled } = getUserSettings();
+  const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
@@ -62,12 +64,14 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (isResting && restTimeLeft > 0) {
       const timer = setTimeout(() => {
         setRestTimeLeft(restTimeLeft - 1);
-        if (restTimeLeft === 11) playTone(880, 0.35);      // 10s: 띵!
-        if (restTimeLeft === 4)  playTone(660, 0.25);      // 3s: 띵
-        if (restTimeLeft === 3)  playTone(880, 0.25);      // 2s: 띵
-        if (restTimeLeft === 2)  playTone(1100, 0.25);     // 1s: 띵
+        if (restNotificationsEnabled) {
+          if (restTimeLeft === 11) playTone(880, 0.35);    // 10s: 띵!
+          if (restTimeLeft === 4)  playTone(660, 0.25);    // 3s: 띵
+          if (restTimeLeft === 3)  playTone(880, 0.25);    // 2s: 띵
+          if (restTimeLeft === 2)  playTone(1100, 0.25);   // 1s: 띵
+        }
         if (restTimeLeft === 1) {
-          playTone(440, 1.2, 0.5);                         // 0s: 땅!
+          if (restNotificationsEnabled) playTone(440, 1.2, 0.5); // 0s: 땅!
           setAudioMessage('Rest complete. Ready for next set.');
         }
       }, 1000);

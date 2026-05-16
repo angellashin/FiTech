@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Exercise, WorkoutPlan } from './domain/workout';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
@@ -7,11 +7,16 @@ import { PlanPreview } from './components/PlanPreview';
 import { WorkoutSession } from './components/WorkoutSession';
 import { WorkoutComplete } from './components/WorkoutComplete';
 import { Profile } from './components/Profile';
+import { getUserSettings, applyDarkMode } from './utils/userSettings';
 
 type Screen = 'login' | 'home' | 'setup' | 'preview' | 'session' | 'complete' | 'profile';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
+
+  useEffect(() => {
+    applyDarkMode(getUserSettings().darkMode);
+  }, []);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<Exercise[] | null>(null);
   const [previewSource, setPreviewSource] = useState<'setup' | 'home'>('setup');
@@ -50,6 +55,15 @@ export default function App() {
   const handleBackToHome = () => {
     setCurrentScreen('home');
     setWorkoutPlan(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('fitech_user_name');
+    localStorage.removeItem('fitech_user_goal');
+    localStorage.removeItem('fitech_avatar_color');
+    setWorkoutPlan(null);
+    setCompletedWorkout(null);
+    setCurrentScreen('login');
   };
 
   const handleGoToProfile = () => {
@@ -95,7 +109,7 @@ export default function App() {
         {currentScreen === 'complete' && completedWorkout && (
           <WorkoutComplete exercises={completedWorkout} onBackToHome={handleBackToHome} />
         )}
-        {currentScreen === 'profile' && <Profile onBackToHome={handleBackToHome} />}
+        {currentScreen === 'profile' && <Profile onBackToHome={handleBackToHome} onLogout={handleLogout} />}
       </div>
     </div>
   );

@@ -46,6 +46,38 @@ export interface WorkoutSessionRecord {
 
 const HISTORY_KEY = 'fitech_workout_history';
 const SESSION_HISTORY_KEY = 'fitech_workout_sessions';
+const SAVED_ROUTINES_KEY = 'fitech_saved_routines';
+
+export interface SavedRoutine {
+  id: string;
+  name: string;
+  savedAt: string;
+  exercises: Exercise[];
+}
+
+export const getSavedRoutines = (): SavedRoutine[] =>
+  safeReadArray<SavedRoutine>(SAVED_ROUTINES_KEY);
+
+export const saveRoutine = (name: string, exercises: Exercise[]): SavedRoutine => {
+  const routines = getSavedRoutines();
+  const routine: SavedRoutine = {
+    id: `routine_${Date.now()}`,
+    name: name.trim(),
+    savedAt: new Date().toISOString(),
+    exercises: exercises.map((ex) => ({
+      ...ex,
+      setDetails: ex.setDetails?.map((s) => ({ ...s, completed: false })) ?? [],
+    })),
+  };
+  routines.push(routine);
+  localStorage.setItem(SAVED_ROUTINES_KEY, JSON.stringify(routines));
+  return routine;
+};
+
+export const deleteRoutine = (id: string): void => {
+  const updated = getSavedRoutines().filter((r) => r.id !== id);
+  localStorage.setItem(SAVED_ROUTINES_KEY, JSON.stringify(updated));
+};
 
 const safeReadArray = <T>(key: string): T[] => {
   try {

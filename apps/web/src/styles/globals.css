@@ -40,3 +40,13 @@
     0 0 40px rgba(59, 130, 246, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
+
+html.light-mode {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+html.light-mode img,
+html.light-mode video,
+html.light-mode canvas {
+  filter: invert(1) hue-rotate(180deg);
+}

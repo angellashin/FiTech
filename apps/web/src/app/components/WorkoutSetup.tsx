@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowLeft, Wifi, WifiOff, ChevronDown, ChevronRight } from 'lucide-react';
 import type { WorkoutGoal, MuscleGroup, WorkoutPlan, WorkoutIntensity } from '../domain/workout';
-import { generateWorkoutPlan } from '../services/workoutPlanner';
+import { generateWorkoutPlanWithLLM } from '../services/llmWorkoutPlanner';
+import {
+  getGymProfile,
+  saveGymProfile,
+  EQUIPMENT_CATEGORIES,
+  EQUIPMENT_LABELS,
+  type Equipment,
+} from '../utils/gymProfile';
 
 interface WorkoutSetupProps {
   onPlanGenerated: (plan: WorkoutPlan) => void;
@@ -14,6 +21,17 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
   const [duration, setDuration] = useState<number>(45);
   const [intensity, setIntensity] = useState<WorkoutIntensity>('normal');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [planSource, setPlanSource] = useState<'llm' | 'local' | null>(null);
+  const [showGym, setShowGym] = useState(false);
+  const [gymEquipment, setGymEquipment] = useState<Equipment[]>(() => getGymProfile().equipment);
+
+  const toggleGymEquipment = (item: Equipment) => {
+    const next = gymEquipment.includes(item)
+      ? gymEquipment.filter((e) => e !== item)
+      : [...gymEquipment, item];
+    setGymEquipment(next);
+    saveGymProfile({ equipment: next });
+  };
 
   const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
     { value: 'chest', label: 'Chest' },
@@ -43,13 +61,13 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
     );
   };
 
-  const generatePlan = () => {
+  const generatePlan = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      const plan: WorkoutPlan = generateWorkoutPlan(goal, muscleGroups, duration, intensity);
-      setIsGenerating(false);
-      onPlanGenerated(plan);
-    }, 800);
+    setPlanSource(null);
+    const { plan, source } = await generateWorkoutPlanWithLLM(goal, muscleGroups, duration, intensity);
+    setPlanSource(source);
+    setIsGenerating(false);
+    onPlanGenerated(plan);
   };
 
   return (
@@ -138,10 +156,85 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
               ))}
             </div>
           </div>
+          {/* My Gym */}
+          <div>
+            <button
+              onClick={() => setShowGym((v) => !v)}
+              className="w-full flex items-center justify-between py-1 mb-1"
+            >
+              <label className="text-sm font-medium text-neutral-300 cursor-pointer">
+                My Gym Equipment
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-500">
+                  {gymEquipment.length === 0 ? 'All exercises' : `${gymEquipment.length} selected`}
+                </span>
+                {showGym
+                  ? <ChevronDown className="w-4 h-4 text-neutral-500" />
+                  : <ChevronRight className="w-4 h-4 text-neutral-500" />
+                }
+              </div>
+            </button>
+            {showGym && (
+              <div className="glass-dark rounded-2xl p-4 space-y-4">
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  체크한 기구만 사용하는 운동으로 AI가 구성해줘요. 미선택 시 전체 대상.
+                </p>
+                {EQUIPMENT_CATEGORIES.map((cat) => (
+                  <div key={cat.label}>
+                    <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+                      {cat.label}
+                    </div>
+                    <div className="space-y-1">
+                      {cat.items.map((item) => {
+                        const checked = gymEquipment.includes(item);
+                        return (
+                          <button
+                            key={item}
+                            onClick={() => toggleGymEquipment(item)}
+                            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 transition-colors text-left"
+                          >
+                            <div
+                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                checked ? 'bg-blue-600 border-blue-600' : 'border-neutral-600'
+                              }`}
+                            >
+                              {checked && (
+                                <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className={`text-sm ${checked ? 'text-white' : 'text-neutral-400'}`}>
+                              {EQUIPMENT_LABELS[item]}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {gymEquipment.length > 0 && (
+                  <button
+                    onClick={() => { setGymEquipment([]); saveGymProfile({ equipment: [] }); }}
+                    className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-6 space-y-3">
+        {planSource === 'local' && (
+          <div className="flex items-center justify-center gap-2 text-xs text-neutral-500">
+            <WifiOff className="w-3 h-3" />
+            <span>AI unavailable — generated with local planner</span>
+          </div>
+        )}
         <button
           onClick={generatePlan}
           disabled={isGenerating}
@@ -150,7 +243,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
           {isGenerating ? (
             <>
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span className="font-semibold">Generating Plan...</span>
+              <span className="font-semibold">AI is building your plan...</span>
             </>
           ) : (
             <>
@@ -158,6 +251,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
                 <Sparkles className="w-5 h-5" />
               </div>
               <span className="font-semibold">Generate Plan</span>
+              <Wifi className="w-4 h-4 opacity-60" />
             </>
           )}
         </button>

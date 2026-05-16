@@ -98,7 +98,7 @@ const durationToExerciseCount = (duration: number) => {
   return 6;
 };
 
-const adaptForGoal = (template: ExerciseTemplate, goal: WorkoutGoal): ExerciseTemplate => {
+export const adaptForGoal = (template: ExerciseTemplate, goal: WorkoutGoal): ExerciseTemplate => {
   switch (goal) {
     case 'strength':
       return {
