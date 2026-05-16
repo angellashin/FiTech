@@ -22,7 +22,7 @@ const getMediaButtonPlugin = () => {
 - 결과: `getMediaButtonPlugin()`이 항상 `null` → listener 미등록 → 안드로이드에서 `notifyListeners("singleTap", ...)`를 발사해도 JS에 듣는 사람이 0명 → 사라짐. 사용자가 APK 설치하고 이어폰 눌러도 무반응.
 
 추가로 발견한 부수 결함:
-1. `MainActivity.kt`에서 `registerPlugin(MediaButtonPlugin::class.java)`이 `super.onCreate(savedInstanceState)` **전에** 호출됨 → BridgeActivity의 플러그인 매니저가 init 되기 전이라 무시될 가능성.
+1. ~~`MainActivity.kt`에서 `registerPlugin`이 `super.onCreate` 전에 호출됨~~ → **이건 sangjun이 맞았던 거였음**. 작업 중 한번 뒤집어봤다가 device test에서 "MediaButton plugin is not implemented on android" 에러가 떠서 즉시 revert. 이유: `BridgeActivity.onCreate`는 `super.onCreate(savedInstanceState)` 내부에서 `load()`를 호출해 Bridge를 만들고, 이때 `initialPlugins` 리스트를 읽음. `registerPlugin()`은 그 리스트에 추가만 하기 때문에 **반드시 super.onCreate 호출 전에** 해야 함. 5/14 sangjun 코드가 정답이고, 따로 손댈 필요 없음.
 2. MediaSession에 실제 오디오 재생 없음 → 일부 안드로이드 OEM/버전에서 미디어 버튼 라우팅 불안정.
 3. 디바이스에서 어디서 끊겼는지 확인할 수단 부재 (콘솔도 못 봄) → 디버깅 사이클이 "APK 다시 빌드 → 깔고 → 안 됨 → 추측"의 무한 루프.
 
@@ -42,7 +42,7 @@ const getMediaButtonPlugin = () => {
   - 헤더에 `Info` 버튼 추가 → 진단 오버레이 토글. 오버레이는 platform/active/rawEventCount/lastRawEvent/lastTap/errors 표시. **다음에 또 이어폰이 안 잡힐 때 이거 보면 어느 단계에서 끊겼는지 바로 보임**.
   - Earbud Controls 카드 헤더에 작은 라이브 인디케이터(점 + "Native"/"Browser"/"Off") 추가.
 - `apps/web/android-src/MainActivity.kt`
-  - `registerPlugin()`을 `super.onCreate()` **뒤로** 이동. 주석으로 이유 명시.
+  - 한번 순서 바꿨다가 다시 sangjun 원래 순서(`super.onCreate` 전에 `registerPlugin`)로 revert. 주석으로 이유 자세히 명시. 이 파일은 sangjun과 사실상 동일하되 주석만 추가된 상태.
 
 ### 안 한 것 (의도적)
 - 무음 audio loop는 안드로이드 OEM 안정성을 위해서도 도움될 수 있지만, sangjun 네이티브 플러그인은 이미 `MediaSession.isActive = true` + PlaybackState로 처리 중이라 굳이 안드로이드 빌드에서 추가 audio 재생을 안 시킴 (브라우저 경로에서만 무음 audio 재생). 만약 일부 안드로이드 기기에서 여전히 안 잡히면, 이때 native 측에서 무음 미디어 재생 추가하는 게 다음 액션.
