@@ -53,11 +53,10 @@ jobs:
         run: |
           DEST=android/app/src/main/java/com/fitech/app
           mkdir -p $DEST
-          # cap add android generates MainActivity.java; remove it so our
-          # MainActivity.kt is the only definition and registerPlugin() runs.
-          rm -f "$DEST/MainActivity.java"
-          cp android-src/MediaButtonPlugin.kt $DEST/
-          cp android-src/MainActivity.kt $DEST/
+          # Replace the generated MainActivity.java with our version that
+          # calls registerPlugin() before super.onCreate().
+          cp android-src/MediaButtonPlugin.java $DEST/
+          cp android-src/MainActivity.java $DEST/
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
