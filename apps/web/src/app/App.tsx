@@ -20,6 +20,7 @@ export default function App() {
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<Exercise[] | null>(null);
   const [previewSource, setPreviewSource] = useState<'setup' | 'home'>('setup');
+  const [homeKey, setHomeKey] = useState(0);
   const handleLogin = () => {
     setCurrentScreen('home');
   };
@@ -53,6 +54,7 @@ export default function App() {
   };
 
   const handleBackToHome = () => {
+    setHomeKey((k) => k + 1); // force Home to remount so savedRoutines are re-read
     setCurrentScreen('home');
     setWorkoutPlan(null);
   };
@@ -87,7 +89,7 @@ export default function App() {
       <div className="w-full max-w-[430px] relative flex flex-col bg-neutral-950 text-white overflow-hidden h-full">
         {currentScreen === 'login' && <Login onLogin={handleLogin} />}
         {currentScreen === 'home' && (
-          <Home onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} onLoadPlan={handleLoadPlan} />
+          <Home key={homeKey} onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} onLoadPlan={handleLoadPlan} />
         )}
         {currentScreen === 'setup' && (
           <WorkoutSetup onPlanGenerated={handlePlanGenerated} onBack={handleBackFromSetup} />
