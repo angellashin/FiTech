@@ -60,15 +60,10 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    // Clear all user data so a different person starts fresh
+    // Only clear the name so Login can detect a user switch on next sign-in.
+    // Workout data is preserved: if the same name re-enters, history is intact.
+    // If a different name enters, Login clears the data at that point.
     localStorage.removeItem('fitech_user_name');
-    localStorage.removeItem('fitech_user_goal');
-    localStorage.removeItem('fitech_avatar_color');
-    localStorage.removeItem('fitech_workout_history');
-    localStorage.removeItem('fitech_workout_sessions');
-    localStorage.removeItem('fitech_saved_routines');
-    localStorage.removeItem('fitech_gym_profile');
-    localStorage.removeItem('fitech_settings');
     setWorkoutPlan(null);
     setCompletedWorkout(null);
     setCurrentScreen('login');

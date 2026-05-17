@@ -17,6 +17,19 @@ export function Login({ onLogin }: LoginProps) {
 
     setIsLoading(true);
     setSyncMessage('Preparing cloud sync...');
+
+    // If a different user logs in, clear all previous user's data
+    const previousName = localStorage.getItem('fitech_user_name');
+    if (previousName && previousName !== displayName) {
+      localStorage.removeItem('fitech_workout_history');
+      localStorage.removeItem('fitech_workout_sessions');
+      localStorage.removeItem('fitech_saved_routines');
+      localStorage.removeItem('fitech_gym_profile');
+      localStorage.removeItem('fitech_settings');
+      localStorage.removeItem('fitech_user_goal');
+      localStorage.removeItem('fitech_avatar_color');
+    }
+
     localStorage.setItem('fitech_user_name', displayName);
 
     try {
