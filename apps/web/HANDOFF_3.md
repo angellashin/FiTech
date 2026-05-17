@@ -250,11 +250,14 @@ VITE_GEMINI_API_KEY_3=...
 2. **다른 앱의 미디어세션 점유** — 음악 앱(Spotify, 유튜브 뮤직 등)이 미디어 버튼을 가로챔
 
 #### 변경 사항 (`useEarbudControls.ts`)
-- silent audio 볼륨 `0.0001` → `0.01` (일부 Android 빌드에서 0에 가까운 볼륨은 "재생 중" 미인식)
-- 오디오 재생 상태 추적 → `EarbudDiagnostics.isAudioPlaying: boolean` 필드 추가
+- silent audio 볼륨 `0.0001` → **`1.0`** (모든-0 WAV = 실제 무음이지만 volume 1.0이어야 Android 오디오 포커스 시스템이 "미디어 재생 중"으로 인식해 AVRCP 라우팅됨)
+- `audio.style.display = 'none'` 후 **`document.body.appendChild(audio)`** — 일부 Android Chrome 빌드는 DOM에 없는 audio 요소는 미디어 세션 등록을 거부함
+- `play`/`pause` 이벤트 리스너 추가 → `EarbudDiagnostics.isAudioPlaying: boolean` 실시간 추적
 - `activateAudio()` 함수 노출 — 사용자 제스처 컨텍스트에서 명시적으로 오디오 재생 트리거
 - 기존 `{ once: true }` 리스너 → 지속적 리스너로 변경 (모든 터치/클릭 시 paused면 재시도)
+- `seekforward` / `seekbackward` MediaSession 핸들러 추가 (일부 이어폰 모델이 next/previous 대신 이 이벤트 사용)
 - 훅 반환 타입 변경: `EarbudDiagnostics` → `{ diagnostics, activateAudio }`
+- 정리(cleanup) 시 audio 요소를 DOM에서 제거, blob URL revoke
 
 #### 변경 사항 (`WorkoutSession.tsx`)
 - 진단 패널에 **"Silent audio: playing ✓ / not playing ✗"** 실시간 표시
@@ -266,6 +269,44 @@ VITE_GEMINI_API_KEY_3=...
 2. "not playing"이면 → "Tap here to activate" 버튼 탭
 3. playing인데도 Raw events 0이면 → Spotify / 유튜브 뮤직 등 완전히 종료 후 재시도
 4. 여전히 안 되면 → Capacitor APK 방식 사용 (native MediaButton 플러그인으로 100% 동작)
+
+---
+
+### 11. Android APK 빌드 & TTS 네이티브 전환
+
+#### APK 빌드
+GitHub Actions `build-apk.yml` 워크플로우가 **`main` 브랜치 push 시 자동으로** APK를 빌드함.  
+Actions → Build Android APK → 가장 최근 성공 실행 → **Artifacts** 섹션에서 `FiTech-debug-{sha}` ZIP 다운로드 → 압축 해제 후 `app-debug.apk` 폰으로 전송 후 설치.
+
+빌드 파이프라인 (`build-apk.yml`):
+1. `pnpm install --no-frozen-lockfile`
+2. `pnpm build` (GITHUB_PAGES=false → base URL = `/`)
+3. `npx cap init` → `npx cap add android` → `npx cap sync android`
+4. `android-src/MainActivity.java`, `android-src/MediaButtonPlugin.java` 복사 (custom native plugin)
+5. `./gradlew assembleDebug`
+
+> 로컬 Android Studio 없이 클라우드에서 전체 빌드. AhnLab Safe Transaction 등 보안 소프트웨어의 영향 없음.
+
+#### TTS — Capacitor 네이티브 플러그인으로 교체 (`useAudioCoach.ts`)
+
+**문제:** Capacitor Android WebView에서 `window.speechSynthesis`가 존재하지 않아 TTS가 완전히 동작하지 않음.
+
+**해결:** `@capacitor-community/text-to-speech@6.1.0` 플러그인 도입.
+
+```
+Native Android (Capacitor.isNativePlatform() === true)
+  → TextToSpeech.speak({ text, lang: 'en-US', rate: 0.95, ... })
+  → 폰 TTS 엔진(Google TTS) 직접 호출 → 정상 동작
+
+Browser
+  → 기존 Web Speech API (speechSynthesis) 유지
+  → utterance.lang = 'en-US', 명시적 voice 선택 추가 (Android Chrome 호환성)
+```
+
+**설치:** `npm install @capacitor-community/text-to-speech@6.1.0 --legacy-peer-deps`  
+(최신 버전 8.x는 Capacitor 8+ 전용 → 6.x 버전 사용)
+
+**폰 TTS 엔진 확인:** 폰 설정 → 접근성 → 텍스트 음성 변환 → Google TTS 엔진 활성화, 영어 목소리 다운로드 필요.
 
 ---
 
@@ -290,7 +331,9 @@ VITE_GEMINI_API_KEY_3=...
 | `src/app/components/Home.tsx` | My Routines 섹션 항상 표시 + empty state, Recent Workouts 위로 위치 이동 |
 | `src/app/utils/workoutHistory.ts` | SavedRoutine 타입 + getSavedRoutines / saveRoutine / deleteRoutine 추가 |
 | `src/app/services/workoutPlanner.ts` | `adaptForGoal` export 추가 (llmWorkoutPlanner에서 재사용) |
-| `src/app/hooks/useEarbudControls.ts` | isAudioPlaying 진단, activateAudio 함수 노출, 볼륨 조정, 리스너 방식 변경 |
+| `src/app/hooks/useEarbudControls.ts` | isAudioPlaying 진단, activateAudio 함수 노출, 볼륨 1.0, DOM 첨부, seekforward/seekbackward 핸들러, 정리 개선 |
+| `src/app/hooks/useAudioCoach.ts` | Capacitor native TTS 플러그인 분기 추가, browser 경로 voice/lang 명시 |
+| `package.json` | `@capacitor-community/text-to-speech@6.1.0` 추가 |
 | `apps/web/.env.local` | VITE_GEMINI_API_KEY, _2, _3 추가 |
 
 ---
@@ -397,6 +440,8 @@ VITE_GEMINI_API_KEY_3=AIzaSyClqM71Nw5EprV0uXIJSxagbzsZcbXEBfY
 - Gemini 2.5 Flash API (운동 계획 LLM, 없으면 로컬 플래너 폴백)
 - localStorage — 모든 사용자 데이터 로컬 저장
 - Web Audio API (운동 알림음)
-- Web Speech API (TTS 음성 안내)
+- Web Speech API (TTS 음성 안내 — 브라우저)
+- `@capacitor-community/text-to-speech` (TTS 음성 안내 — Android APK)
 - Capacitor 6 (Android APK 빌드)
-- GitHub Pages (자동 배포 — `main` 브랜치 push 시 → https://angellashin.github.io/FiTech/)
+- GitHub Actions `build-apk.yml` (APK 자동 빌드 — main push 시)
+- GitHub Pages (웹 자동 배포 — `main` 브랜치 push 시 → https://angellashin.github.io/FiTech/)
