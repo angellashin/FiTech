@@ -144,6 +144,47 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
           </div>
         </div>
 
+        {/* My Routines */}
+        {savedRoutines.length > 0 && (
+          <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Bookmark className="w-5 h-5 text-blue-400" />
+              </div>
+              <h2 className="text-lg font-semibold">My Routines</h2>
+            </div>
+            <div className="space-y-3">
+              {savedRoutines.map((routine) => (
+                <div key={routine.id} className="glass-dark rounded-xl p-4 shadow-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="font-medium">{routine.name}</div>
+                      <div className="text-sm text-neutral-400 mt-0.5">
+                        {routine.exercises.length} exercises
+                        {' · '}
+                        {routine.exercises.map((e) => e.muscleGroup).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteRoutine(routine.id)}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => onLoadPlan(routineToPlan(routine))}
+                    className="w-full flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl py-3 text-sm font-medium transition-all mt-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Load Routine
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Recent Workouts */}
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
           <div className="flex items-center gap-2 mb-4">
@@ -208,47 +249,6 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
             )}
           </div>
         </div>
-
-        {/* My Routines */}
-        {savedRoutines.length > 0 && (
-          <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Bookmark className="w-5 h-5 text-blue-400" />
-              </div>
-              <h2 className="text-lg font-semibold">My Routines</h2>
-            </div>
-            <div className="space-y-3">
-              {savedRoutines.map((routine) => (
-                <div key={routine.id} className="glass-dark rounded-xl p-4 shadow-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="font-medium">{routine.name}</div>
-                      <div className="text-sm text-neutral-400 mt-0.5">
-                        {routine.exercises.length} exercises
-                        {' · '}
-                        {routine.exercises.map((e) => e.muscleGroup).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteRoutine(routine.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => onLoadPlan(routineToPlan(routine))}
-                    className="w-full flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl py-3 text-sm font-medium transition-all mt-2"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Load Routine
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Earbud Controls */}
         <div
