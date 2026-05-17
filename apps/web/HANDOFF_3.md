@@ -287,54 +287,65 @@ Actions → Build Android APK → 가장 최근 성공 실행 → **Artifacts** 
 
 > 로컬 Android Studio 없이 클라우드에서 전체 빌드. AhnLab Safe Transaction 등 보안 소프트웨어의 영향 없음.
 
-#### TTS — Capacitor 네이티브 플러그인으로 교체 (`useAudioCoach.ts`)
+#### TTS — 커스텀 Java 플러그인으로 교체 (`useAudioCoach.ts`)
 
 **문제:** Capacitor Android WebView에서 `window.speechSynthesis`가 존재하지 않아 TTS가 완전히 동작하지 않음.
 
-**해결:** `@capacitor-community/text-to-speech@6.1.0` 플러그인 도입.
+**해결:** Android 내장 `android.speech.tts.TextToSpeech` API를 직접 wrapping한 커스텀 Capacitor 플러그인 구현.  
+(npm TTS 플러그인은 Gradle 의존성 충돌로 빌드 실패 → 직접 Java로 작성)
 
 ```
 Native Android (Capacitor.isNativePlatform() === true)
-  → TextToSpeech.speak({ text, lang: 'en-US', rate: 0.95, ... })
-  → 폰 TTS 엔진(Google TTS) 직접 호출 → 정상 동작
+  → FiTechTTS.speak({ text, rate: 0.95, pitch: 1.0 })
+  → FiTechTTSPlugin.java → android.speech.tts.TextToSpeech → 폰 TTS 엔진(Google TTS)
 
 Browser
   → 기존 Web Speech API (speechSynthesis) 유지
   → utterance.lang = 'en-US', 명시적 voice 선택 추가 (Android Chrome 호환성)
 ```
 
-**설치:** `npm install @capacitor-community/text-to-speech@6.1.0 --legacy-peer-deps`  
-(최신 버전 8.x는 Capacitor 8+ 전용 → 6.x 버전 사용)
+**신규 파일:**
+- `android-src/FiTechTTSPlugin.java` — `@CapacitorPlugin(name = "FiTechTTS")`, `speak()` / `stop()` 메서드, `OnInitListener` 구현
+- `src/app/lib/fitechTTS.ts` — TypeScript 플러그인 인터페이스 (`registerPlugin<FiTechTTSPlugin>('FiTechTTS')`)
 
-**폰 TTS 엔진 확인:** 폰 설정 → 접근성 → 텍스트 음성 변환 → Google TTS 엔진 활성화, 영어 목소리 다운로드 필요.
+**등록:** `android-src/MainActivity.java`에 `registerPlugin(FiTechTTSPlugin.class)` 추가  
+**CI:** `build-apk.yml`에 `cp android-src/FiTechTTSPlugin.java $DEST/` 추가
+
+**폰 TTS 엔진 확인:** 폰 설정 → 접근성 → 텍스트 음성 변환 → Google TTS 엔진 활성화 필요.
 
 ---
 
 ## 변경된 파일 목록
 
+### 신규 파일
+
+| 파일 | 내용 |
+|------|------|
+| `src/app/utils/userSettings.ts` | 설정 read/write/applyDarkMode |
+| `src/app/utils/gymProfile.ts` | 헬스장 기구 프로필 read/write |
+| `src/app/utils/workoutHistory.ts` | SavedRoutine 타입 + getSavedRoutines / saveRoutine / deleteRoutine |
+| `src/app/services/llmWorkoutPlanner.ts` | Gemini API 호출, 프롬프트 빌드, 폴백 로직 |
+| `src/app/lib/fitechTTS.ts` | FiTechTTS Capacitor 플러그인 TypeScript 인터페이스 |
+| `android-src/FiTechTTSPlugin.java` | Android 내장 TTS wrapping Capacitor 플러그인 |
+
+### 수정된 파일
+
 | 파일 | 변경 내용 |
 |------|----------|
-| `src/app/utils/userSettings.ts` | **신규** — 설정 read/write/applyDarkMode |
-| `src/app/utils/gymProfile.ts` | **신규** — 헬스장 기구 프로필 read/write |
-| `src/app/services/llmWorkoutPlanner.ts` | **신규** — Gemini API 호출, 프롬프트 빌드, 폴백 로직 |
 | `src/styles/globals.css` | light-mode CSS 필터 추가 |
-| `src/app/utils/userSettings.ts` | **신규** — 설정 read/write/applyDarkMode |
-| `src/app/utils/gymProfile.ts` | **신규** — 헬스장 기구 프로필 read/write |
-| `src/app/services/llmWorkoutPlanner.ts` | **신규** — Gemini API 호출, 프롬프트 빌드, 폴백 로직 |
-| `src/styles/globals.css` | light-mode CSS 필터 추가 |
-| `src/app/App.tsx` | 다크모드 초기 적용, handleLogout 수정(이름만 삭제), homeKey 추가, Profile에 onLogout prop 전달 |
+| `src/app/App.tsx` | 다크모드 초기 적용, handleLogout 수정(이름만 삭제), homeKey 추가 |
 | `src/app/components/Login.tsx` | 로그인 시 이름 비교 → 다른 사용자면 데이터 초기화 |
 | `src/app/components/Profile.tsx` | Settings 토글 연결, 프로필 편집 모달, About/Help accordion, 로그아웃, Cloud Sync 조건부 표시 |
-| `src/app/components/WorkoutSession.tsx` | audioEnabled 초기값을 설정에서 읽기, restNotifications 조건 추가, 모바일 오디오 언락, 이어폰 진단 패널 개선 |
-| `src/app/components/WorkoutSetup.tsx` | My Gym Equipment 섹션 추가 (Intensity 아래), LLM 호출 연결 |
-| `src/app/components/WorkoutComplete.tsx` | 루틴 저장 UI (이름 입력 + Save 버튼 + 완료 피드백) |
-| `src/app/components/Home.tsx` | My Routines 섹션 항상 표시 + empty state, Recent Workouts 위로 위치 이동 |
-| `src/app/utils/workoutHistory.ts` | SavedRoutine 타입 + getSavedRoutines / saveRoutine / deleteRoutine 추가 |
-| `src/app/services/workoutPlanner.ts` | `adaptForGoal` export 추가 (llmWorkoutPlanner에서 재사용) |
-| `src/app/hooks/useEarbudControls.ts` | isAudioPlaying 진단, activateAudio 함수 노출, 볼륨 1.0, DOM 첨부, seekforward/seekbackward 핸들러, 정리 개선 |
-| `src/app/hooks/useAudioCoach.ts` | Capacitor native TTS 플러그인 분기 추가, browser 경로 voice/lang 명시 |
-| `package.json` | `@capacitor-community/text-to-speech@6.1.0` 추가 |
-| `apps/web/.env.local` | VITE_GEMINI_API_KEY, _2, _3 추가 |
+| `src/app/components/WorkoutSession.tsx` | audioEnabled 설정 연동, restNotifications 조건, 이어폰 진단 패널 개선 |
+| `src/app/components/WorkoutSetup.tsx` | My Gym Equipment 섹션, LLM 호출 연결 |
+| `src/app/components/WorkoutComplete.tsx` | 루틴 저장 UI (이름 입력 + Save 버튼) |
+| `src/app/components/Home.tsx` | My Routines 항상 표시 + empty state, Recent Workouts 위로 이동 |
+| `src/app/services/workoutPlanner.ts` | `adaptForGoal` export 추가 |
+| `src/app/hooks/useEarbudControls.ts` | isAudioPlaying 진단, activateAudio 노출, 볼륨 1.0, DOM 첨부, seekforward/seekbackward |
+| `src/app/hooks/useAudioCoach.ts` | 네이티브/브라우저 TTS 분기, browser 경로 voice/lang 명시 |
+| `android-src/MainActivity.java` | `registerPlugin(FiTechTTSPlugin.class)` 추가 |
+| `.github/workflows/build-apk.yml` | FiTechTTSPlugin.java 복사 단계 추가 |
+| `apps/web/.env.local` | VITE_GEMINI_API_KEY, _2, _3 추가 (git 미포함) |
 
 ---
 
@@ -441,7 +452,7 @@ VITE_GEMINI_API_KEY_3=AIzaSyClqM71Nw5EprV0uXIJSxagbzsZcbXEBfY
 - localStorage — 모든 사용자 데이터 로컬 저장
 - Web Audio API (운동 알림음)
 - Web Speech API (TTS 음성 안내 — 브라우저)
-- `@capacitor-community/text-to-speech` (TTS 음성 안내 — Android APK)
-- Capacitor 6 (Android APK 빌드)
+- `android.speech.tts.TextToSpeech` via `FiTechTTSPlugin.java` (TTS 음성 안내 — Android APK)
+- Capacitor 6 (Android APK 빌드 브릿지)
 - GitHub Actions `build-apk.yml` (APK 자동 빌드 — main push 시)
 - GitHub Pages (웹 자동 배포 — `main` 브랜치 push 시 → https://angellashin.github.io/FiTech/)
