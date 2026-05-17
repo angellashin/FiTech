@@ -2,7 +2,7 @@
 
 배포 URL: https://angellashin.github.io/FiTech/  
 작업 브랜치: `yunje` 기반 로컬 클론 (`C:\Users\USER\Desktop\FiTech`)  
-작업 범위: Profile 화면 완성 · 운동 루틴 저장/불러오기 · LLM 기반 운동 계획 생성 · 헬스장 기구 프로필
+작업 범위: Profile 화면 완성 · 운동 루틴 저장/불러오기 · LLM 기반 운동 계획 생성 · 헬스장 기구 프로필 · 이어폰 진단 개선 · 사용자 데이터 격리
 
 ---
 
@@ -99,19 +99,19 @@ FAQ 각 항목은 내부 accordion으로 하나씩 열고 닫힘.
 
 Log Out 버튼 클릭 → 중앙 확인 다이얼로그 표시.
 
-**로그아웃 시 삭제되는 데이터:**
-- `fitech_user_name`
-- `fitech_user_goal`
-- `fitech_avatar_color`
+**로그아웃 시 동작:**
+- `fitech_user_name`만 삭제 후 Login 화면으로 이동
+- 운동 기록 등 나머지 데이터는 그대로 보존
 
-**로그아웃 후에도 보존되는 데이터:**
-- `fitech_workout_sessions` — 운동 세션 기록
-- `fitech_workout_history` — 세트별 무게/반복 기록
-- `fitech_user_settings` — 설정값
+**다음 로그인 시 사용자 전환 감지 (`Login.tsx`):**
+- 이전 이름과 **같은 이름** → 기존 기록 전부 유지, 그대로 홈 진입
+- 이전 이름과 **다른 이름** → 아래 키 전부 삭제 후 새 사용자로 시작
 
-> 실수로 눌러도 운동 기록이 날아가지 않도록 의도적으로 보존.
+삭제되는 키:
+- `fitech_workout_history` / `fitech_workout_sessions` / `fitech_saved_routines`
+- `fitech_gym_profile` / `fitech_settings` / `fitech_user_goal` / `fitech_avatar_color`
 
-로그아웃 완료 후 Login 화면으로 이동 (`App.tsx`의 `handleLogout`).
+> 같은 기기를 여러 사람이 번갈아 쓸 때 데이터가 섞이지 않도록 설계.
 
 ---
 
@@ -133,9 +133,12 @@ Log Out 버튼 클릭 → 중앙 확인 다이얼로그 표시.
 - 저장 성공 시 버튼이 BookmarkCheck 아이콘 + "Saved!" 으로 전환
 
 #### 불러오기 흐름 (Home)
-- Home 화면에 **My Routines** 섹션 조건부 표시 (저장된 루틴 없으면 미표시)
+- Home 화면에 **My Routines** 섹션 **항상 표시** (Your Progress 바로 아래 → Recent Workouts 위)
+  - 루틴이 없으면 "No routines saved yet. Complete a workout and save it!" 안내 문구
+  - 루틴이 있으면 목록 표시
 - 각 루틴: 이름 / 운동 개수 / 사용된 근육 그룹 / Load 버튼 / 삭제(🗑️) 버튼
 - Load 버튼 클릭 → 해당 루틴의 운동 목록으로 바로 Plan Preview 진입
+- Home 재진입 시 항상 최신 루틴 목록 반영 (`key={homeKey}` 강제 remount)
 
 **저장 구조 (`fitech_saved_routines`):**
 ```ts
@@ -239,6 +242,33 @@ VITE_GEMINI_API_KEY_3=...
 
 ---
 
+### 10. 이어폰 컨트롤 — 모바일 브라우저 안정성 개선
+
+#### 문제
+모바일 Chrome에서 MediaSession API 기반 이어폰 탭 인식이 불안정. 원인:
+1. **오디오 미재생** — 브라우저 자동재생 정책(Autoplay Policy)으로 silent audio가 재생 안 됨 → Chrome이 미디어 버튼을 해당 페이지로 라우팅하지 않음
+2. **다른 앱의 미디어세션 점유** — 음악 앱(Spotify, 유튜브 뮤직 등)이 미디어 버튼을 가로챔
+
+#### 변경 사항 (`useEarbudControls.ts`)
+- silent audio 볼륨 `0.0001` → `0.01` (일부 Android 빌드에서 0에 가까운 볼륨은 "재생 중" 미인식)
+- 오디오 재생 상태 추적 → `EarbudDiagnostics.isAudioPlaying: boolean` 필드 추가
+- `activateAudio()` 함수 노출 — 사용자 제스처 컨텍스트에서 명시적으로 오디오 재생 트리거
+- 기존 `{ once: true }` 리스너 → 지속적 리스너로 변경 (모든 터치/클릭 시 paused면 재시도)
+- 훅 반환 타입 변경: `EarbudDiagnostics` → `{ diagnostics, activateAudio }`
+
+#### 변경 사항 (`WorkoutSession.tsx`)
+- 진단 패널에 **"Silent audio: playing ✓ / not playing ✗"** 실시간 표시
+- silent audio가 재생 안 될 때 **"Tap here to activate earbud control"** 버튼 표시
+- 진단 패널 안내 문구 업데이트: 다른 음악 앱 종료 권고
+
+#### 이어폰이 여전히 안 될 때 체크리스트
+1. 진단 패널 열기 → "Silent audio: playing ✓" 확인
+2. "not playing"이면 → "Tap here to activate" 버튼 탭
+3. playing인데도 Raw events 0이면 → Spotify / 유튜브 뮤직 등 완전히 종료 후 재시도
+4. 여전히 안 되면 → Capacitor APK 방식 사용 (native MediaButton 플러그인으로 100% 동작)
+
+---
+
 ## 변경된 파일 목록
 
 | 파일 | 변경 내용 |
@@ -247,14 +277,20 @@ VITE_GEMINI_API_KEY_3=...
 | `src/app/utils/gymProfile.ts` | **신규** — 헬스장 기구 프로필 read/write |
 | `src/app/services/llmWorkoutPlanner.ts` | **신규** — Gemini API 호출, 프롬프트 빌드, 폴백 로직 |
 | `src/styles/globals.css` | light-mode CSS 필터 추가 |
-| `src/app/App.tsx` | 다크모드 초기 적용, handleLogout 추가, Profile에 onLogout prop 전달 |
+| `src/app/utils/userSettings.ts` | **신규** — 설정 read/write/applyDarkMode |
+| `src/app/utils/gymProfile.ts` | **신규** — 헬스장 기구 프로필 read/write |
+| `src/app/services/llmWorkoutPlanner.ts` | **신규** — Gemini API 호출, 프롬프트 빌드, 폴백 로직 |
+| `src/styles/globals.css` | light-mode CSS 필터 추가 |
+| `src/app/App.tsx` | 다크모드 초기 적용, handleLogout 수정(이름만 삭제), homeKey 추가, Profile에 onLogout prop 전달 |
+| `src/app/components/Login.tsx` | 로그인 시 이름 비교 → 다른 사용자면 데이터 초기화 |
 | `src/app/components/Profile.tsx` | Settings 토글 연결, 프로필 편집 모달, About/Help accordion, 로그아웃, Cloud Sync 조건부 표시 |
-| `src/app/components/WorkoutSession.tsx` | audioEnabled 초기값을 설정에서 읽기, restNotifications 조건 추가 |
+| `src/app/components/WorkoutSession.tsx` | audioEnabled 초기값을 설정에서 읽기, restNotifications 조건 추가, 모바일 오디오 언락, 이어폰 진단 패널 개선 |
 | `src/app/components/WorkoutSetup.tsx` | My Gym Equipment 섹션 추가 (Intensity 아래), LLM 호출 연결 |
 | `src/app/components/WorkoutComplete.tsx` | 루틴 저장 UI (이름 입력 + Save 버튼 + 완료 피드백) |
-| `src/app/components/Home.tsx` | My Routines 섹션 추가 (Load / 삭제 기능 포함) |
+| `src/app/components/Home.tsx` | My Routines 섹션 항상 표시 + empty state, Recent Workouts 위로 위치 이동 |
 | `src/app/utils/workoutHistory.ts` | SavedRoutine 타입 + getSavedRoutines / saveRoutine / deleteRoutine 추가 |
 | `src/app/services/workoutPlanner.ts` | `adaptForGoal` export 추가 (llmWorkoutPlanner에서 재사용) |
+| `src/app/hooks/useEarbudControls.ts` | isAudioPlaying 진단, activateAudio 함수 노출, 볼륨 조정, 리스너 방식 변경 |
 | `apps/web/.env.local` | VITE_GEMINI_API_KEY, _2, _3 추가 |
 
 ---
@@ -316,7 +352,7 @@ anon key는 [Supabase 대시보드](https://supabase.com/dashboard/project/kqrqr
 
 - **Dark Mode 고도화** — 현재 CSS `invert` 필터 방식. Tailwind `dark:` 클래스 기반으로 전환하면 색상 제어 정밀도 향상
 - **Audio Guidance 세션 중 토글 → 영구 저장** — 세션 내 🔊 버튼 토글은 세션 종료 후 초기화됨. 영구 저장 연결 가능
-- **운동 기록 삭제 기능** — 로그아웃 시 기록 보존 정책으로 수동 삭제 방법 없음. "Clear Workout History" 옵션 추가 고려
+- **운동 기록 삭제 기능** — Profile에 "Clear Workout History" 옵션 추가 고려 (현재는 다른 이름 로그인 시에만 초기화됨)
 - **Personal Records 전체 보기** — 현재 상위 3개만 표시. 전체 기록 보기 화면 확장 가능
 - **LLM 기구 매핑 정밀화** — 현재 LLM이 자연어로 기구-운동 연관을 추론. exerciseLibrary에 `requiredEquipment` 필드 추가 후 코드 레벨 필터링으로 정확도 향상 가능
 - **Saved Routines 편집** — 저장된 루틴에서 개별 운동 추가/삭제 기능
