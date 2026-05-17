@@ -1,26 +1,51 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 export function useAudioCoach(enabled: boolean) {
   const [isSupported, setIsSupported] = useState(false);
 
   useEffect(() => {
-    setIsSupported(
-      typeof window !== 'undefined' &&
-        'speechSynthesis' in window &&
-        'SpeechSynthesisUtterance' in window,
-    );
-    // Pre-warm the voice list — Android WebView loads voices lazily and
-    // won't produce audio if no voice is selected when speak() is called.
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.getVoices();
+    if (Capacitor.isNativePlatform()) {
+      // Native Android: always supported via the TTS plugin
+      setIsSupported(true);
+    } else {
+      setIsSupported(
+        typeof window !== 'undefined' &&
+          'speechSynthesis' in window &&
+          'SpeechSynthesisUtterance' in window,
+      );
+      // Pre-warm the voice list — Android WebView loads voices lazily.
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+      }
     }
   }, []);
 
   const speak = useCallback(
-    (message: string) => {
-      if (!enabled || !message || typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    async (message: string) => {
+      if (!enabled || !message) return;
+
+      // --- Native Android path (Capacitor TTS plugin) ---
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await TextToSpeech.stop();
+          await TextToSpeech.speak({
+            text: message,
+            lang: 'en-US',
+            rate: 0.95,
+            pitch: 1.0,
+            volume: 0.9,
+            category: 'ambient',
+          });
+        } catch (err) {
+          console.warn('Native TTS failed:', err);
+        }
         return;
       }
+
+      // --- Browser path (Web Speech API) ---
+      if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(message);
@@ -29,9 +54,7 @@ export function useAudioCoach(enabled: boolean) {
       utterance.pitch = 1;
       utterance.volume = 0.9;
 
-      // Android WebView requires an explicit voice; without one it silently
-      // does nothing. Pick the first en-US voice, fall back to any English
-      // voice, then use whatever is available.
+      // Explicitly select a voice — required on some platforms.
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
         const voice =
@@ -46,13 +69,25 @@ export function useAudioCoach(enabled: boolean) {
     [enabled],
   );
 
-  const stop = useCallback(() => {
+  const stop = useCallback(async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await TextToSpeech.stop();
+      } catch {
+        // ignore
+      }
+      return;
+    }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
   }, []);
 
-  useEffect(() => stop, [stop]);
+  useEffect(() => {
+    return () => {
+      void stop();
+    };
+  }, [stop]);
 
   return { isSupported, speak, stop };
 }
