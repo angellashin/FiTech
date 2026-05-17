@@ -192,6 +192,10 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
     // (Bluetooth media-button) events to Chrome. Lower values can fail this check.
     audio.volume = 1.0;
     audio.preload = 'auto';
+    // Attach to DOM — some Android Chrome builds require the element to be in the
+    // document tree before they register the media session for AVRCP routing.
+    audio.style.display = 'none';
+    document.body.appendChild(audio);
 
     // Track whether audio is actually playing so we can surface it in diagnostics.
     const onPlay = () => setDiagnostics((prev) => ({ ...prev, isAudioPlaying: true }));
@@ -260,6 +264,7 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
       }
       audio.pause();
       audio.src = '';
+      if (audio.parentNode) audio.parentNode.removeChild(audio);
       URL.revokeObjectURL(audioUrl);
       // Reading stateRef.current here is intentional — we want the latest
       // pendingTimer at unmount time, not the one captured when the effect ran.
