@@ -56,6 +56,7 @@ jobs:
           # Replace the generated MainActivity.java with our version that
           # calls registerPlugin() before super.onCreate().
           cp android-src/MediaButtonPlugin.java $DEST/
+          cp android-src/FiTechTTSPlugin.java $DEST/
           cp android-src/MainActivity.java $DEST/
 
       - name: Setup Java 17

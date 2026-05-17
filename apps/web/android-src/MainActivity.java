@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         // Must be before super.onCreate: BridgeActivity.onCreate calls load()
         // which builds the Bridge from initialPlugins. After that it's too late.
         registerPlugin(MediaButtonPlugin.class);
+        registerPlugin(FiTechTTSPlugin.class);
         super.onCreate(savedInstanceState);
     }
 

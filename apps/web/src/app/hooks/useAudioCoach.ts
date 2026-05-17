@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { TextToSpeech } from '@capacitor-community/text-to-speech';
+import { FiTechTTS } from '../lib/fitechTTS';
 
 export function useAudioCoach(enabled: boolean) {
   const [isSupported, setIsSupported] = useState(false);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      // Native Android: always supported via the TTS plugin
+      // Native Android: always supported via the custom FiTechTTS Java plugin
       setIsSupported(true);
     } else {
       setIsSupported(
@@ -26,20 +26,13 @@ export function useAudioCoach(enabled: boolean) {
     async (message: string) => {
       if (!enabled || !message) return;
 
-      // --- Native Android path (Capacitor TTS plugin) ---
+      // --- Native Android path (custom FiTechTTS Java plugin) ---
       if (Capacitor.isNativePlatform()) {
         try {
-          await TextToSpeech.stop();
-          await TextToSpeech.speak({
-            text: message,
-            lang: 'en-US',
-            rate: 0.95,
-            pitch: 1.0,
-            volume: 0.9,
-            category: 'ambient',
-          });
+          await FiTechTTS.stop();
+          await FiTechTTS.speak({ text: message, rate: 0.95, pitch: 1.0 });
         } catch (err) {
-          console.warn('Native TTS failed:', err);
+          android_log('TTS speak failed: ' + String(err));
         }
         return;
       }
@@ -72,7 +65,7 @@ export function useAudioCoach(enabled: boolean) {
   const stop = useCallback(async () => {
     if (Capacitor.isNativePlatform()) {
       try {
-        await TextToSpeech.stop();
+        await FiTechTTS.stop();
       } catch {
         // ignore
       }
@@ -90,4 +83,8 @@ export function useAudioCoach(enabled: boolean) {
   }, [stop]);
 
   return { isSupported, speak, stop };
+}
+
+function android_log(_msg: string) {
+  // no-op in production; useful for debugging
 }
