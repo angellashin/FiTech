@@ -170,17 +170,24 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
     audio.volume = 0.0001; // effectively silent but not exactly 0 (some browsers treat 0 as "not playing")
     audio.preload = 'auto';
 
+    // Autoplay may be blocked on mobile — retry on first user gesture.
+    const tryPlay = () => {
+      audio.play().catch(() => {
+        // Still blocked; will retry on next gesture
+      });
+    };
+
     const playPromise = audio.play();
-    // Autoplay may be rejected if there's no user gesture yet.
     if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch((err) => {
-        setDiagnostics((prev) => ({
-          ...prev,
-          errors: [
-            ...prev.errors,
-            `Silent audio autoplay blocked (${String(err)}). Tap once on screen first.`,
-          ],
-        }));
+      playPromise.catch(() => {
+        // Autoplay blocked — wait for user gesture and retry
+        const onGesture = () => {
+          tryPlay();
+          document.removeEventListener('touchstart', onGesture);
+          document.removeEventListener('click', onGesture);
+        };
+        document.addEventListener('touchstart', onGesture, { once: true });
+        document.addEventListener('click', onGesture, { once: true });
       });
     }
 
