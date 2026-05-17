@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { MediaButton, type EarbudTapEvent } from '../lib/mediaButton';
 
@@ -13,11 +13,18 @@ export interface EarbudHandlers {
 export interface EarbudDiagnostics {
   platform: EarbudPlatform;
   active: boolean;
+  isAudioPlaying: boolean;
   rawEventCount: number;
   lastRawEvent: string | null;
   lastTapKind: EarbudTapEvent | null;
   lastTapAt: number | null;
   errors: string[];
+}
+
+export interface EarbudControls {
+  diagnostics: EarbudDiagnostics;
+  /** Call this inside a user-gesture handler to force the silent audio to play. */
+  activateAudio: () => void;
 }
 
 const TAP_WINDOW_MS = 400;
@@ -51,19 +58,31 @@ function makeSilentAudioUrl(): string {
   return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
 }
 
-export function useEarbudControls(handlers: EarbudHandlers, enabled = true): EarbudDiagnostics {
+export function useEarbudControls(handlers: EarbudHandlers, enabled = true): EarbudControls {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
+
+  // Keep a ref to the silent audio element so activateAudio() can reach it
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [diagnostics, setDiagnostics] = useState<EarbudDiagnostics>(() => ({
     platform: 'unsupported',
     active: false,
+    isAudioPlaying: false,
     rawEventCount: 0,
     lastRawEvent: null,
     lastTapKind: null,
     lastTapAt: null,
     errors: [],
   }));
+
+  /** Must be called from inside a user-gesture handler (click / touchend). */
+  const activateAudio = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!audio.paused) return; // already playing
+    audio.play().catch(() => {});
+  }, []);
 
   // Mutable counters that don't need to trigger re-render every tap
   const stateRef = useRef({
@@ -166,28 +185,31 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
 
     const audioUrl = makeSilentAudioUrl();
     const audio = new Audio(audioUrl);
+    audioRef.current = audio;
     audio.loop = true;
-    audio.volume = 0.0001; // effectively silent but not exactly 0 (some browsers treat 0 as "not playing")
+    audio.volume = 0.01; // low but not 0 — some Android builds ignore volume=0 for MediaSession
     audio.preload = 'auto';
 
-    // Autoplay may be blocked on mobile — retry on first user gesture.
+    // Track whether audio is actually playing so we can surface it in diagnostics.
+    const onPlay = () => setDiagnostics((prev) => ({ ...prev, isAudioPlaying: true }));
+    const onPause = () => setDiagnostics((prev) => ({ ...prev, isAudioPlaying: false }));
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+
+    // Autoplay may be blocked on mobile — retry on every user gesture until it succeeds.
     const tryPlay = () => {
-      audio.play().catch(() => {
-        // Still blocked; will retry on next gesture
-      });
+      if (!audio.paused) return;
+      audio.play().catch(() => {});
     };
+
+    const onGesture = () => tryPlay();
+    document.addEventListener('touchstart', onGesture);
+    document.addEventListener('click', onGesture);
 
     const playPromise = audio.play();
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise.catch(() => {
-        // Autoplay blocked — wait for user gesture and retry
-        const onGesture = () => {
-          tryPlay();
-          document.removeEventListener('touchstart', onGesture);
-          document.removeEventListener('click', onGesture);
-        };
-        document.addEventListener('touchstart', onGesture, { once: true });
-        document.addEventListener('click', onGesture, { once: true });
+        // Autoplay blocked — will play on next user gesture via the listeners above
       });
     }
 
@@ -214,6 +236,11 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
     }
 
     return () => {
+      document.removeEventListener('touchstart', onGesture);
+      document.removeEventListener('click', onGesture);
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audioRef.current = null;
       try {
         navigator.mediaSession.setActionHandler('play', null);
         navigator.mediaSession.setActionHandler('pause', null);
@@ -231,11 +258,11 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
       // eslint-disable-next-line react-hooks/exhaustive-deps
       const s = stateRef.current;
       if (s.pendingTimer) clearTimeout(s.pendingTimer);
-      setDiagnostics((prev) => ({ ...prev, active: false }));
+      setDiagnostics((prev) => ({ ...prev, active: false, isAudioPlaying: false }));
     };
     // We intentionally only re-run when `enabled` toggles.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 
-  return diagnostics;
+  return { diagnostics, activateAudio };
 }

@@ -279,7 +279,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     run();
   };
 
-  const earbud = useEarbudControls(
+  const { diagnostics: earbud, activateAudio } = useEarbudControls(
     {
       onSingleTap: () => flashAndRun('singleTap', handleSingleTap),
       onDoubleTap: () => flashAndRun('doubleTap', handleDoubleTap),
@@ -360,15 +360,30 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
           </div>
           <div>Platform: <span className="font-mono">{earbud.platform}</span></div>
           <div>Active: <span className="font-mono">{String(earbud.active)}</span></div>
+          <div>
+            Silent audio:{' '}
+            <span className={`font-mono ${earbud.isAudioPlaying ? 'text-emerald-300' : 'text-red-300'}`}>
+              {earbud.isAudioPlaying ? 'playing ✓' : 'not playing ✗'}
+            </span>
+          </div>
           <div>Raw events received: <span className="font-mono">{earbud.rawEventCount}</span></div>
           <div>Last raw event: <span className="font-mono">{earbud.lastRawEvent ?? '—'}</span></div>
           <div>Last tap: <span className="font-mono">{earbud.lastTapKind ?? '—'}</span></div>
           {earbud.errors.length > 0 && (
             <div className="text-red-300">Errors: {earbud.errors.join(' · ')}</div>
           )}
+          {/* Show activate button when audio is not playing */}
+          {!earbud.isAudioPlaying && earbud.platform === 'mediasession' && (
+            <button
+              onClick={activateAudio}
+              className="mt-2 w-full py-2 rounded-lg bg-emerald-600/40 hover:bg-emerald-600/60 border border-emerald-500/50 text-emerald-100 text-xs font-medium transition-colors"
+            >
+              Tap here to activate earbud control
+            </button>
+          )}
           <div className="text-emerald-200/70 pt-1">
-            Press your earbud button to see the counter go up. If "Raw events" stays at 0, the OS
-            is not routing media keys to FiTech.
+            Press your earbud button to see the counter go up. If "Raw events" stays at 0,{' '}
+            close any music apps (Spotify, YouTube Music, etc.) — they may be intercepting media buttons.
           </div>
         </div>
       )}
