@@ -187,7 +187,10 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
     audio.loop = true;
-    audio.volume = 0.01; // low but not 0 — some Android builds ignore volume=0 for MediaSession
+    // Volume 1.0 on an all-zero (silent) WAV = no audible output, but Android's
+    // audio-focus system sees "volume > 0 media playing" and routes AVRCP
+    // (Bluetooth media-button) events to Chrome. Lower values can fail this check.
+    audio.volume = 1.0;
     audio.preload = 'auto';
 
     // Track whether audio is actually playing so we can surface it in diagnostics.
@@ -223,9 +226,12 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
       const onPress = (event: string) => () => registerBrowserTap(event);
       navigator.mediaSession.setActionHandler('play', onPress('play'));
       navigator.mediaSession.setActionHandler('pause', onPress('pause'));
-      // Some earbuds fire next/previous on multi-press
+      // Different earbud models fire different events on multi-press
       navigator.mediaSession.setActionHandler('nexttrack', onPress('nexttrack'));
       navigator.mediaSession.setActionHandler('previoustrack', onPress('previoustrack'));
+      // Some earbuds use seekforward/seekbackward instead of next/previous
+      try { navigator.mediaSession.setActionHandler('seekforward', onPress('seekforward')); } catch {}
+      try { navigator.mediaSession.setActionHandler('seekbackward', onPress('seekbackward')); } catch {}
 
       setDiagnostics((prev) => ({ ...prev, platform: 'mediasession', active: true }));
     } catch (err) {
@@ -246,6 +252,8 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
         navigator.mediaSession.setActionHandler('pause', null);
         navigator.mediaSession.setActionHandler('nexttrack', null);
         navigator.mediaSession.setActionHandler('previoustrack', null);
+        try { navigator.mediaSession.setActionHandler('seekforward', null); } catch {}
+        try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch {}
         navigator.mediaSession.playbackState = 'none';
       } catch {
         // ignore
