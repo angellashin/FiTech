@@ -32,7 +32,34 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
+
+  // 모바일 브라우저 오디오 잠금 해제 — 화면 첫 터치 시 AudioContext + speechSynthesis 활성화
+  useEffect(() => {
+    const unlock = () => {
+      if (audioUnlocked) return;
+      // AudioContext 잠금 해제
+      try {
+        const ctx = new AudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+        ctx.close();
+      } catch {}
+      // speechSynthesis 잠금 해제 (무음 utterance)
+      if ('speechSynthesis' in window) {
+        const silent = new SpeechSynthesisUtterance('');
+        silent.volume = 0;
+        window.speechSynthesis.speak(silent);
+      }
+      setAudioUnlocked(true);
+    };
+    document.addEventListener('touchstart', unlock, { once: true });
+    document.addEventListener('click', unlock, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('click', unlock);
+    };
+  }, [audioUnlocked]);
 
   const currentExercise = exercises[currentExerciseIndex];
   const totalExercises = exercises.length || 1;
