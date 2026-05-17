@@ -145,14 +145,18 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
         </div>
 
         {/* My Routines */}
-        {savedRoutines.length > 0 && (
-          <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Bookmark className="w-5 h-5 text-blue-400" />
-              </div>
-              <h2 className="text-lg font-semibold">My Routines</h2>
+        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Bookmark className="w-5 h-5 text-blue-400" />
             </div>
+            <h2 className="text-lg font-semibold">My Routines</h2>
+          </div>
+          {savedRoutines.length === 0 ? (
+            <div className="text-center py-6 text-neutral-500 text-sm">
+              No routines saved yet. Complete a workout and save it!
+            </div>
+          ) : (
             <div className="space-y-3">
               {savedRoutines.map((routine) => (
                 <div key={routine.id} className="glass-dark rounded-xl p-4 shadow-lg">
@@ -182,8 +186,8 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Recent Workouts */}
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
