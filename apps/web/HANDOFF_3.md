@@ -259,6 +259,44 @@ VITE_GEMINI_API_KEY_3=...
 
 ---
 
+## Supabase DB 현황
+
+### 기존 테이블 (이전 팀이 구축, 현재도 유지됨)
+
+| 테이블 | 내용 |
+|--------|------|
+| `workout_sessions` | 완료된 운동 세션 요약 (시작/종료 시각, 총 볼륨 등) |
+| `session_exercises` | 세션별 운동 목록 |
+| `session_sets` | 세트별 무게/반복/완료 여부 |
+| `session_events` | 이어버드 탭 이벤트 로그 |
+
+Supabase 연결은 `src/app/lib/supabaseClient.ts`에서 관리. `VITE_SUPABASE_ANON_KEY`가 비어있으면 `supabase = null`이 되어 **자동으로 localStorage 전용 모드로 전환**됨 — 앱은 정상 동작.
+
+### 이번 작업(junseo)과 DB의 관계
+
+이번에 추가한 기능들은 **Supabase 테이블 변경 없음**. 전부 localStorage 기반으로 구현:
+
+| 기능 | 저장 위치 |
+|------|----------|
+| Settings 토글 | `fitech_user_settings` (localStorage) |
+| 프로필 편집 | `fitech_user_name`, `fitech_user_goal`, `fitech_avatar_color` (localStorage) |
+| Saved Routines | `fitech_saved_routines` (localStorage) |
+| My Gym 기구 프로필 | `fitech_gym_profile` (localStorage) |
+
+→ DB migration 불필요, Supabase anon key 없어도 모든 기능 동작.
+
+### Supabase를 실제로 연결하려면
+
+`VITE_SUPABASE_ANON_KEY`를 채우면 운동 완료 시 자동으로 Supabase에도 싱크됨.  
+anon key는 [Supabase 대시보드](https://supabase.com/dashboard/project/kqrqrahstuhvosnwbydp/settings/api)에서 확인 가능 (프로젝트 오너에게 요청).
+
+### 앞으로 DB 추가 시 규칙 (노션 기준)
+
+- 기존 테이블 파일을 직접 수정하지 말고, **새 migration 파일 생성 → PR → 적용** 순서로 진행
+- `supabase/migrations/` 폴더에 SQL 파일 추가하는 방식
+
+---
+
 ## localStorage 키 전체 목록
 
 | 키 | 내용 | 타입 |
@@ -325,4 +363,4 @@ VITE_GEMINI_API_KEY_3=AIzaSyClqM71Nw5EprV0uXIJSxagbzsZcbXEBfY
 - Web Audio API (운동 알림음)
 - Web Speech API (TTS 음성 안내)
 - Capacitor 6 (Android APK 빌드)
-- GitHub Pages (자동 배포 — `yunje` 브랜치 push 시)
+- GitHub Pages (자동 배포 — `main` 브랜치 push 시 → https://angellashin.github.io/FiTech/)
