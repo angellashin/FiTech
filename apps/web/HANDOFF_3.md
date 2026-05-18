@@ -433,14 +433,14 @@ npm run dev
 ```env
 VITE_SUPABASE_URL=https://kqrqrahstuhvosnwbydp.supabase.co
 VITE_SUPABASE_ANON_KEY=
-VITE_GEMINI_API_KEY=AIzaSyDo5oOD-6hEpqRbgvBevuHHrtB0t08BqGM
-VITE_GEMINI_API_KEY_2=AIzaSyAFesjO_mGeh3iCgbuk2pyAJNhGDOom0A0
-VITE_GEMINI_API_KEY_3=AIzaSyClqM71Nw5EprV0uXIJSxagbzsZcbXEBfY
+VITE_GEMINI_API_KEY=<팀원에게 별도 공유>
+VITE_GEMINI_API_KEY_2=<팀원에게 별도 공유>
+VITE_GEMINI_API_KEY_3=<팀원에게 별도 공유>
 ```
 
 > - `VITE_SUPABASE_ANON_KEY`는 비워도 됨 — 로컬 전용 모드로 자동 동작  
-> - Gemini API 키 3개는 Google AI Studio에서 발급한 키. 무료 tier 일일 할당량이 있으며, 키 하나가 429(할당량 초과)를 반환하면 자동으로 다음 키로 전환됨  
-> - 키가 전부 소진되면 LLM 없이 로컬 알고리즘으로 폴백하므로 앱 자체는 정상 동작함
+> - Gemini API 키 3개는 보안상 이 파일에 포함하지 않음. **준서에게 카카오톡 등으로 별도 요청**  
+> - 키가 없거나 전부 소진되면 LLM 없이 로컬 알고리즘으로 폴백하므로 앱 자체는 정상 동작함
 
 ---
 
