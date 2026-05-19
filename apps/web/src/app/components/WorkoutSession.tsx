@@ -483,11 +483,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                   onClick={() => setGuideExercise(currentExercise)}
                   className="mx-auto mb-5 flex w-full max-w-xs items-center gap-3 rounded-3xl border border-white/10 bg-white/5 p-3 text-left hover:bg-white/10 transition-colors"
                 >
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white p-1">
                     <img
                       src={currentGuide.imageSrc}
                       alt={`${currentExercise.name} form illustration`}
-                      className="absolute inset-0 h-full w-full object-contain"
+                      className="h-full w-full object-contain"
                       loading="lazy"
                     />
                   </div>

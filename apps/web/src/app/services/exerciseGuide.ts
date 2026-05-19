@@ -43,8 +43,13 @@ const slugExerciseName = (name: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
+const withAppBasePath = (assetPath: string): string => {
+  const base = import.meta.env.BASE_URL || '/';
+  return `${base.replace(/\/$/, '')}/${assetPath.replace(/^\//, '')}`;
+};
+
 export const getExerciseImageSrc = (exerciseName: string): string =>
-  `/exercise-guides/${slugExerciseName(exerciseName)}.png`;
+  withAppBasePath(`exercise-guides/${slugExerciseName(exerciseName)}.png`);
 
 const titleCaseMuscle = (muscleGroup?: string) => {
   if (!muscleGroup) return 'Full body';

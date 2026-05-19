@@ -59,12 +59,12 @@ const ExerciseCard = ({
           type="button"
           onClick={() => onOpenGuide(exercise)}
           aria-label={`Open ${exercise.name} guide`}
-          className="relative w-16 h-16 rounded-2xl bg-white shadow-inner overflow-hidden flex-shrink-0 ring-1 ring-white/10 hover:ring-blue-400 transition-all"
+          className="relative w-16 h-16 rounded-2xl bg-white p-1 shadow-inner overflow-hidden flex-shrink-0 ring-1 ring-white/10 hover:ring-blue-400 transition-all"
         >
           <img
             src={guide.imageSrc}
             alt={`${exercise.name} form illustration`}
-            className="absolute inset-0 h-full w-full object-contain"
+            className="h-full w-full object-contain"
             loading="lazy"
           />
           <span className="absolute left-1.5 top-1.5 w-5 h-5 rounded-md bg-blue-600 text-[11px] font-bold flex items-center justify-center text-white">
