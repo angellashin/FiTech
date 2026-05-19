@@ -473,10 +473,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         ) : (
           <div className="text-center w-full">
             <div className="mb-8">
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <Volume2 className="w-6 h-6 text-blue-500" />
-                <div className="text-sm text-neutral-400">Audio Guidance Active</div>
-              </div>
               {currentExercise && currentGuide && (
                 <button
                   type="button"
