@@ -110,9 +110,10 @@ npm audit --audit-level=critical
 
 ## 배포
 
+- 배포 URL: `https://angellashin.github.io/FiTech/`
 - GitHub Pages workflow: `.github/workflows/deploy-pages.yml`
 - main branch push 후 GitHub Actions에서 자동 배포됩니다.
-- 예상 URL: `https://angellashin.github.io/FiTech/`
+- GitHub Actions 확인: `https://github.com/angellashin/FiTech/actions`
 
 ## 남은 리스크
 
