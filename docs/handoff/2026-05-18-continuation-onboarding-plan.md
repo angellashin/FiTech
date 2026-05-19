@@ -850,9 +850,9 @@ MVP 우선순위:
 ### 2026-05-19 운동별 생성 이미지 적용 / 완료 화면 문구 경량화
 
 - 운동별 자세 이미지는 더 이상 SVG 라인 일러스트를 사용하지 않는다.
-- `$imagegen`으로 7개 sprite sheet를 생성하고, 운동 라이브러리의 70개 운동별 PNG asset으로 crop해 `apps/web/public/exercise-guides/`에 저장했다.
-  - 앱에서 사용하는 개별 asset: `apps/web/public/exercise-guides/{exercise-slug}.png`
-- `exerciseGuide.imageSrc`를 추가해서 `PlanPreview`, `WorkoutSession`, `ExerciseGuideSheet`가 실제 생성 PNG를 렌더링하도록 변경했다.
+- `$imagegen`으로 7개 sprite sheet를 생성하고, 운동 라이브러리의 70개 운동별 asset으로 crop한 뒤 WebP로 압축해 `apps/web/public/exercise-guides/`에 저장했다.
+  - 앱에서 사용하는 개별 asset: `apps/web/public/exercise-guides/{exercise-slug}.webp`
+- `exerciseGuide.imageSrc`를 추가해서 `PlanPreview`, `WorkoutSession`, `ExerciseGuideSheet`가 실제 생성 WebP를 렌더링하도록 변경했다.
 - 기존 `ExerciseGuideIllustration.tsx` SVG 구현은 제거했다.
 - 운동 완료 화면의 `Today's Takeaways` 섹션을 제거했다.
   - 사용자가 운동 직후 긴 분석 문구로 피로를 더 느끼지 않게 한다.
@@ -861,7 +861,7 @@ MVP 우선순위:
 
 검증:
 
-- [x] 70개 운동별 PNG asset 생성 확인
+- [x] 70개 운동별 WebP asset 생성 확인
 - [x] `ExerciseGuideIllustration` / `Today's Takeaways` / `Review says this felt hard` 코드 참조 제거 확인
 - [x] `npm run format:check`
 - [x] `npm test` — 7 files / 50 tests pass

@@ -49,7 +49,7 @@ const withAppBasePath = (assetPath: string): string => {
 };
 
 export const getExerciseImageSrc = (exerciseName: string): string =>
-  withAppBasePath(`exercise-guides/${slugExerciseName(exerciseName)}.png`);
+  withAppBasePath(`exercise-guides/${slugExerciseName(exerciseName)}.webp`);
 
 const titleCaseMuscle = (muscleGroup?: string) => {
   if (!muscleGroup) return 'Full body';

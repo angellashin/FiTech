@@ -26,7 +26,7 @@ FiTech는 이번 작업으로 “운동 추천 → 초보자용 운동 자세 �
   - 단계별 수행 방법
   - safety cue
   - 초보자 팁
-- `$imagegen`으로 생성한 운동별 PNG 70개를 `apps/web/public/exercise-guides/`에 저장해 사용합니다.
+- `$imagegen`으로 생성한 운동별 이미지를 WebP 70개로 압축해 `apps/web/public/exercise-guides/`에 저장해 사용합니다.
 
 ### 3. 이어폰 중심 운동 세션
 
