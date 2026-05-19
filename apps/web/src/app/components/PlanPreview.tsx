@@ -12,10 +12,14 @@ import {
   X,
   GripVertical,
   Minus,
+  Sparkles,
+  Info,
 } from 'lucide-react';
 import type { WorkoutPlan, Exercise, MuscleGroup } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 import { exerciseLibrary } from '../services/workoutPlanner';
+import { getExerciseGuide } from '../services/exerciseGuide';
+import { ExerciseGuideSheet } from './ExerciseGuideSheet';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
@@ -33,6 +37,7 @@ interface DraggableExerciseItemProps {
   onUpdateRestTime: (id: string, value: number) => void;
   onAddSet: (id: string) => void;
   onRemoveSet: (id: string, setIndex: number) => void;
+  onOpenGuide: (exercise: Exercise) => void;
 }
 
 const ExerciseCard = ({
@@ -42,18 +47,43 @@ const ExerciseCard = ({
   onUpdateRestTime,
   onAddSet,
   onRemoveSet,
+  onOpenGuide,
 }: DraggableExerciseItemProps) => {
   const sets = exercise.setDetails ?? [];
+  const guide = getExerciseGuide(exercise);
 
   return (
     <div className="glass-dark rounded-2xl p-4 border border-neutral-700/50 shadow-lg hover:bg-white/5 transition-all">
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
-          {index + 1}
-        </div>
-        <div>
+        <button
+          type="button"
+          onClick={() => onOpenGuide(exercise)}
+          aria-label={`Open ${exercise.name} guide`}
+          className="relative w-16 h-16 rounded-2xl bg-white shadow-inner overflow-hidden flex-shrink-0 ring-1 ring-white/10 hover:ring-blue-400 transition-all"
+        >
+          <img
+            src={guide.imageSrc}
+            alt={`${exercise.name} form illustration`}
+            className="absolute inset-0 h-full w-full object-contain"
+            loading="lazy"
+          />
+          <span className="absolute left-1.5 top-1.5 w-5 h-5 rounded-md bg-blue-600 text-[11px] font-bold flex items-center justify-center text-white">
+            {index + 1}
+          </span>
+        </button>
+        <div className="min-w-0 flex-1">
           <h4 className="font-semibold text-lg mb-1">{exercise.name}</h4>
-          <p className="text-sm text-neutral-400">{exercise.muscleGroup}</p>
+          <p className="text-sm text-neutral-400">
+            {exercise.muscleGroup} · {guide.equipment}
+          </p>
+          <button
+            type="button"
+            onClick={() => onOpenGuide(exercise)}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200 hover:bg-blue-500/20 transition-colors"
+          >
+            <Info className="h-3.5 w-3.5" />
+            Form guide
+          </button>
         </div>
       </div>
 
@@ -131,9 +161,15 @@ interface EditRowProps {
 const EditRow = ({ exercise, index, onDelete, moveExercise }: EditRowProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  const [{ handlerId }, drop] = useDrop<{ index: number }, void, { handlerId: string | symbol | null }>({
+  const [{ handlerId }, drop] = useDrop<
+    { index: number },
+    void,
+    { handlerId: string | symbol | null }
+  >({
     accept: 'exercise',
-    collect(monitor) { return { handlerId: monitor.getHandlerId() }; },
+    collect(monitor) {
+      return { handlerId: monitor.getHandlerId() };
+    },
     hover(item: { index: number }, monitor) {
       if (!ref.current) return;
       const dragIndex = item.index;
@@ -165,7 +201,9 @@ const EditRow = ({ exercise, index, onDelete, moveExercise }: EditRowProps) => {
     >
       <span className="text-sm text-neutral-500 w-5 text-center">{index + 1}</span>
       <div className="flex-1 min-w-0">
-        <span className="text-sm text-white font-medium">{exercise.muscleGroup} | {exercise.name}</span>
+        <span className="text-sm text-white font-medium">
+          {exercise.muscleGroup} | {exercise.name}
+        </span>
       </div>
       <button
         onClick={() => onDelete(exercise.id)}
@@ -202,17 +240,20 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const allExercises = MUSCLE_GROUPS.flatMap(({ key }) =>
-    exerciseLibrary[key].map((ex) => ({ ...ex, groupKey: key }))
+    exerciseLibrary[key].map((ex) => ({ ...ex, groupKey: key })),
   );
 
-  const filtered = activeGroup === 'all'
-    ? allExercises
-    : allExercises.filter((ex) => ex.groupKey === activeGroup);
+  const filtered =
+    activeGroup === 'all' ? allExercises : allExercises.filter((ex) => ex.groupKey === activeGroup);
 
   const toggleSelect = (name: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
       return next;
     });
   };
@@ -286,16 +327,18 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
                 isAlready ? 'opacity-30 cursor-not-allowed' : 'hover:bg-neutral-800/40'
               }`}
             >
-              <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
-                isChecked
-                  ? 'bg-blue-600 border-blue-600'
-                  : 'border-neutral-600'
-              }`}>
+              <div
+                className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
+                  isChecked ? 'bg-blue-600 border-blue-600' : 'border-neutral-600'
+                }`}
+              >
                 {isChecked && <Check className="w-3 h-3 text-white" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">{ex.name}</div>
-                <div className="text-xs text-neutral-500 mt-0.5">{ex.muscleGroup} · {ex.sets} sets × {ex.reps} reps</div>
+                <div className="text-xs text-neutral-500 mt-0.5">
+                  {ex.muscleGroup} · {ex.sets} sets × {ex.reps} reps
+                </div>
               </div>
             </button>
           );
@@ -309,7 +352,9 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
           disabled={selected.size === 0}
           className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed text-white rounded-2xl font-semibold text-sm transition-all"
         >
-          {selected.size === 0 ? 'Select exercises' : `Add ${selected.size} exercise${selected.size > 1 ? 's' : ''}`}
+          {selected.size === 0
+            ? 'Select exercises'
+            : `Add ${selected.size} exercise${selected.size > 1 ? 's' : ''}`}
         </button>
       </div>
     </div>
@@ -321,10 +366,12 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
   const [exercises, setExercises] = useState(plan.exercises);
   const [isEditing, setIsEditing] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [guideExercise, setGuideExercise] = useState<Exercise | null>(null);
 
   const totalExercises = exercises.length;
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
   const estimatedTime = plan.duration;
+  const rationaleItems = plan.rationale?.filter(Boolean).slice(0, 5) ?? [];
 
   const goalLabels: Record<string, string> = {
     strength: 'Strength',
@@ -348,29 +395,55 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
   };
 
   const handleUpdateRestTime = (exerciseId: string, value: number) => {
-    setExercises(exercises.map((ex) => ex.id === exerciseId ? { ...ex, restTime: value } : ex));
+    setExercises(exercises.map((ex) => (ex.id === exerciseId ? { ...ex, restTime: value } : ex)));
   };
 
-  const handleUpdateSet = (exerciseId: string, setIndex: number, field: 'weight' | 'reps', value: number) => {
-    setExercises(exercises.map((ex) => {
-      if (ex.id !== exerciseId || !ex.setDetails) return ex;
-      return { ...ex, setDetails: ex.setDetails.map((s, i) => i === setIndex ? { ...s, [field]: value } : s) };
-    }));
+  const handleUpdateSet = (
+    exerciseId: string,
+    setIndex: number,
+    field: 'weight' | 'reps',
+    value: number,
+  ) => {
+    setExercises(
+      exercises.map((ex) => {
+        if (ex.id !== exerciseId || !ex.setDetails) return ex;
+        return {
+          ...ex,
+          setDetails: ex.setDetails.map((s, i) => (i === setIndex ? { ...s, [field]: value } : s)),
+        };
+      }),
+    );
   };
 
   const handleAddSet = (exerciseId: string) => {
-    setExercises(exercises.map((ex) => {
-      if (ex.id !== exerciseId) return ex;
-      const lastSet = ex.setDetails?.[ex.setDetails.length - 1] ?? { weight: 0, reps: 10, completed: false };
-      return { ...ex, sets: ex.sets + 1, setDetails: [...(ex.setDetails ?? []), { ...lastSet, completed: false }] };
-    }));
+    setExercises(
+      exercises.map((ex) => {
+        if (ex.id !== exerciseId) return ex;
+        const lastSet = ex.setDetails?.[ex.setDetails.length - 1] ?? {
+          weight: 0,
+          reps: 10,
+          completed: false,
+        };
+        return {
+          ...ex,
+          sets: ex.sets + 1,
+          setDetails: [...(ex.setDetails ?? []), { ...lastSet, completed: false }],
+        };
+      }),
+    );
   };
 
   const handleRemoveSet = (exerciseId: string, setIndex: number) => {
-    setExercises(exercises.map((ex) => {
-      if (ex.id !== exerciseId || !ex.setDetails || ex.setDetails.length <= 1) return ex;
-      return { ...ex, sets: ex.sets - 1, setDetails: ex.setDetails.filter((_, i) => i !== setIndex) };
-    }));
+    setExercises(
+      exercises.map((ex) => {
+        if (ex.id !== exerciseId || !ex.setDetails || ex.setDetails.length <= 1) return ex;
+        return {
+          ...ex,
+          sets: ex.sets - 1,
+          setDetails: ex.setDetails.filter((_, i) => i !== setIndex),
+        };
+      }),
+    );
   };
 
   const handlePickerAdd = (picked: Exercise[]) => {
@@ -408,7 +481,10 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
             </div>
           </div>
           <button
-            onClick={() => { setIsEditing(!isEditing); setShowPicker(false); }}
+            onClick={() => {
+              setIsEditing(!isEditing);
+              setShowPicker(false);
+            }}
             className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-colors ${
               isEditing
                 ? 'bg-blue-600 text-white'
@@ -453,7 +529,10 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
 
             <div className="px-6 pt-4 pb-6">
               <button
-                onClick={() => { setIsEditing(false); setShowPicker(false); }}
+                onClick={() => {
+                  setIsEditing(false);
+                  setShowPicker(false);
+                }}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-semibold transition-all"
               >
                 Confirm
@@ -510,6 +589,23 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                 </div>
               </div>
 
+              {rationaleItems.length > 0 && (
+                <div className="bg-gradient-to-br from-emerald-950/40 to-neutral-950 border border-emerald-500/20 rounded-3xl p-5 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-5 h-5 text-emerald-300" />
+                    <h3 className="text-lg font-semibold">Why this recommendation?</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {rationaleItems.map((item) => (
+                      <div key={item} className="flex gap-2 text-sm text-emerald-50/85">
+                        <span className="text-emerald-300">•</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="bg-neutral-900 rounded-3xl p-6 mb-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Dumbbell className="w-5 h-5 text-neutral-400" />
@@ -538,6 +634,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                         onUpdateRestTime={handleUpdateRestTime}
                         onAddSet={handleAddSet}
                         onRemoveSet={handleRemoveSet}
+                        onOpenGuide={setGuideExercise}
                       />
                     ))
                   )}
@@ -550,8 +647,8 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                   <div className="text-sm">
                     <p className="text-blue-100 mb-1 font-medium">Hands-Free Workout</p>
                     <p className="text-blue-300/70">
-                      Audio guidance will guide you through each exercise. Use earbud taps to control
-                      your workout.
+                      Audio guidance will guide you through each exercise. Use earbud taps to
+                      control your workout.
                     </p>
                   </div>
                 </div>
@@ -574,6 +671,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
             </div>
           </>
         )}
+        <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
       </div>
     </DndProvider>
   );

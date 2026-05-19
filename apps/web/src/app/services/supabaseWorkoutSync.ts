@@ -1,6 +1,7 @@
 import type { Exercise } from '../domain/workout';
 import { supabase } from '../lib/supabaseClient';
 import type { WorkoutSessionRecord } from '../utils/workoutHistory';
+import { buildSessionAnalytics } from './workoutAnalytics';
 import { rememberWorkoutSyncStatus, type WorkoutSyncResult } from './cloudSyncStatus';
 
 const getExerciseVolume = (exercise: Exercise): number => {
@@ -38,6 +39,8 @@ export const syncWorkoutSessionToSupabase = async (
     return result;
   }
 
+  const analytics = session.analytics ?? buildSessionAnalytics(session);
+
   const sessionRow = {
     id: session.id,
     user_id: user.id,
@@ -45,11 +48,15 @@ export const syncWorkoutSessionToSupabase = async (
     started_at: session.startedAt,
     completed_at: session.completedAt,
     goal: session.goal ?? null,
-    muscle_group: session.muscleGroup ?? null,
+    muscle_group: session.muscleGroup?.join(',') ?? null,
     duration_minutes: session.duration ?? null,
     total_sets: session.totalSets,
     completed_sets: session.completedSets,
     total_volume: session.totalVolume,
+    plan_snapshot: session.planSnapshot ?? null,
+    review: session.review ?? null,
+    exercise_reviews: session.exerciseReviews ?? [],
+    analytics,
   };
 
   const exerciseRows = session.exercises.map((exercise, index) => ({

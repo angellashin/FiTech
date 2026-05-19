@@ -12,28 +12,33 @@
 
 기존 Profile의 Settings 토글 3개가 하드코딩(`enabled: true`)으로 클릭해도 아무 효과 없었음. 전부 실제 기능에 연결.
 
-| 설정 | 동작 |
-|------|------|
-| Audio Guidance | OFF 시 운동 세션 TTS 음성 안내 비활성화 |
+| 설정               | 동작                                               |
+| ------------------ | -------------------------------------------------- |
+| Audio Guidance     | OFF 시 운동 세션 TTS 음성 안내 비활성화            |
 | Rest Notifications | OFF 시 쉬는시간 카운트다운 beep(띵~/땅!) 전부 무음 |
-| Dark Mode | OFF 시 CSS invert 필터로 즉시 라이트 모드 전환 |
+| Dark Mode          | OFF 시 CSS invert 필터로 즉시 라이트 모드 전환     |
 
 **저장 방식:** `localStorage` 키 `fitech_user_settings`에 JSON으로 저장. 앱 재시작 후에도 유지.
 
 **신규 파일:** `src/app/utils/userSettings.ts`
+
 - `getUserSettings()` — 설정 읽기 (기본값: 전부 true)
 - `setUserSetting(key, value)` — 개별 설정 쓰기
 - `applyDarkMode(dark: boolean)` — `html` 태그에 `light-mode` 클래스 토글
 
 **Dark Mode 구현:** `src/styles/globals.css`에 아래 추가
+
 ```css
 html.light-mode {
   filter: invert(1) hue-rotate(180deg);
 }
-html.light-mode img, html.light-mode video, html.light-mode canvas {
+html.light-mode img,
+html.light-mode video,
+html.light-mode canvas {
   filter: invert(1) hue-rotate(180deg);
 }
 ```
+
 > 프로토타입 수준의 라이트 모드. 컴포넌트별 색상 분기 없이 CSS 필터로 전체 반전.  
 > 향후 Tailwind `dark:` 클래스 방식으로 고도화 가능.
 
@@ -44,10 +49,12 @@ html.light-mode img, html.light-mode video, html.light-mode canvas {
 ### 2. WorkoutSession — 설정 값 반영
 
 **Audio Guidance:**
+
 - `WorkoutSession.tsx`의 `audioEnabled` 초기값을 `true` 하드코딩 → `getUserSettings().audioGuidance`로 변경
 - Profile에서 설정을 바꾸면 다음 세션부터 반영됨
 
 **Rest Notifications:**
+
 - 쉬는시간 `useEffect` 내 `playTone()` 호출부를 `restNotificationsEnabled` 조건으로 감쌈
 - 10초 전 경고음 / 3·2·1초 카운트다운 beep / 완료 땅! 모두 설정 OFF 시 무음
 
@@ -58,6 +65,7 @@ html.light-mode img, html.light-mode video, html.light-mode canvas {
 연필(✏️) 버튼 클릭 시 바텀 시트가 슬라이드 업.
 
 편집 가능 항목:
+
 - **아바타 색상** — 파랑/보라/초록/빨강/주황 5가지 원형 버튼으로 선택
 - **Display Name** — 최대 30자 (빈칸 저장 시 기존 이름 유지)
 - **Current Goal** — 최대 60자 자유 입력
@@ -78,10 +86,12 @@ Save 버튼 클릭 즉시 카드에 반영. 외부 탭 또는 Cancel로 변경�
 버튼 클릭 시 아래로 펼쳐지는 구조. 별도 화면 전환 없음.
 
 **About FiTech:**
+
 - 앱 아이콘, 버전(v1.0.0), 소개 문구
 - Platform / Audio / Storage / Earbud control 기술 정보 표
 
 **Help & Support — FAQ 8개:**
+
 1. 이어폰 버튼 조작법 (1/2/3탭)
 2. 음성 안내가 안 나올 때
 3. 무게 추천 로직 3단계
@@ -100,14 +110,17 @@ FAQ 각 항목은 내부 accordion으로 하나씩 열고 닫힘.
 Log Out 버튼 클릭 → 중앙 확인 다이얼로그 표시.
 
 **로그아웃 시 동작:**
+
 - `fitech_user_name`만 삭제 후 Login 화면으로 이동
 - 운동 기록 등 나머지 데이터는 그대로 보존
 
 **다음 로그인 시 사용자 전환 감지 (`Login.tsx`):**
+
 - 이전 이름과 **같은 이름** → 기존 기록 전부 유지, 그대로 홈 진입
 - 이전 이름과 **다른 이름** → 아래 키 전부 삭제 후 새 사용자로 시작
 
 삭제되는 키:
+
 - `fitech_workout_history` / `fitech_workout_sessions` / `fitech_saved_routines`
 - `fitech_gym_profile` / `fitech_settings` / `fitech_user_goal` / `fitech_avatar_color`
 
@@ -128,11 +141,13 @@ Log Out 버튼 클릭 → 중앙 확인 다이얼로그 표시.
 운동 완료 후 해당 루틴에 이름을 붙여 저장하고, Home 화면에서 바로 불러올 수 있는 기능.
 
 #### 저장 흐름 (WorkoutComplete)
+
 - 운동 완료 화면 하단에 **Save Routine** 카드 추가
 - 이름 입력 → Save 버튼 클릭 (이름 없으면 비활성화)
 - 저장 성공 시 버튼이 BookmarkCheck 아이콘 + "Saved!" 으로 전환
 
 #### 불러오기 흐름 (Home)
+
 - Home 화면에 **My Routines** 섹션 **항상 표시** (Your Progress 바로 아래 → Recent Workouts 위)
   - 루틴이 없으면 "No routines saved yet. Complete a workout and save it!" 안내 문구
   - 루틴이 있으면 목록 표시
@@ -141,16 +156,18 @@ Log Out 버튼 클릭 → 중앙 확인 다이얼로그 표시.
 - Home 재진입 시 항상 최신 루틴 목록 반영 (`key={homeKey}` 강제 remount)
 
 **저장 구조 (`fitech_saved_routines`):**
+
 ```ts
 interface SavedRoutine {
-  id: string;       // 저장 시각 기반 uuid
-  name: string;     // 사용자 입력 이름
-  savedAt: string;  // ISO 날짜 문자열
+  id: string; // 저장 시각 기반 uuid
+  name: string; // 사용자 입력 이름
+  savedAt: string; // ISO 날짜 문자열
   exercises: Exercise[];
 }
 ```
 
 **신규 함수 (`src/app/utils/workoutHistory.ts`):**
+
 - `getSavedRoutines()` — 전체 루틴 목록 읽기
 - `saveRoutine(name, exercises)` — 루틴 저장 후 반환
 - `deleteRoutine(id)` — ID로 삭제
@@ -176,27 +193,32 @@ interface SavedRoutine {
 ```
 
 #### 핵심 설계 원칙
+
 - LLM은 **이미 정의된 exerciseLibrary 목록 안에서만** 선택 가능 (새 운동 발명 불가)
 - 모르는 이름이 응답에 포함되면 `console.warn` 후 skip
 - API 실패 / 할당량 초과 시 기존 로컬 `generateWorkoutPlan`으로 자동 폴백
 
 #### 사용 모델 및 API 키 관리
-| 항목 | 값 |
-|------|-----|
-| 모델 | `gemini-2.5-flash` |
-| API 키 | `.env.local`에 3개 등록 (키 로테이션) |
-| 키 소진(429) 시 | 다음 키로 자동 전환 |
-| 전체 키 소진 시 | 로컬 플래너로 폴백 |
+
+| 항목            | 값                                    |
+| --------------- | ------------------------------------- |
+| 모델            | `gemini-2.5-flash`                    |
+| API 키          | `.env.local`에 3개 등록 (키 로테이션) |
+| 키 소진(429) 시 | 다음 키로 자동 전환                   |
+| 전체 키 소진 시 | 로컬 플래너로 폴백                    |
 
 **`.env.local` 설정:**
+
 ```env
 VITE_GEMINI_API_KEY=...
 VITE_GEMINI_API_KEY_2=...
 VITE_GEMINI_API_KEY_3=...
 ```
+
 > API 키가 하나도 없으면 처음부터 로컬 플래너 사용 (오프라인 완전 동작 보장).
 
 #### 프롬프트 구조 (`buildPrompt`)
+
 1. 강도 설명 (Very Light / Light / Normal / Hard / Very Hard)
 2. 대상 근육 그룹
 3. **헬스장 기구 제약** (My Gym 설정 시 자동 포함)
@@ -205,6 +227,7 @@ VITE_GEMINI_API_KEY_3=...
 6. 응답 형식: JSON 배열 `["운동명1", "운동명2", ...]` 만 출력
 
 #### UI 변경 (`WorkoutSetup.tsx`)
+
 - Generate Plan 버튼 클릭 시 "AI is building your plan..." 로딩 표시
 - API 실패 후 폴백 시 하단에 "AI unavailable — generated with local planner" 문구 표시
 - **My Gym Equipment** 섹션이 Intensity 바로 아래에 위치 (9번 항목 참고)
@@ -218,23 +241,25 @@ VITE_GEMINI_API_KEY_3=...
 사용자가 평소 이용하는 헬스장의 기구를 체크해두면 LLM이 그 기구로 할 수 있는 운동만 선택.
 
 #### 위치
+
 **Setup Workout 화면** → Intensity 섹션 바로 아래 **My Gym Equipment** 섹션 (아코디언 형태)
 
 > Profile이 아닌 WorkoutSetup에 배치한 이유: 루틴 생성 직전에 기구를 바로 확인·조정하는 흐름이 더 자연스럽기 때문.
 
 #### 기구 목록 (12종, 3 카테고리)
 
-| 카테고리 | 기구 |
-|---------|------|
-| Free Weights | Barbell, Dumbbells, EZ Bar, Kettlebell |
-| Machines & Cable | Cable Machine, Lat Pulldown Machine, Leg Press Machine, Pec Deck Machine, Smith Machine, Leg Extension / Curl Machine |
-| Bodyweight Stations | Pull-up Bar, Dip Station |
+| 카테고리            | 기구                                                                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Free Weights        | Barbell, Dumbbells, EZ Bar, Kettlebell                                                                                |
+| Machines & Cable    | Cable Machine, Lat Pulldown Machine, Leg Press Machine, Pec Deck Machine, Smith Machine, Leg Extension / Curl Machine |
+| Bodyweight Stations | Pull-up Bar, Dip Station                                                                                              |
 
 #### 동작 방식
+
 - 체크박스 클릭 즉시 `fitech_gym_profile`에 저장 (별도 Save 버튼 없음)
 - 기구 미설정 시: 모든 운동 대상, 헤더에 "All exercises" 표시
 - 기구 설정 시: LLM 프롬프트에 아래 문구 자동 삽입
-  > *"User's gym equipment: Barbell, Dumbbells, ... Only select exercises that can be performed with the equipment listed above."*
+  > _"User's gym equipment: Barbell, Dumbbells, ... Only select exercises that can be performed with the equipment listed above."_
 - 헤더에 선택 수량 표시: "3 selected"
 - Clear all 버튼으로 전체 초기화
 
@@ -245,11 +270,14 @@ VITE_GEMINI_API_KEY_3=...
 ### 10. 이어폰 컨트롤 — 모바일 브라우저 안정성 개선
 
 #### 문제
+
 모바일 Chrome에서 MediaSession API 기반 이어폰 탭 인식이 불안정. 원인:
+
 1. **오디오 미재생** — 브라우저 자동재생 정책(Autoplay Policy)으로 silent audio가 재생 안 됨 → Chrome이 미디어 버튼을 해당 페이지로 라우팅하지 않음
 2. **다른 앱의 미디어세션 점유** — 음악 앱(Spotify, 유튜브 뮤직 등)이 미디어 버튼을 가로챔
 
 #### 변경 사항 (`useEarbudControls.ts`)
+
 - silent audio 볼륨 `0.0001` → **`1.0`** (모든-0 WAV = 실제 무음이지만 volume 1.0이어야 Android 오디오 포커스 시스템이 "미디어 재생 중"으로 인식해 AVRCP 라우팅됨)
 - `audio.style.display = 'none'` 후 **`document.body.appendChild(audio)`** — 일부 Android Chrome 빌드는 DOM에 없는 audio 요소는 미디어 세션 등록을 거부함
 - `play`/`pause` 이벤트 리스너 추가 → `EarbudDiagnostics.isAudioPlaying: boolean` 실시간 추적
@@ -260,11 +288,13 @@ VITE_GEMINI_API_KEY_3=...
 - 정리(cleanup) 시 audio 요소를 DOM에서 제거, blob URL revoke
 
 #### 변경 사항 (`WorkoutSession.tsx`)
+
 - 진단 패널에 **"Silent audio: playing ✓ / not playing ✗"** 실시간 표시
 - silent audio가 재생 안 될 때 **"Tap here to activate earbud control"** 버튼 표시
 - 진단 패널 안내 문구 업데이트: 다른 음악 앱 종료 권고
 
 #### 이어폰이 여전히 안 될 때 체크리스트
+
 1. 진단 패널 열기 → "Silent audio: playing ✓" 확인
 2. "not playing"이면 → "Tap here to activate" 버튼 탭
 3. playing인데도 Raw events 0이면 → Spotify / 유튜브 뮤직 등 완전히 종료 후 재시도
@@ -275,10 +305,12 @@ VITE_GEMINI_API_KEY_3=...
 ### 11. Android APK 빌드 & TTS 네이티브 전환
 
 #### APK 빌드
+
 GitHub Actions `build-apk.yml` 워크플로우가 **`main` 브랜치 push 시 자동으로** APK를 빌드함.  
 Actions → Build Android APK → 가장 최근 성공 실행 → **Artifacts** 섹션에서 `FiTech-debug-{sha}` ZIP 다운로드 → 압축 해제 후 `app-debug.apk` 폰으로 전송 후 설치.
 
 빌드 파이프라인 (`build-apk.yml`):
+
 1. `pnpm install --no-frozen-lockfile`
 2. `pnpm build` (GITHUB_PAGES=false → base URL = `/`)
 3. `npx cap init` → `npx cap add android` → `npx cap sync android`
@@ -305,6 +337,7 @@ Browser
 ```
 
 **신규 파일:**
+
 - `android-src/FiTechTTSPlugin.java` — `@CapacitorPlugin(name = "FiTechTTS")`, `speak()` / `stop()` 메서드, `OnInitListener` 구현
 - `src/app/lib/fitechTTS.ts` — TypeScript 플러그인 인터페이스 (`registerPlugin<FiTechTTSPlugin>('FiTechTTS')`)
 
@@ -319,33 +352,33 @@ Browser
 
 ### 신규 파일
 
-| 파일 | 내용 |
-|------|------|
-| `src/app/utils/userSettings.ts` | 설정 read/write/applyDarkMode |
-| `src/app/utils/gymProfile.ts` | 헬스장 기구 프로필 read/write |
-| `src/app/utils/workoutHistory.ts` | SavedRoutine 타입 + getSavedRoutines / saveRoutine / deleteRoutine |
-| `src/app/services/llmWorkoutPlanner.ts` | Gemini API 호출, 프롬프트 빌드, 폴백 로직 |
-| `src/app/lib/fitechTTS.ts` | FiTechTTS Capacitor 플러그인 TypeScript 인터페이스 |
-| `android-src/FiTechTTSPlugin.java` | Android 내장 TTS wrapping Capacitor 플러그인 |
+| 파일                                    | 내용                                                               |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `src/app/utils/userSettings.ts`         | 설정 read/write/applyDarkMode                                      |
+| `src/app/utils/gymProfile.ts`           | 헬스장 기구 프로필 read/write                                      |
+| `src/app/utils/workoutHistory.ts`       | SavedRoutine 타입 + getSavedRoutines / saveRoutine / deleteRoutine |
+| `src/app/services/llmWorkoutPlanner.ts` | Gemini API 호출, 프롬프트 빌드, 폴백 로직                          |
+| `src/app/lib/fitechTTS.ts`              | FiTechTTS Capacitor 플러그인 TypeScript 인터페이스                 |
+| `android-src/FiTechTTSPlugin.java`      | Android 내장 TTS wrapping Capacitor 플러그인                       |
 
 ### 수정된 파일
 
-| 파일 | 변경 내용 |
-|------|----------|
-| `src/styles/globals.css` | light-mode CSS 필터 추가 |
-| `src/app/App.tsx` | 다크모드 초기 적용, handleLogout 수정(이름만 삭제), homeKey 추가 |
-| `src/app/components/Login.tsx` | 로그인 시 이름 비교 → 다른 사용자면 데이터 초기화 |
-| `src/app/components/Profile.tsx` | Settings 토글 연결, 프로필 편집 모달, About/Help accordion, 로그아웃, Cloud Sync 조건부 표시 |
-| `src/app/components/WorkoutSession.tsx` | audioEnabled 설정 연동, restNotifications 조건, 이어폰 진단 패널 개선 |
-| `src/app/components/WorkoutSetup.tsx` | My Gym Equipment 섹션, LLM 호출 연결 |
-| `src/app/components/WorkoutComplete.tsx` | 루틴 저장 UI (이름 입력 + Save 버튼) |
-| `src/app/components/Home.tsx` | My Routines 항상 표시 + empty state, Recent Workouts 위로 이동 |
-| `src/app/services/workoutPlanner.ts` | `adaptForGoal` export 추가 |
-| `src/app/hooks/useEarbudControls.ts` | isAudioPlaying 진단, activateAudio 노출, 볼륨 1.0, DOM 첨부, seekforward/seekbackward |
-| `src/app/hooks/useAudioCoach.ts` | 네이티브/브라우저 TTS 분기, browser 경로 voice/lang 명시 |
-| `android-src/MainActivity.java` | `registerPlugin(FiTechTTSPlugin.class)` 추가 |
-| `.github/workflows/build-apk.yml` | FiTechTTSPlugin.java 복사 단계 추가 |
-| `apps/web/.env.local` | VITE_GEMINI_API_KEY, _2, _3 추가 (git 미포함) |
+| 파일                                     | 변경 내용                                                                                    |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `src/styles/globals.css`                 | light-mode CSS 필터 추가                                                                     |
+| `src/app/App.tsx`                        | 다크모드 초기 적용, handleLogout 수정(이름만 삭제), homeKey 추가                             |
+| `src/app/components/Login.tsx`           | 로그인 시 이름 비교 → 다른 사용자면 데이터 초기화                                            |
+| `src/app/components/Profile.tsx`         | Settings 토글 연결, 프로필 편집 모달, About/Help accordion, 로그아웃, Cloud Sync 조건부 표시 |
+| `src/app/components/WorkoutSession.tsx`  | audioEnabled 설정 연동, restNotifications 조건, 이어폰 진단 패널 개선                        |
+| `src/app/components/WorkoutSetup.tsx`    | My Gym Equipment 섹션, LLM 호출 연결                                                         |
+| `src/app/components/WorkoutComplete.tsx` | 루틴 저장 UI (이름 입력 + Save 버튼)                                                         |
+| `src/app/components/Home.tsx`            | My Routines 항상 표시 + empty state, Recent Workouts 위로 이동                               |
+| `src/app/services/workoutPlanner.ts`     | `adaptForGoal` export 추가                                                                   |
+| `src/app/hooks/useEarbudControls.ts`     | isAudioPlaying 진단, activateAudio 노출, 볼륨 1.0, DOM 첨부, seekforward/seekbackward        |
+| `src/app/hooks/useAudioCoach.ts`         | 네이티브/브라우저 TTS 분기, browser 경로 voice/lang 명시                                     |
+| `android-src/MainActivity.java`          | `registerPlugin(FiTechTTSPlugin.class)` 추가                                                 |
+| `.github/workflows/build-apk.yml`        | FiTechTTSPlugin.java 복사 단계 추가                                                          |
+| `apps/web/.env.local`                    | VITE_GEMINI_API_KEY, \_2, \_3 추가 (git 미포함)                                              |
 
 ---
 
@@ -353,12 +386,12 @@ Browser
 
 ### 기존 테이블 (이전 팀이 구축, 현재도 유지됨)
 
-| 테이블 | 내용 |
-|--------|------|
-| `workout_sessions` | 완료된 운동 세션 요약 (시작/종료 시각, 총 볼륨 등) |
-| `session_exercises` | 세션별 운동 목록 |
-| `session_sets` | 세트별 무게/반복/완료 여부 |
-| `session_events` | 이어버드 탭 이벤트 로그 |
+| 테이블              | 내용                                               |
+| ------------------- | -------------------------------------------------- |
+| `workout_sessions`  | 완료된 운동 세션 요약 (시작/종료 시각, 총 볼륨 등) |
+| `session_exercises` | 세션별 운동 목록                                   |
+| `session_sets`      | 세트별 무게/반복/완료 여부                         |
+| `session_events`    | 이어버드 탭 이벤트 로그                            |
 
 Supabase 연결은 `src/app/lib/supabaseClient.ts`에서 관리. `VITE_SUPABASE_ANON_KEY`가 비어있으면 `supabase = null`이 되어 **자동으로 localStorage 전용 모드로 전환**됨 — 앱은 정상 동작.
 
@@ -366,12 +399,12 @@ Supabase 연결은 `src/app/lib/supabaseClient.ts`에서 관리. `VITE_SUPABASE_
 
 이번에 추가한 기능들은 **Supabase 테이블 변경 없음**. 전부 localStorage 기반으로 구현:
 
-| 기능 | 저장 위치 |
-|------|----------|
-| Settings 토글 | `fitech_user_settings` (localStorage) |
-| 프로필 편집 | `fitech_user_name`, `fitech_user_goal`, `fitech_avatar_color` (localStorage) |
-| Saved Routines | `fitech_saved_routines` (localStorage) |
-| My Gym 기구 프로필 | `fitech_gym_profile` (localStorage) |
+| 기능               | 저장 위치                                                                    |
+| ------------------ | ---------------------------------------------------------------------------- |
+| Settings 토글      | `fitech_user_settings` (localStorage)                                        |
+| 프로필 편집        | `fitech_user_name`, `fitech_user_goal`, `fitech_avatar_color` (localStorage) |
+| Saved Routines     | `fitech_saved_routines` (localStorage)                                       |
+| My Gym 기구 프로필 | `fitech_gym_profile` (localStorage)                                          |
 
 → DB migration 불필요, Supabase anon key 없어도 모든 기능 동작.
 
@@ -389,16 +422,16 @@ anon key는 [Supabase 대시보드](https://supabase.com/dashboard/project/kqrqr
 
 ## localStorage 키 전체 목록
 
-| 키 | 내용 | 타입 |
-|----|------|------|
-| `fitech_user_name` | 사용자 이름 | string |
-| `fitech_user_goal` | 현재 목표 문구 | string |
-| `fitech_avatar_color` | 아바타 색상 인덱스 (0–4) | string(number) |
-| `fitech_user_settings` | 오디오/알림/다크모드 설정 | JSON |
-| `fitech_workout_sessions` | 완료된 운동 세션 목록 | JSON array |
-| `fitech_workout_history` | 세트별 무게/반복 기록 | JSON array |
-| `fitech_saved_routines` | 저장된 루틴 목록 | JSON array |
-| `fitech_gym_profile` | 헬스장 보유 기구 목록 | JSON |
+| 키                        | 내용                      | 타입           |
+| ------------------------- | ------------------------- | -------------- |
+| `fitech_user_name`        | 사용자 이름               | string         |
+| `fitech_user_goal`        | 현재 목표 문구            | string         |
+| `fitech_avatar_color`     | 아바타 색상 인덱스 (0–4)  | string(number) |
+| `fitech_user_settings`    | 오디오/알림/다크모드 설정 | JSON           |
+| `fitech_workout_sessions` | 완료된 운동 세션 목록     | JSON array     |
+| `fitech_workout_history`  | 세트별 무게/반복 기록     | JSON array     |
+| `fitech_saved_routines`   | 저장된 루틴 목록          | JSON array     |
+| `fitech_gym_profile`      | 헬스장 보유 기구 목록     | JSON           |
 
 ---
 
@@ -438,8 +471,9 @@ VITE_GEMINI_API_KEY_2=<팀원에게 별도 공유>
 VITE_GEMINI_API_KEY_3=<팀원에게 별도 공유>
 ```
 
-> - `VITE_SUPABASE_ANON_KEY`는 비워도 됨 — 로컬 전용 모드로 자동 동작  
-> - Gemini API 키 3개는 보안상 이 파일에 포함하지 않음. **준서에게 카카오톡 등으로 별도 요청**  
+> - `VITE_SUPABASE_ANON_KEY`는 비워도 됨 — 로컬 전용 모드로 자동 동작
+> - Gemini API 키 3개는 보안상 이 파일에 포함하지 않음. **준서에게 카카오톡 등으로 별도 요청**
+> - 키 하나가 429(할당량 초과)를 반환하면 자동으로 다음 키로 전환됨
 > - 키가 없거나 전부 소진되면 LLM 없이 로컬 알고리즘으로 폴백하므로 앱 자체는 정상 동작함
 
 ---

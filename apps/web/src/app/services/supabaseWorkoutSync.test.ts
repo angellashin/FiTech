@@ -23,15 +23,25 @@ import { syncWorkoutSessionToSupabase } from './supabaseWorkoutSync';
 
 const sampleSession: WorkoutSessionRecord = {
   id: 'session-test',
-  schemaVersion: 1,
+  schemaVersion: 2,
   startedAt: '2026-05-08T10:00:00.000Z',
   completedAt: '2026-05-08T10:30:00.000Z',
   goal: 'strength',
-  muscleGroup: 'lower-body',
+  muscleGroup: ['lower-body'],
   duration: 30,
   totalSets: 2,
   completedSets: 1,
   totalVolume: 400,
+  review: { rating: 4, notes: 'steady', reviewedAt: '2026-05-08T10:31:00.000Z' },
+  exerciseReviews: [
+    {
+      exerciseId: 'squat',
+      exerciseName: 'Squats',
+      rating: 3,
+      reviewedAt: '2026-05-08T10:32:00.000Z',
+    },
+  ],
+  planSnapshot: { goal: 'strength', muscleGroup: ['lower-body'], duration: 30, exercises: [] },
   exercises: [
     {
       id: 'squat',
@@ -120,6 +130,11 @@ describe('syncWorkoutSessionToSupabase', () => {
         user_id: 'user-1',
         completed_sets: 1,
         total_volume: 400,
+        muscle_group: 'lower-body',
+        review: sampleSession.review,
+        exercise_reviews: sampleSession.exerciseReviews,
+        plan_snapshot: sampleSession.planSnapshot,
+        analytics: expect.objectContaining({ adherenceRate: 50 }),
       }),
     );
     expect(tableClients.get('session_exercises')?.upsert).toHaveBeenCalledWith(

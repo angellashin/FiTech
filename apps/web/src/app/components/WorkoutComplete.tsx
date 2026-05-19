@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   CheckCircle2,
   TrendingUp,
@@ -9,11 +9,27 @@ import {
   BarChart3,
   Bookmark,
   BookmarkCheck,
+  Sparkles,
 } from 'lucide-react';
-import type { Exercise, ExerciseSet } from '../domain/workout';
-import { calculateTotalVolume, getPreviousExerciseHistory, saveRoutine } from '../utils/workoutHistory';
+import {
+  WORKOUT_REVIEW_FACE_OPTIONS,
+  type Exercise,
+  type ExerciseSet,
+  type WorkoutReviewRating,
+} from '../domain/workout';
+import {
+  calculateTotalVolume,
+  getPreviousExerciseHistory,
+  getWorkoutSession,
+  saveRoutine,
+  saveWorkoutSessionReview,
+  updateWorkoutSession,
+} from '../utils/workoutHistory';
+import { buildSessionAnalytics } from '../services/workoutAnalytics';
+import { WorkoutReviewFaceIcon } from './WorkoutReviewFaceIcon';
 
 interface WorkoutCompleteProps {
+  sessionId: string;
   exercises: Exercise[];
   onBackToHome: () => void;
 }
@@ -66,14 +82,35 @@ const buildComparisons = (exercises: Exercise[]): ExerciseComparison[] => {
   });
 };
 
-export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProps) {
+export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutCompleteProps) {
   const [routineName, setRoutineName] = useState('');
   const [saved, setSaved] = useState(false);
+  const [sessionRating, setSessionRating] = useState<WorkoutReviewRating | null>(null);
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [reviewSaved, setReviewSaved] = useState(false);
 
   const handleSaveRoutine = () => {
     if (!routineName.trim()) return;
     saveRoutine(routineName, exercises);
     setSaved(true);
+  };
+
+  const handleSaveReview = () => {
+    if (!sessionId || !sessionRating) return;
+    const reviewedSession = saveWorkoutSessionReview(sessionId, {
+      rating: sessionRating,
+      notes: reviewNotes.trim() || undefined,
+    });
+    const latestSession = reviewedSession ?? getWorkoutSession(sessionId);
+    const enrichedSession = latestSession
+      ? (updateWorkoutSession(latestSession.id, {
+          analytics: buildSessionAnalytics(latestSession),
+        }) ?? latestSession)
+      : null;
+    void import('../services/supabaseWorkoutSync')
+      .then(({ syncWorkoutSessionToSupabase }) => syncWorkoutSessionToSupabase(enrichedSession))
+      .catch((error) => console.warn('Unable to sync workout review:', error));
+    setReviewSaved(true);
   };
 
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
@@ -84,6 +121,28 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
   const totalVolume = calculateTotalVolume(exercises);
   const comparisons = buildComparisons(exercises);
   const hasComparisons = comparisons.length > 0;
+  const analytics = useMemo(
+    () =>
+      buildSessionAnalytics({
+        id: sessionId,
+        schemaVersion: 2,
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        exercises,
+        events: [],
+        totalSets,
+        completedSets,
+        totalVolume,
+        review: sessionRating
+          ? {
+              rating: sessionRating,
+              notes: reviewNotes.trim() || undefined,
+              reviewedAt: new Date().toISOString(),
+            }
+          : undefined,
+      }),
+    [completedSets, exercises, reviewNotes, sessionId, sessionRating, totalSets, totalVolume],
+  );
 
   const stats = [
     {
@@ -99,7 +158,7 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
       color: 'text-orange-500',
     },
     {
-      label: 'Volume Score',
+      label: 'Total Work',
       value: Math.round(totalVolume).toLocaleString(),
       icon: BarChart3,
       color: 'text-blue-500',
@@ -139,6 +198,62 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
                 );
               })}
             </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="glass-dark rounded-xl p-3">
+                <div className="text-neutral-500 mb-1">Completion Rate</div>
+                <div className="text-lg font-bold text-emerald-400">{analytics.adherenceRate}%</div>
+                <div className="text-[11px] text-neutral-600 mt-1">Completed / planned sets</div>
+              </div>
+              <div className="glass-dark rounded-xl p-3">
+                <div className="text-neutral-500 mb-1">New Records</div>
+                <div className="text-lg font-bold text-yellow-400">{analytics.prs.length}</div>
+                <div className="text-[11px] text-neutral-600 mt-1">Compared with past sessions</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-950/40 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-blue-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-blue-300" />
+              <div className="text-sm text-blue-200">Quick Review</div>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">How did this workout feel?</h3>
+            <p className="text-xs text-neutral-400 mb-4">
+              One face captures the overall feel — difficulty, condition, energy, and satisfaction.
+            </p>
+            <div className="grid grid-cols-5 gap-2 mb-4">
+              {WORKOUT_REVIEW_FACE_OPTIONS.map((item) => (
+                <button
+                  key={item.rating}
+                  type="button"
+                  aria-label={item.ariaLabel}
+                  aria-pressed={sessionRating === item.rating}
+                  onClick={() => setSessionRating(item.rating)}
+                  className={`rounded-2xl p-2 border transition-all ${
+                    sessionRating === item.rating
+                      ? 'border-blue-400 bg-blue-500/20 scale-105'
+                      : 'border-neutral-800 bg-neutral-900/70 hover:bg-neutral-800'
+                  }`}
+                >
+                  <WorkoutReviewFaceIcon rating={item.rating} className="w-8 h-8 mx-auto" />
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={reviewNotes}
+              onChange={(event) => setReviewNotes(event.target.value)}
+              placeholder="Optional note: pain, form, energy, or anything to remember"
+              maxLength={160}
+              className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 min-h-20 mb-4"
+            />
+            <button
+              type="button"
+              onClick={handleSaveReview}
+              disabled={!sessionRating || reviewSaved}
+              className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-500 py-3 text-sm font-semibold transition-all"
+            >
+              {reviewSaved ? 'Review saved for future plans' : 'Save Review'}
+            </button>
           </div>
 
           {hasComparisons && (
@@ -220,7 +335,7 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
                         <span className="font-semibold">First comparable workout recorded!</span>
                       </p>
                       <p className="text-neutral-400">
-                        Repeat these exercises to unlock previous-vs-current progressive overload
+                        Repeat these exercises to unlock previous-vs-current strength trend
                         insights.
                       </p>
                     </div>
@@ -230,14 +345,11 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
             </div>
           )}
 
-          {/* Save as Routine */}
           <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
             {saved ? (
               <div className="flex items-center justify-center gap-3 py-2 text-green-400">
                 <BookmarkCheck className="w-5 h-5" />
-                <span className="font-medium">
-                  "{routineName}" saved to My Routines!
-                </span>
+                <span className="font-medium">"{routineName}" saved to My Routines!</span>
               </div>
             ) : (
               <>
@@ -256,6 +368,7 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
                     className="flex-1 bg-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
                   <button
+                    type="button"
                     onClick={handleSaveRoutine}
                     disabled={!routineName.trim()}
                     className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-sm font-medium transition-all"
@@ -268,6 +381,7 @@ export function WorkoutComplete({ exercises, onBackToHome }: WorkoutCompleteProp
           </div>
 
           <button
+            type="button"
             onClick={onBackToHome}
             className="w-full bg-gradient-to-br from-blue-600 via-blue-600 to-blue-700 hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 text-white rounded-2xl py-5 font-semibold transition-all shadow-lg shadow-blue-900/50 hover:shadow-xl hover:shadow-blue-900/60 hover:scale-[1.02] active:scale-[0.98]"
           >

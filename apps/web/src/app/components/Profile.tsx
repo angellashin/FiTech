@@ -16,8 +16,9 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { getLastCloudSyncStatus } from '../services/cloudSyncStatus';
-import { getAllHistory, getAllSessions } from '../utils/workoutHistory';
+import { clearWorkoutData, getAllSessions } from '../utils/workoutHistory';
 import { getUserSettings, setUserSetting, applyDarkMode } from '../utils/userSettings';
+import { getPersonalRecords } from '../services/workoutAnalytics';
 
 interface ProfileProps {
   onBackToHome: () => void;
@@ -59,6 +60,9 @@ const getCurrentStreak = (sessionDates: string[]) => {
 
 export function Profile({ onBackToHome, onLogout }: ProfileProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showAllRecords, setShowAllRecords] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
   const savedSettings = getUserSettings();
   const [audioGuidance, setAudioGuidance] = useState(savedSettings.audioGuidance);
   const [restNotifications, setRestNotifications] = useState(savedSettings.restNotifications);
@@ -102,7 +106,7 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     },
     {
       q: 'How are weights recommended?',
-      a: "FiTech uses a 3-step system: (1) If you've done this exercise before, it suggests last session's weight × 1.025 for progressive overload. (2) If the exercise is new but you've trained the same muscle group, it uses your average weight for that group rounded to the nearest 2.5 kg. (3) If this is your first time, it defaults to 20 kg (0 kg for bodyweight exercises).",
+      a: "FiTech uses a conservative 3-step system: (1) If you've done this exercise before, it carries forward the last completed working sets instead of assuming overnight strength gains. (2) If the exercise is new but you've trained the same muscle group, it estimates from your recent strength base and scales by movement type, so a fly or raise does not copy a bench-press weight. (3) If this is your first time, it defaults to 20 kg (0 kg for bodyweight exercises). Workout intensity and recovery signals can still adjust the final load.",
     },
     {
       q: 'What does Workout Intensity do?',
@@ -114,7 +118,7 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     },
     {
       q: 'Where is my workout data stored?',
-      a: 'All data is saved locally in your browser\'s localStorage under the keys fitech_workout_sessions and fitech_workout_history. If Supabase cloud sync is active, a backup is also written to the cloud. Clearing your browser data will erase local history.',
+      a: "All data is saved locally in your browser's localStorage under the keys fitech_workout_sessions and fitech_workout_history. If Supabase cloud sync is active, a backup is also written to the cloud. Clearing your browser data will erase local history.",
     },
     {
       q: 'Can I edit my workout plan before starting?',
@@ -140,8 +144,8 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
   const [userGoal, setUserGoal] = useState(
     () => localStorage.getItem('fitech_user_goal') || 'Build Muscle & Stay Consistent',
   );
-  const [avatarColorIndex, setAvatarColorIndex] = useState(
-    () => Number(localStorage.getItem('fitech_avatar_color') ?? 0),
+  const [avatarColorIndex, setAvatarColorIndex] = useState(() =>
+    Number(localStorage.getItem('fitech_avatar_color') ?? 0),
   );
 
   const openEditModal = () => {
@@ -158,13 +162,15 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     setUserGoal(trimmedGoal);
     setAvatarColorIndex(editColorIndex);
     localStorage.setItem('fitech_user_name', trimmedName);
+    localStorage.setItem('fitech_last_user_name', trimmedName);
     localStorage.setItem('fitech_user_goal', trimmedGoal);
     localStorage.setItem('fitech_avatar_color', String(editColorIndex));
     setShowEditModal(false);
   };
 
   const sessions = getAllSessions();
-  const history = getAllHistory();
+  // dataVersion forces this screen to re-read localStorage after destructive data actions.
+  void dataVersion;
   const initials =
     userName
       .split(/\s+/)
@@ -180,26 +186,10 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     );
   });
   const currentStreak = getCurrentStreak(sessions.map((session) => session.completedAt));
-  const bestByExercise = Array.from(
-    history
-      .reduce((records, item) => {
-        const topSet = item.setDetails.reduce(
-          (best, set) => (set.weight > best.weight ? set : best),
-          item.setDetails[0],
-        );
-        const existing = records.get(item.exerciseName);
-        if (!existing || topSet.weight > existing.weight) {
-          records.set(item.exerciseName, {
-            exercise: item.exerciseName,
-            weight: topSet.weight,
-            reps: topSet.reps,
-            date: item.date,
-          });
-        }
-        return records;
-      }, new Map<string, { exercise: string; weight: number; reps: number; date: string }>())
-      .values(),
-  ).slice(0, 3);
+  const allPersonalRecords = getPersonalRecords(sessions);
+  const visiblePersonalRecords = showAllRecords
+    ? allPersonalRecords
+    : allPersonalRecords.slice(0, 3);
 
   const stats = [
     {
@@ -216,7 +206,7 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     },
     {
       label: 'Achievements',
-      value: bestByExercise.length.toString(),
+      value: allPersonalRecords.length.toString(),
       icon: Award,
       color: 'text-yellow-500',
     },
@@ -236,14 +226,24 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     : 'Complete a workout to sync';
 
   const settings = [
-    { label: 'Audio Guidance', icon: Headphones, enabled: audioGuidance, onToggle: toggleAudioGuidance },
-    { label: 'Rest Notifications', icon: Bell, enabled: restNotifications, onToggle: toggleRestNotifications },
+    {
+      label: 'Audio Guidance',
+      icon: Headphones,
+      enabled: audioGuidance,
+      onToggle: toggleAudioGuidance,
+    },
+    {
+      label: 'Rest Notifications',
+      icon: Bell,
+      enabled: restNotifications,
+      onToggle: toggleRestNotifications,
+    },
     { label: 'Dark Mode', icon: Moon, enabled: darkMode, onToggle: toggleDarkMode },
   ];
 
   const personalRecords =
-    bestByExercise.length > 0
-      ? bestByExercise.map((record) => ({
+    visiblePersonalRecords.length > 0
+      ? visiblePersonalRecords.map((record) => ({
           exercise: record.exercise,
           record:
             record.weight > 0 ? `${record.weight} kg × ${record.reps}` : `${record.reps} reps`,
@@ -254,6 +254,12 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
           { exercise: 'Bench Press', record: 'No record yet', date: 'Complete a workout' },
           { exercise: 'Deadlift', record: 'No record yet', date: 'Complete a workout' },
         ];
+
+  const handleClearHistory = () => {
+    clearWorkoutData();
+    setDataVersion((current) => current + 1);
+    setShowClearConfirm(false);
+  };
 
   return (
     <div className="size-full flex flex-col bg-neutral-950 overflow-auto">
@@ -273,7 +279,9 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
           <div className="relative">
             <div className="flex items-center gap-4 mb-4">
-              <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${avatarColors[avatarColorIndex]} flex items-center justify-center text-2xl font-bold shadow-xl shadow-blue-900/50`}>
+              <div
+                className={`w-20 h-20 rounded-full bg-gradient-to-br ${avatarColors[avatarColorIndex]} flex items-center justify-center text-2xl font-bold shadow-xl shadow-blue-900/50`}
+              >
                 {initials}
               </div>
               <div className="flex-1">
@@ -289,9 +297,7 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
             </div>
             <div className="glass-dark rounded-xl p-4 shadow-lg">
               <div className="text-sm text-neutral-400 mb-2">Current Goal</div>
-              <div className="text-lg font-semibold text-blue-300">
-                {userGoal}
-              </div>
+              <div className="text-lg font-semibold text-blue-300">{userGoal}</div>
             </div>
           </div>
         </div>
@@ -322,7 +328,9 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
             <h3 className="text-lg font-semibold mb-4">Cloud Sync</h3>
             <div className="glass-dark rounded-xl p-4 shadow-lg">
               <div className="text-sm text-neutral-400 mb-1">Supabase status</div>
-              <div className={lastCloudSync.ok ? 'text-green-400 font-semibold' : 'text-neutral-300'}>
+              <div
+                className={lastCloudSync.ok ? 'text-green-400 font-semibold' : 'text-neutral-300'}
+              >
                 {cloudSyncLabel}
               </div>
             </div>
@@ -331,6 +339,21 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
 
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
           <h3 className="text-lg font-semibold mb-4">Personal Records</h3>
+
+          <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-red-900/30">
+            <h3 className="text-lg font-semibold mb-2 text-red-200">Data Management</h3>
+            <p className="text-sm text-neutral-400 mb-4">
+              Clear local workout sessions and set history when you want a fresh training baseline.
+              Saved routines stay available.
+            </p>
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="w-full rounded-xl bg-red-600/15 hover:bg-red-600/25 border border-red-500/30 py-3 text-sm font-semibold text-red-200 transition-colors"
+            >
+              Clear Workout History
+            </button>
+          </div>
+
           <div className="space-y-3">
             {personalRecords.map((record, index) => (
               <div
@@ -345,6 +368,14 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
               </div>
             ))}
           </div>
+          {allPersonalRecords.length > 3 && (
+            <button
+              onClick={() => setShowAllRecords((current) => !current)}
+              className="w-full mt-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 py-3 text-sm text-neutral-200 transition-colors"
+            >
+              {showAllRecords ? 'Show top 3' : `View all ${allPersonalRecords.length} records`}
+            </button>
+          )}
         </div>
 
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
@@ -410,8 +441,8 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
                   </div>
                 </div>
                 <p className="text-sm text-neutral-300 leading-relaxed">
-                  FiTech is a screenless, voice-first workout app designed for the gym floor. Control
-                  your entire session with earbud taps — no screen-glancing required.
+                  FiTech is a screenless, voice-first workout app designed for the gym floor.
+                  Control your entire session with earbud taps — no screen-glancing required.
                 </p>
                 <div className="space-y-2">
                   {[
@@ -490,6 +521,35 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
         </div>
       </div>
 
+      {showClearConfirm && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-6">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowClearConfirm(false)}
+          />
+          <div className="relative bg-neutral-900 rounded-2xl p-6 w-full shadow-2xl animate-fade-in border border-red-500/30">
+            <h3 className="text-lg font-semibold mb-2">Clear workout history?</h3>
+            <p className="text-sm text-neutral-400 mb-6">
+              This removes local sessions and set history. Saved routines stay available.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearHistory}
+                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 transition-colors font-medium"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Logout Confirm Dialog */}
       {showLogoutConfirm && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-6">
@@ -500,7 +560,8 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
           <div className="relative bg-neutral-900 rounded-2xl p-6 w-full shadow-2xl animate-fade-in">
             <h3 className="text-lg font-semibold mb-2">Log Out</h3>
             <p className="text-sm text-neutral-400 mb-6">
-              Your workout history stays saved on this device. You'll need to enter your name again on next launch.
+              Your workout history stays saved on this device. You'll need to enter your name again
+              on next launch.
             </p>
             <div className="flex gap-3">
               <button

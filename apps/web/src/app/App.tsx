@@ -7,18 +7,40 @@ import { PlanPreview } from './components/PlanPreview';
 import { WorkoutSession } from './components/WorkoutSession';
 import { WorkoutComplete } from './components/WorkoutComplete';
 import { Profile } from './components/Profile';
+import { WorkoutHistory } from './components/WorkoutHistory';
+import { ProgressReport } from './components/ProgressReport';
 import { getUserSettings, applyDarkMode } from './utils/userSettings';
 
-type Screen = 'login' | 'home' | 'setup' | 'preview' | 'session' | 'complete' | 'profile';
+type Screen =
+  | 'login'
+  | 'home'
+  | 'setup'
+  | 'preview'
+  | 'session'
+  | 'complete'
+  | 'profile'
+  | 'history'
+  | 'progress';
+
+const getInitialScreen = (): Screen => {
+  try {
+    return localStorage.getItem('fitech_user_name') ? 'home' : 'login';
+  } catch {
+    return 'login';
+  }
+};
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('login');
+  const [currentScreen, setCurrentScreen] = useState<Screen>(getInitialScreen);
 
   useEffect(() => {
     applyDarkMode(getUserSettings().darkMode);
   }, []);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
-  const [completedWorkout, setCompletedWorkout] = useState<Exercise[] | null>(null);
+  const [completedWorkout, setCompletedWorkout] = useState<{
+    sessionId: string;
+    exercises: Exercise[];
+  } | null>(null);
   const [previewSource, setPreviewSource] = useState<'setup' | 'home'>('setup');
   const [homeKey, setHomeKey] = useState(0);
   const handleLogin = () => {
@@ -42,8 +64,8 @@ export default function App() {
     setCurrentScreen('session');
   };
 
-  const handleWorkoutComplete = (exercises: Exercise[]) => {
-    setCompletedWorkout(exercises);
+  const handleWorkoutComplete = (sessionId: string, exercises: Exercise[]) => {
+    setCompletedWorkout({ sessionId, exercises });
     setCurrentScreen('complete');
   };
 
@@ -63,6 +85,10 @@ export default function App() {
     // Only clear the name so Login can detect a user switch on next sign-in.
     // Workout data is preserved: if the same name re-enters, history is intact.
     // If a different name enters, Login clears the data at that point.
+    const currentName = localStorage.getItem('fitech_user_name');
+    if (currentName) {
+      localStorage.setItem('fitech_last_user_name', currentName);
+    }
     localStorage.removeItem('fitech_user_name');
     setWorkoutPlan(null);
     setCompletedWorkout(null);
@@ -71,6 +97,14 @@ export default function App() {
 
   const handleGoToProfile = () => {
     setCurrentScreen('profile');
+  };
+
+  const handleViewHistory = () => {
+    setCurrentScreen('history');
+  };
+
+  const handleViewProgressReport = () => {
+    setCurrentScreen('progress');
   };
 
   const handleBackFromSetup = () => {
@@ -90,7 +124,14 @@ export default function App() {
       <div className="w-full max-w-[430px] relative flex flex-col bg-neutral-950 text-white overflow-hidden h-full">
         {currentScreen === 'login' && <Login onLogin={handleLogin} />}
         {currentScreen === 'home' && (
-          <Home key={homeKey} onStartWorkout={handleStartWorkout} onGoToProfile={handleGoToProfile} onLoadPlan={handleLoadPlan} />
+          <Home
+            key={homeKey}
+            onStartWorkout={handleStartWorkout}
+            onGoToProfile={handleGoToProfile}
+            onLoadPlan={handleLoadPlan}
+            onViewHistory={handleViewHistory}
+            onViewProgressReport={handleViewProgressReport}
+          />
         )}
         {currentScreen === 'setup' && (
           <WorkoutSetup onPlanGenerated={handlePlanGenerated} onBack={handleBackFromSetup} />
@@ -110,9 +151,19 @@ export default function App() {
           />
         )}
         {currentScreen === 'complete' && completedWorkout && (
-          <WorkoutComplete exercises={completedWorkout} onBackToHome={handleBackToHome} />
+          <WorkoutComplete
+            sessionId={completedWorkout.sessionId}
+            exercises={completedWorkout.exercises}
+            onBackToHome={handleBackToHome}
+          />
         )}
-        {currentScreen === 'profile' && <Profile onBackToHome={handleBackToHome} onLogout={handleLogout} />}
+        {currentScreen === 'profile' && (
+          <Profile onBackToHome={handleBackToHome} onLogout={handleLogout} />
+        )}
+        {currentScreen === 'history' && (
+          <WorkoutHistory onBack={handleBackToHome} onLoadPlan={handleLoadPlan} />
+        )}
+        {currentScreen === 'progress' && <ProgressReport onBack={handleBackToHome} />}
       </div>
     </div>
   );

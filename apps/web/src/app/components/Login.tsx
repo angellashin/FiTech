@@ -5,6 +5,25 @@ interface LoginProps {
   onLogin: () => void;
 }
 
+const ACTIVE_USER_NAME_KEY = 'fitech_user_name';
+const LAST_USER_NAME_KEY = 'fitech_last_user_name';
+
+const USER_SCOPED_STORAGE_KEYS = [
+  'fitech_workout_history',
+  'fitech_workout_sessions',
+  'fitech_saved_routines',
+  'fitech_gym_profile',
+  'fitech_user_settings',
+  'fitech_user_goal',
+  'fitech_avatar_color',
+  'fitech_cloud_sync_status',
+  'fitech_last_cloud_sync_status',
+];
+
+const clearPreviousUserData = () => {
+  USER_SCOPED_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+};
+
 export function Login({ onLogin }: LoginProps) {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,21 +37,22 @@ export function Login({ onLogin }: LoginProps) {
     setIsLoading(true);
     setSyncMessage('Preparing cloud sync...');
 
-    // If a different user logs in, clear all previous user's data
-    const previousName = localStorage.getItem('fitech_user_name');
-    if (previousName && previousName !== displayName) {
-      localStorage.removeItem('fitech_workout_history');
-      localStorage.removeItem('fitech_workout_sessions');
-      localStorage.removeItem('fitech_saved_routines');
-      localStorage.removeItem('fitech_gym_profile');
-      localStorage.removeItem('fitech_settings');
-      localStorage.removeItem('fitech_user_goal');
-      localStorage.removeItem('fitech_avatar_color');
+    // If a different user logs in on the same device, isolate the local-first data set.
+    const previousName =
+      localStorage.getItem(ACTIVE_USER_NAME_KEY) ?? localStorage.getItem(LAST_USER_NAME_KEY);
+    const isUserSwitch = Boolean(previousName && previousName !== displayName);
+    if (isUserSwitch) {
+      clearPreviousUserData();
     }
 
-    localStorage.setItem('fitech_user_name', displayName);
+    localStorage.setItem(ACTIVE_USER_NAME_KEY, displayName);
+    localStorage.setItem(LAST_USER_NAME_KEY, displayName);
 
     try {
+      if (isUserSwitch) {
+        const { supabase } = await import('../lib/supabaseClient');
+        await supabase?.auth.signOut();
+      }
       const { ensureAnonymousFiTechUser } = await import('../services/supabaseAuth');
       const result = await ensureAnonymousFiTechUser(displayName);
       setSyncMessage(result.message);
@@ -107,7 +127,7 @@ export function Login({ onLogin }: LoginProps) {
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                Auto weight suggestions with progressive overload
+                Conservative weight suggestions from your records
               </li>
               <li className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />

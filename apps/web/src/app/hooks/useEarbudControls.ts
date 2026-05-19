@@ -234,8 +234,16 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
       navigator.mediaSession.setActionHandler('nexttrack', onPress('nexttrack'));
       navigator.mediaSession.setActionHandler('previoustrack', onPress('previoustrack'));
       // Some earbuds use seekforward/seekbackward instead of next/previous
-      try { navigator.mediaSession.setActionHandler('seekforward', onPress('seekforward')); } catch {}
-      try { navigator.mediaSession.setActionHandler('seekbackward', onPress('seekbackward')); } catch {}
+      try {
+        navigator.mediaSession.setActionHandler('seekforward', onPress('seekforward'));
+      } catch {
+        // Optional MediaSession action is not supported in every browser.
+      }
+      try {
+        navigator.mediaSession.setActionHandler('seekbackward', onPress('seekbackward'));
+      } catch {
+        // Optional MediaSession action is not supported in every browser.
+      }
 
       setDiagnostics((prev) => ({ ...prev, platform: 'mediasession', active: true }));
     } catch (err) {
@@ -256,8 +264,16 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
         navigator.mediaSession.setActionHandler('pause', null);
         navigator.mediaSession.setActionHandler('nexttrack', null);
         navigator.mediaSession.setActionHandler('previoustrack', null);
-        try { navigator.mediaSession.setActionHandler('seekforward', null); } catch {}
-        try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch {}
+        try {
+          navigator.mediaSession.setActionHandler('seekforward', null);
+        } catch {
+          // Optional MediaSession action is not supported in every browser.
+        }
+        try {
+          navigator.mediaSession.setActionHandler('seekbackward', null);
+        } catch {
+          // Optional MediaSession action is not supported in every browser.
+        }
         navigator.mediaSession.playbackState = 'none';
       } catch {
         // ignore

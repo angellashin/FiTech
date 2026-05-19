@@ -1,13 +1,27 @@
 import { useState } from 'react';
-import { Dumbbell, History, TrendingUp, Headphones, User, ChevronDown, ChevronUp, RotateCcw, Bookmark, Trash2 } from 'lucide-react';
+import {
+  Dumbbell,
+  History,
+  TrendingUp,
+  Headphones,
+  User,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  Bookmark,
+  Trash2,
+  CalendarDays,
+} from 'lucide-react';
 import { getAllSessions, getSavedRoutines, deleteRoutine } from '../utils/workoutHistory';
 import type { WorkoutSessionRecord, SavedRoutine } from '../utils/workoutHistory';
-import type { WorkoutPlan } from '../domain/workout';
+import type { MuscleGroup, WorkoutPlan } from '../domain/workout';
 
 interface HomeProps {
   onStartWorkout: () => void;
   onGoToProfile: () => void;
   onLoadPlan: (plan: WorkoutPlan) => void;
+  onViewHistory: () => void;
+  onViewProgressReport: () => void;
 }
 
 const formatDate = (iso: string): string => {
@@ -39,11 +53,7 @@ const getDurationLabel = (session: WorkoutSessionRecord): string => {
 };
 
 const sessionToPlan = (session: WorkoutSessionRecord): WorkoutPlan => {
-  const muscleGroup = Array.isArray(session.muscleGroup)
-    ? session.muscleGroup
-    : session.muscleGroup
-      ? [session.muscleGroup]
-      : ['chest'];
+  const muscleGroup: MuscleGroup[] = session.muscleGroup?.length ? session.muscleGroup : ['chest'];
   return {
     goal: session.goal ?? 'strength',
     muscleGroup,
@@ -62,7 +72,13 @@ const routineToPlan = (routine: SavedRoutine): WorkoutPlan => ({
   exercises: routine.exercises,
 });
 
-export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
+export function Home({
+  onStartWorkout,
+  onGoToProfile,
+  onLoadPlan,
+  onViewHistory,
+  onViewProgressReport,
+}: HomeProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savedRoutines, setSavedRoutines] = useState<SavedRoutine[]>(() => getSavedRoutines());
 
@@ -121,12 +137,19 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
         </button>
 
         {/* Your Progress */}
-        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
+        <button
+          type="button"
+          onClick={onViewProgressReport}
+          className="w-full text-left bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50 hover:border-blue-500/30 hover:bg-neutral-900 transition-all"
+        >
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-blue-400" />
             </div>
-            <h2 className="text-lg font-semibold">Your Progress</h2>
+            <div>
+              <h2 className="text-lg font-semibold">Your Progress</h2>
+              <p className="text-xs text-neutral-500">Tap for full progress report</p>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center bg-blue-500/5 rounded-xl p-3 border border-blue-500/10">
@@ -142,7 +165,7 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
               <div className="text-xs text-neutral-400 mt-1">Total</div>
             </div>
           </div>
-        </div>
+        </button>
 
         {/* My Routines */}
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
@@ -166,7 +189,10 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
                       <div className="text-sm text-neutral-400 mt-0.5">
                         {routine.exercises.length} exercises
                         {' · '}
-                        {routine.exercises.map((e) => e.muscleGroup).filter((v, i, a) => a.indexOf(v) === i).join(', ')}
+                        {routine.exercises
+                          .map((e) => e.muscleGroup)
+                          .filter((v, i, a) => a.indexOf(v) === i)
+                          .join(', ')}
                       </div>
                     </div>
                     <button
@@ -191,11 +217,20 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
 
         {/* Recent Workouts */}
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center">
-              <History className="w-5 h-5 text-neutral-400" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center">
+                <History className="w-5 h-5 text-neutral-400" />
+              </div>
+              <h2 className="text-lg font-semibold">Recent Workouts</h2>
             </div>
-            <h2 className="text-lg font-semibold">Recent Workouts</h2>
+            <button
+              onClick={onViewHistory}
+              className="flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200"
+            >
+              <CalendarDays className="w-4 h-4" />
+              View all
+            </button>
           </div>
           <div className="space-y-3">
             {recentWorkouts.length === 0 ? (
@@ -220,11 +255,14 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="text-sm text-neutral-500">{formatDate(session.completedAt)}</div>
-                        {isExpanded
-                          ? <ChevronUp className="w-4 h-4 text-neutral-500" />
-                          : <ChevronDown className="w-4 h-4 text-neutral-500" />
-                        }
+                        <div className="text-sm text-neutral-500">
+                          {formatDate(session.completedAt)}
+                        </div>
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-neutral-500" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-neutral-500" />
+                        )}
                       </div>
                     </button>
 
@@ -234,7 +272,9 @@ export function Home({ onStartWorkout, onGoToProfile, onLoadPlan }: HomeProps) {
                           {session.exercises.map((ex, i) => (
                             <div key={i} className="flex items-center justify-between text-sm">
                               <span className="text-neutral-300">{ex.name}</span>
-                              <span className="text-neutral-500">{ex.sets} sets × {ex.reps} reps</span>
+                              <span className="text-neutral-500">
+                                {ex.sets} sets × {ex.reps} reps
+                              </span>
                             </div>
                           ))}
                         </div>

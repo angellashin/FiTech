@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, Bell, Info } from 'lucide-react';
+import { useCallback, useState, useEffect } from 'react';
+import { Volume2, VolumeX, X, Bell, Info, BookOpen } from 'lucide-react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
 import {
   saveWorkoutHistory,
+  updateWorkoutSession,
   type WorkoutSessionEvent,
   type WorkoutSessionEventType,
 } from '../utils/workoutHistory';
 import { useAudioCoach } from '../hooks/useAudioCoach';
 import { useEarbudControls } from '../hooks/useEarbudControls';
-import { getUserSettings } from '../utils/userSettings';
+import { getUserSettings, setUserSetting } from '../utils/userSettings';
+import { buildSessionAnalytics } from '../services/workoutAnalytics';
+import { getExerciseGuide } from '../services/exerciseGuide';
+import { ExerciseGuideSheet } from './ExerciseGuideSheet';
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
-  onComplete: (exercises: Exercise[]) => void;
+  onComplete: (sessionId: string, exercises: Exercise[]) => void;
   onBack: () => void;
 }
 
@@ -28,9 +32,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const [events, setEvents] = useState<WorkoutSessionEvent[]>([]);
   const [startedAt] = useState(() => new Date().toISOString());
-  const { audioGuidance: savedAudioGuidance, restNotifications: restNotificationsEnabled } = getUserSettings();
+  const { audioGuidance: savedAudioGuidance, restNotifications: restNotificationsEnabled } =
+    getUserSettings();
   const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [guideExercise, setGuideExercise] = useState<Exercise | null>(null);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
@@ -42,9 +48,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       // AudioContext 잠금 해제
       try {
         const ctx = new AudioContext();
-        if (ctx.state === 'suspended') ctx.resume();
-        ctx.close();
-      } catch {}
+        if (ctx.state === 'suspended') void ctx.resume();
+        void ctx.close();
+      } catch {
+        // Some browsers block AudioContext until a stronger user gesture; safe to ignore.
+      }
       // speechSynthesis 잠금 해제 (무음 utterance)
       if ('speechSynthesis' in window) {
         const silent = new SpeechSynthesisUtterance('');
@@ -62,6 +70,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   }, [audioUnlocked]);
 
   const currentExercise = exercises[currentExerciseIndex];
+  const currentGuide = currentExercise ? getExerciseGuide(currentExercise) : null;
   const totalExercises = exercises.length || 1;
   const progress = (completedExercises.length / totalExercises) * 100;
 
@@ -71,7 +80,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     }
   }, [audioMessage, speak]);
 
-  const playTone = (frequency: number, duration: number, volume = 0.35) => {
+  const playTone = useCallback((frequency: number, duration: number, volume = 0.35) => {
     try {
       const ctx = new AudioContext();
       const osc = ctx.createOscillator();
@@ -84,18 +93,20 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + duration);
-    } catch {}
-  };
+    } catch {
+      // Audio feedback is best-effort; the session flow must continue silently if blocked.
+    }
+  }, []);
 
   useEffect(() => {
     if (isResting && restTimeLeft > 0) {
       const timer = setTimeout(() => {
         setRestTimeLeft(restTimeLeft - 1);
         if (restNotificationsEnabled) {
-          if (restTimeLeft === 11) playTone(880, 0.35);    // 10s: 띵!
-          if (restTimeLeft === 4)  playTone(660, 0.25);    // 3s: 띵
-          if (restTimeLeft === 3)  playTone(880, 0.25);    // 2s: 띵
-          if (restTimeLeft === 2)  playTone(1100, 0.25);   // 1s: 띵
+          if (restTimeLeft === 11) playTone(880, 0.35); // 10s: 띵!
+          if (restTimeLeft === 4) playTone(660, 0.25); // 3s: 띵
+          if (restTimeLeft === 3) playTone(880, 0.25); // 2s: 띵
+          if (restTimeLeft === 2) playTone(1100, 0.25); // 1s: 띵
         }
         if (restTimeLeft === 1) {
           if (restNotificationsEnabled) playTone(440, 1.2, 0.5); // 0s: 땅!
@@ -106,7 +117,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     } else if (isResting && restTimeLeft === 0) {
       setIsResting(false);
     }
-  }, [isResting, restTimeLeft]);
+  }, [isResting, playTone, restNotificationsEnabled, restTimeLeft]);
 
   const createEvent = (
     type: WorkoutSessionEventType,
@@ -148,13 +159,19 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       goal: plan.goal,
       muscleGroup: plan.muscleGroup,
       duration: plan.duration,
+      planSnapshot: plan,
     });
+    const enrichedSession = savedSession
+      ? (updateWorkoutSession(savedSession.id, {
+          analytics: buildSessionAnalytics(savedSession),
+        }) ?? savedSession)
+      : null;
     void import('../services/supabaseWorkoutSync')
-      .then(({ syncWorkoutSessionToSupabase }) => syncWorkoutSessionToSupabase(savedSession))
+      .then(({ syncWorkoutSessionToSupabase }) => syncWorkoutSessionToSupabase(enrichedSession))
       .catch((error) => console.warn('Unable to load Supabase workout sync:', error));
     setEvents(savedEvents);
     setAudioMessage(completionEvent.message);
-    onComplete(finalExercises);
+    onComplete(enrichedSession?.id ?? '', finalExercises);
   };
 
   const rememberCompletedExercise = (exerciseId: string) => {
@@ -291,7 +308,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const toggleAudio = () => {
     setAudioEnabled((previous) => {
       const next = !previous;
-      if (previous) {
+      setUserSetting('audioGuidance', next);
+      if (!next) {
         stop();
       }
       return next;
@@ -358,17 +376,29 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div>Platform: <span className="font-mono">{earbud.platform}</span></div>
-          <div>Active: <span className="font-mono">{String(earbud.active)}</span></div>
+          <div>
+            Platform: <span className="font-mono">{earbud.platform}</span>
+          </div>
+          <div>
+            Active: <span className="font-mono">{String(earbud.active)}</span>
+          </div>
           <div>
             Silent audio:{' '}
-            <span className={`font-mono ${earbud.isAudioPlaying ? 'text-emerald-300' : 'text-red-300'}`}>
+            <span
+              className={`font-mono ${earbud.isAudioPlaying ? 'text-emerald-300' : 'text-red-300'}`}
+            >
               {earbud.isAudioPlaying ? 'playing ✓' : 'not playing ✗'}
             </span>
           </div>
-          <div>Raw events received: <span className="font-mono">{earbud.rawEventCount}</span></div>
-          <div>Last raw event: <span className="font-mono">{earbud.lastRawEvent ?? '—'}</span></div>
-          <div>Last tap: <span className="font-mono">{earbud.lastTapKind ?? '—'}</span></div>
+          <div>
+            Raw events received: <span className="font-mono">{earbud.rawEventCount}</span>
+          </div>
+          <div>
+            Last raw event: <span className="font-mono">{earbud.lastRawEvent ?? '—'}</span>
+          </div>
+          <div>
+            Last tap: <span className="font-mono">{earbud.lastTapKind ?? '—'}</span>
+          </div>
           {earbud.errors.length > 0 && (
             <div className="text-red-300">Errors: {earbud.errors.join(' · ')}</div>
           )}
@@ -382,8 +412,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
             </button>
           )}
           <div className="text-emerald-200/70 pt-1">
-            Press your earbud button to see the counter go up. If "Raw events" stays at 0,{' '}
-            close any music apps (Spotify, YouTube Music, etc.) — they may be intercepting media buttons.
+            Press your earbud button to see the counter go up. If "Raw events" stays at 0, close any
+            music apps (Spotify, YouTube Music, etc.) — they may be intercepting media buttons.
           </div>
         </div>
       )}
@@ -447,6 +477,31 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                 <Volume2 className="w-6 h-6 text-blue-500" />
                 <div className="text-sm text-neutral-400">Audio Guidance Active</div>
               </div>
+              {currentExercise && currentGuide && (
+                <button
+                  type="button"
+                  onClick={() => setGuideExercise(currentExercise)}
+                  className="mx-auto mb-5 flex w-full max-w-xs items-center gap-3 rounded-3xl border border-white/10 bg-white/5 p-3 text-left hover:bg-white/10 transition-colors"
+                >
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white">
+                    <img
+                      src={currentGuide.imageSrc}
+                      alt={`${currentExercise.name} form illustration`}
+                      className="absolute inset-0 h-full w-full object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-semibold text-blue-200">
+                      <BookOpen className="h-3 w-3" />
+                      Form guide
+                    </div>
+                    <div className="text-xs leading-relaxed text-neutral-400">
+                      {currentGuide.equipment} · {currentGuide.primaryFocus}
+                    </div>
+                  </div>
+                </button>
+              )}
               <h2 className="text-4xl font-bold mb-2">{currentExercise?.name}</h2>
               <p className="text-lg text-neutral-400">{currentExercise?.muscleGroup}</p>
             </div>
@@ -465,7 +520,9 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                   <div className="text-sm text-neutral-400">Reps</div>
                 </div>
                 <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
-                  <div className={`font-bold text-orange-400 mb-2 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
+                  <div
+                    className={`font-bold text-orange-400 mb-2 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}
+                  >
                     {currentExercise?.restTime}s
                   </div>
                   <div className="text-sm text-neutral-400">Rest</div>
@@ -551,6 +608,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
           </div>
         </div>
       </div>
+      <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
     </div>
   );
 }

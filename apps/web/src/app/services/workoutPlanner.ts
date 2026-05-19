@@ -1,4 +1,11 @@
-import type { MuscleGroup, WorkoutGoal, WorkoutPlan, Exercise, WorkoutIntensity } from '../domain/workout';
+import type {
+  MuscleGroup,
+  WorkoutGoal,
+  WorkoutPlan,
+  Exercise,
+  WorkoutIntensity,
+} from '../domain/workout';
+import type { TrainingContext } from './trainingContext';
 import { INTENSITY_MULTIPLIER } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 
@@ -98,6 +105,94 @@ const durationToExerciseCount = (duration: number) => {
   return 6;
 };
 
+type ExerciseLoadCategory =
+  | 'compound'
+  | 'machine'
+  | 'cable'
+  | 'dumbbell'
+  | 'isolation'
+  | 'bodyweight';
+
+const getExerciseLoadCategory = (template: ExerciseTemplate): ExerciseLoadCategory => {
+  const name = template.name.toLowerCase();
+  if (
+    name.includes('pull up') ||
+    name.includes('chin up') ||
+    name.includes('push up') ||
+    name.includes('dip') ||
+    name.includes('plank') ||
+    name.includes('crunch') ||
+    name.includes('dead bug') ||
+    name.includes('mountain climber') ||
+    name.includes('leg raise')
+  ) {
+    return 'bodyweight';
+  }
+  if (name.includes('machine') || name.includes('pec deck') || name.includes('leg press')) {
+    return 'machine';
+  }
+  if (name.includes('cable') || name.includes('pulldown') || name.includes('pushdown')) {
+    return 'cable';
+  }
+  if (
+    name.includes('fly') ||
+    name.includes('raise') ||
+    name.includes('curl') ||
+    name.includes('extension') ||
+    name.includes('kickback') ||
+    name.includes('face pull') ||
+    name.includes('calf')
+  ) {
+    return 'isolation';
+  }
+  if (name.includes('dumbbell') || name.includes('arnold') || name.includes('lunge')) {
+    return 'dumbbell';
+  }
+  return 'compound';
+};
+
+const RECOVERY_CATEGORY_SCORE: Record<ExerciseLoadCategory, number> = {
+  machine: 0,
+  cable: 1,
+  isolation: 2,
+  bodyweight: 3,
+  dumbbell: 4,
+  compound: 5,
+};
+
+const HIGH_INTENSITY_CATEGORY_SCORE: Record<ExerciseLoadCategory, number> = {
+  compound: 0,
+  dumbbell: 1,
+  machine: 2,
+  cable: 3,
+  bodyweight: 4,
+  isolation: 5,
+};
+
+const orderTemplatesForIntensity = (
+  templates: ExerciseTemplate[],
+  intensity: WorkoutIntensity,
+  fatigueSignal?: TrainingContext['muscleFatigue'][MuscleGroup],
+) => {
+  const shouldProtectRecovery =
+    intensity === 'very-light' ||
+    intensity === 'light' ||
+    fatigueSignal?.decision?.type === 'deload' ||
+    fatigueSignal?.decision?.type === 'reduce' ||
+    fatigueSignal?.level === 'high';
+
+  const shouldPrioritizeLoad =
+    !shouldProtectRecovery && (intensity === 'hard' || intensity === 'very-hard');
+
+  if (!shouldProtectRecovery && !shouldPrioritizeLoad) return templates;
+
+  const scoreMap = shouldProtectRecovery ? RECOVERY_CATEGORY_SCORE : HIGH_INTENSITY_CATEGORY_SCORE;
+  return [...templates].sort((a, b) => {
+    const diff = scoreMap[getExerciseLoadCategory(a)] - scoreMap[getExerciseLoadCategory(b)];
+    return diff !== 0 ? diff : templates.indexOf(a) - templates.indexOf(b);
+  });
+};
+
 export const adaptForGoal = (template: ExerciseTemplate, goal: WorkoutGoal): ExerciseTemplate => {
   switch (goal) {
     case 'strength':
@@ -130,8 +225,9 @@ export const adaptForGoal = (template: ExerciseTemplate, goal: WorkoutGoal): Exe
 const applyIntensityToSets = (
   sets: ReturnType<typeof getRecommendedSets>,
   intensity: WorkoutIntensity,
+  contextMultiplier = 1,
 ) => {
-  const multiplier = INTENSITY_MULTIPLIER[intensity];
+  const multiplier = INTENSITY_MULTIPLIER[intensity] * contextMultiplier;
   if (multiplier === 1.0) return sets;
   return sets.map((s) => ({
     ...s,
@@ -139,32 +235,106 @@ const applyIntensityToSets = (
   }));
 };
 
+const getContextAdjustment = (group: MuscleGroup, trainingContext?: TrainingContext) => {
+  const signal = trainingContext?.muscleFatigue[group];
+  if (!signal || signal.recommendedIntensityMultiplier === 1) {
+    return { multiplier: 1, rationale: null as string | null };
+  }
+  const label = group
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+  return {
+    multiplier: signal.recommendedIntensityMultiplier,
+    rationale: `${label}: ${
+      signal.decision?.type ?? signal.level
+    } recommendation from recent completion, review, and recovery signals.`,
+  };
+};
+
 export function generateWorkoutPlan(
   goal: WorkoutGoal,
   muscleGroups: MuscleGroup[],
   duration: number,
   intensity: WorkoutIntensity = 'normal',
+  trainingContext?: TrainingContext,
 ): WorkoutPlan {
   const totalCount = durationToExerciseCount(duration);
   const perGroup = Math.ceil(totalCount / muscleGroups.length);
 
-  const exercises = muscleGroups.flatMap((group, groupIndex) => {
-    const templates = exerciseLibrary[group] ?? [];
-    return templates.slice(0, perGroup).map((template, index) => {
-      const adapted = adaptForGoal(template, goal);
-      const rawSets = getRecommendedSets(adapted.name, adapted.sets, adapted.reps, adapted.muscleGroup);
-      return {
-        id: `${group}-${goal}-${groupIndex}-${index + 1}`,
-        ...adapted,
-        setDetails: applyIntensityToSets(rawSets, intensity),
-      };
-    });
-  }).slice(0, totalCount);
+  const rationale = new Set<string>();
+  const avoid = new Set(
+    trainingContext?.exercisePreferences.avoid.map((name) => name.toLowerCase()) ?? [],
+  );
+
+  const exercises = muscleGroups
+    .flatMap((group, groupIndex) => {
+      const templates = exerciseLibrary[group] ?? [];
+      const fatigueSignal = trainingContext?.muscleFatigue[group];
+      const intensityOrderedTemplates = orderTemplatesForIntensity(
+        templates,
+        intensity,
+        fatigueSignal,
+      );
+      const preferredTemplates = intensityOrderedTemplates.filter(
+        (template) => !avoid.has(template.name.toLowerCase()),
+      );
+      const usableTemplates =
+        preferredTemplates.length >= perGroup ? preferredTemplates : intensityOrderedTemplates;
+      if (preferredTemplates.length !== templates.length && preferredTemplates.length >= perGroup) {
+        rationale.add('Avoided exercises that were repeatedly marked as equipment occupied.');
+      }
+      if (
+        (intensity === 'very-light' || intensity === 'light') &&
+        intensityOrderedTemplates !== templates
+      ) {
+        rationale.add(
+          'Light intensity: prioritized controlled machine, cable, and isolation work.',
+        );
+      }
+      if (
+        (intensity === 'hard' || intensity === 'very-hard') &&
+        fatigueSignal?.level !== 'high' &&
+        fatigueSignal?.decision?.type !== 'deload' &&
+        fatigueSignal?.decision?.type !== 'reduce'
+      ) {
+        rationale.add('High intensity: prioritized heavier compound movements where appropriate.');
+      }
+      if (
+        (intensity === 'hard' || intensity === 'very-hard') &&
+        (fatigueSignal?.level === 'high' ||
+          fatigueSignal?.decision?.type === 'deload' ||
+          fatigueSignal?.decision?.type === 'reduce')
+      ) {
+        rationale.add(
+          'Recovery signals kept exercise selection conservative despite high intensity.',
+        );
+      }
+      const adjustment = getContextAdjustment(group, trainingContext);
+      if (adjustment.rationale) rationale.add(adjustment.rationale);
+
+      return usableTemplates.slice(0, perGroup).map((template, index) => {
+        const adapted = adaptForGoal(template, goal);
+        const rawSets = getRecommendedSets(
+          adapted.name,
+          adapted.sets,
+          adapted.reps,
+          adapted.muscleGroup,
+        );
+        return {
+          id: `${group}-${goal}-${groupIndex}-${index + 1}`,
+          ...adapted,
+          setDetails: applyIntensityToSets(rawSets, intensity, adjustment.multiplier),
+        };
+      });
+    })
+    .slice(0, totalCount);
 
   return {
     goal,
     muscleGroup: muscleGroups,
     duration,
     exercises,
+    rationale: Array.from(rationale),
   };
 }

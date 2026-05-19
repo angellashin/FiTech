@@ -45,26 +45,59 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
 
   const durations = [30, 45, 60];
 
-  const intensityOptions: { value: WorkoutIntensity; label: string; sub: string; color: string }[] = [
-    { value: 'very-light', label: 'Very Light', sub: '−20%', color: 'from-sky-700 to-sky-800 border-sky-600' },
-    { value: 'light',      label: 'Light',      sub: '−10%', color: 'from-blue-700 to-blue-800 border-blue-600' },
-    { value: 'normal',     label: 'Normal',     sub: '±0%',  color: 'from-green-700 to-green-800 border-green-600' },
-    { value: 'hard',       label: 'Hard',       sub: '+10%', color: 'from-orange-700 to-orange-800 border-orange-600' },
-    { value: 'very-hard',  label: 'Very Hard',  sub: '+20%', color: 'from-red-700 to-red-800 border-red-600' },
-  ];
+  const intensityOptions: { value: WorkoutIntensity; label: string; sub: string; color: string }[] =
+    [
+      {
+        value: 'very-light',
+        label: 'Very Light',
+        sub: '−20%',
+        color: 'from-sky-700 to-sky-800 border-sky-600',
+      },
+      {
+        value: 'light',
+        label: 'Light',
+        sub: '−10%',
+        color: 'from-blue-700 to-blue-800 border-blue-600',
+      },
+      {
+        value: 'normal',
+        label: 'Normal',
+        sub: '±0%',
+        color: 'from-green-700 to-green-800 border-green-600',
+      },
+      {
+        value: 'hard',
+        label: 'Hard',
+        sub: '+10%',
+        color: 'from-orange-700 to-orange-800 border-orange-600',
+      },
+      {
+        value: 'very-hard',
+        label: 'Very Hard',
+        sub: '+20%',
+        color: 'from-red-700 to-red-800 border-red-600',
+      },
+    ];
 
   const toggleMuscleGroup = (value: MuscleGroup) => {
     setMuscleGroups((prev) =>
       prev.includes(value)
-        ? prev.length > 1 ? prev.filter((g) => g !== value) : prev
-        : [...prev, value]
+        ? prev.length > 1
+          ? prev.filter((g) => g !== value)
+          : prev
+        : [...prev, value],
     );
   };
 
   const generatePlan = async () => {
     setIsGenerating(true);
     setPlanSource(null);
-    const { plan, source } = await generateWorkoutPlanWithLLM(goal, muscleGroups, duration, intensity);
+    const { plan, source } = await generateWorkoutPlanWithLLM(
+      goal,
+      muscleGroups,
+      duration,
+      intensity,
+    );
     setPlanSource(source);
     setIsGenerating(false);
     onPlanGenerated(plan);
@@ -149,7 +182,9 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
                   <span className="text-[10px] font-semibold leading-tight text-center px-0.5">
                     {item.label}
                   </span>
-                  <span className={`text-[10px] ${intensity === item.value ? 'text-white/70' : 'text-neutral-600'}`}>
+                  <span
+                    className={`text-[10px] ${intensity === item.value ? 'text-white/70' : 'text-neutral-600'}`}
+                  >
                     {item.sub}
                   </span>
                 </button>
@@ -169,10 +204,11 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
                 <span className="text-xs text-neutral-500">
                   {gymEquipment.length === 0 ? 'All exercises' : `${gymEquipment.length} selected`}
                 </span>
-                {showGym
-                  ? <ChevronDown className="w-4 h-4 text-neutral-500" />
-                  : <ChevronRight className="w-4 h-4 text-neutral-500" />
-                }
+                {showGym ? (
+                  <ChevronDown className="w-4 h-4 text-neutral-500" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-neutral-500" />
+                )}
               </div>
             </button>
             {showGym && (
@@ -201,11 +237,19 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
                             >
                               {checked && (
                                 <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                  <path
+                                    d="M2 6l3 3 5-5"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
                                 </svg>
                               )}
                             </div>
-                            <span className={`text-sm ${checked ? 'text-white' : 'text-neutral-400'}`}>
+                            <span
+                              className={`text-sm ${checked ? 'text-white' : 'text-neutral-400'}`}
+                            >
                               {EQUIPMENT_LABELS[item]}
                             </span>
                           </button>
@@ -216,7 +260,10 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
                 ))}
                 {gymEquipment.length > 0 && (
                   <button
-                    onClick={() => { setGymEquipment([]); saveGymProfile({ equipment: [] }); }}
+                    onClick={() => {
+                      setGymEquipment([]);
+                      saveGymProfile({ equipment: [] });
+                    }}
                     className="text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
                   >
                     Clear all
