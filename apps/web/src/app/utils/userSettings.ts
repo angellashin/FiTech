@@ -24,3 +24,29 @@ export function setUserSetting<K extends keyof UserSettings>(key: K, value: User
 export function applyDarkMode(dark: boolean): void {
   document.documentElement.classList.toggle('light-mode', !dark);
 }
+
+const FAVORITES_KEY = 'fitech_favorite_exercises';
+
+export function getFavoriteExercises(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]') as string[];
+  } catch {
+    return [];
+  }
+}
+
+export function isFavoriteExercise(name: string): boolean {
+  return getFavoriteExercises().includes(name);
+}
+
+export function toggleFavoriteExercise(name: string): boolean {
+  const favorites = getFavoriteExercises();
+  const idx = favorites.indexOf(name);
+  if (idx >= 0) {
+    favorites.splice(idx, 1);
+  } else {
+    favorites.unshift(name);
+  }
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  return idx < 0;
+}

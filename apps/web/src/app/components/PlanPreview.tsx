@@ -20,6 +20,7 @@ import { SET_TYPE_CYCLE, SET_TYPE_LABEL } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 import { exerciseLibrary } from '../services/workoutPlanner';
 import { getExerciseGuide } from '../services/exerciseGuide';
+import { getFavoriteExercises } from '../utils/userSettings';
 import { ExerciseGuideSheet } from './ExerciseGuideSheet';
 import {
   DndContext,
@@ -261,12 +262,19 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
   const [activeGroup, setActiveGroup] = useState<MuscleGroup | 'all'>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  const favorites = getFavoriteExercises();
+
   const allExercises = MUSCLE_GROUPS.flatMap(({ key }) =>
     exerciseLibrary[key].map((ex) => ({ ...ex, groupKey: key })),
   );
 
-  const filtered =
+  const base =
     activeGroup === 'all' ? allExercises : allExercises.filter((ex) => ex.groupKey === activeGroup);
+
+  const filtered = [
+    ...base.filter((ex) => favorites.includes(ex.name)),
+    ...base.filter((ex) => !favorites.includes(ex.name)),
+  ];
 
   const toggleSelect = (name: string) => {
     setSelected((prev) => {
@@ -357,7 +365,12 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
                 {isChecked && <Check className="w-3 h-3 text-white" />}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white">{ex.name}</div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium text-white">{ex.name}</span>
+                  {favorites.includes(ex.name) && (
+                    <span className="text-yellow-400 text-xs">★</span>
+                  )}
+                </div>
                 <div className="text-xs text-neutral-500 mt-0.5">
                   {ex.muscleGroup} · {ex.sets} sets × {ex.reps} reps
                 </div>
