@@ -68,6 +68,7 @@ const ExerciseCard = ({
 }: DraggableExerciseItemProps) => {
   const sets = exercise.setDetails ?? [];
   const guide = getExerciseGuide(exercise);
+  const isBodyweight = guide.type === 'Bodyweight / Reps' || guide.type === 'Hold / Time';
 
   return (
     <div className="glass-dark rounded-2xl p-4 border border-neutral-700/50 shadow-lg hover:bg-white/5 transition-all">
@@ -105,27 +106,29 @@ const ExerciseCard = ({
       </div>
 
       <div className="space-y-2">
-        <div className="grid grid-cols-[40px_1fr_1fr_36px] gap-1.5 text-xs text-neutral-500 px-1">
+        <div className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 text-xs text-neutral-500 px-1`}>
           <div>Set</div>
-          <div>kg</div>
+          {!isBodyweight && <div>kg</div>}
           <div>Reps</div>
           <div></div>
         </div>
         <div className="space-y-1.5">
           {sets.map((set, idx) => (
-            <div key={idx} className="grid grid-cols-[40px_1fr_1fr_36px] gap-1.5 items-center">
+            <div key={idx} className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 items-center`}>
               <div className="glass-dark rounded-lg py-1.5 text-center text-sm font-medium">
                 {idx + 1}
               </div>
-              <input
-                type="number"
-                value={set.weight || ''}
-                onChange={(e) =>
-                  onUpdateSet(exercise.id, idx, 'weight', parseInt(e.target.value) || 0)
-                }
-                className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                placeholder="-"
-              />
+              {!isBodyweight && (
+                <input
+                  type="number"
+                  value={set.weight || ''}
+                  onChange={(e) =>
+                    onUpdateSet(exercise.id, idx, 'weight', parseInt(e.target.value) || 0)
+                  }
+                  className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="-"
+                />
+              )}
               <input
                 type="number"
                 value={set.reps || ''}
