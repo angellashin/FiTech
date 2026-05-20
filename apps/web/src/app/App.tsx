@@ -33,6 +33,13 @@ const getInitialScreen = (): Screen => {
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>(getInitialScreen);
+  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
+  const [completedWorkout, setCompletedWorkout] = useState<{
+    sessionId: string;
+    exercises: Exercise[];
+  } | null>(null);
+  const [previewSource, setPreviewSource] = useState<'setup' | 'home'>('setup');
+  const [homeKey, setHomeKey] = useState(0);
 
   useEffect(() => {
     applyDarkMode(getUserSettings().darkMode);
@@ -66,13 +73,6 @@ export default function App() {
 
     return () => cleanup?.();
   }, [previewSource]);
-  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
-  const [completedWorkout, setCompletedWorkout] = useState<{
-    sessionId: string;
-    exercises: Exercise[];
-  } | null>(null);
-  const [previewSource, setPreviewSource] = useState<'setup' | 'home'>('setup');
-  const [homeKey, setHomeKey] = useState(0);
   const handleLogin = () => {
     setCurrentScreen('home');
   };
