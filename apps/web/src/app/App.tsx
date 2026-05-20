@@ -10,6 +10,7 @@ import { Profile } from './components/Profile';
 import { WorkoutHistory } from './components/WorkoutHistory';
 import { ProgressReport } from './components/ProgressReport';
 import { getUserSettings, applyDarkMode } from './utils/userSettings';
+import { Capacitor } from '@capacitor/core';
 
 type Screen =
   | 'login'
@@ -36,6 +37,35 @@ export default function App() {
   useEffect(() => {
     applyDarkMode(getUserSettings().darkMode);
   }, []);
+
+  // Android hardware back button — navigate to previous screen instead of exiting
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let cleanup: (() => void) | undefined;
+
+    void import('@capacitor/app').then(({ App: CapApp }) => {
+      const sub = CapApp.addListener('backButton', () => {
+        setCurrentScreen((screen) => {
+          if (screen === 'home' || screen === 'login') {
+            void CapApp.exitApp();
+            return screen;
+          }
+          if (screen === 'preview') {
+            return previewSource === 'home' ? 'home' : 'setup';
+          }
+          if (screen === 'session') return 'preview';
+          // complete, profile, history, progress → home
+          setWorkoutPlan(null);
+          setHomeKey((k) => k + 1);
+          return 'home';
+        });
+      });
+      cleanup = () => void sub.then((s) => s.remove());
+    });
+
+    return () => cleanup?.();
+  }, [previewSource]);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<{
     sessionId: string;
