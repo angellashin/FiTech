@@ -266,10 +266,10 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     const currentEx = newExercises[currentExerciseIndex];
 
     newExercises.splice(currentExerciseIndex, 1);
-    newExercises.splice(currentExerciseIndex + 1, 0, currentEx);
+    newExercises.push(currentEx);
 
     const nextExercise = newExercises[currentExerciseIndex];
-    const message = `${currentEx.name} marked occupied and moved down. Next: ${nextExercise.name}.`;
+    const message = `${currentEx.name} marked occupied and moved to end. Next: ${nextExercise.name}.`;
     const occupiedEvent = createEvent('equipment_occupied', message, currentEx, undefined);
 
     setExercises(newExercises);
@@ -418,7 +418,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         </div>
       )}
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 overflow-y-auto">
         {audioMessage && (
           <div className="mb-6 px-6 py-3 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center gap-3 animate-fade-in">
             <Volume2 className="w-5 h-5 text-blue-400 flex-shrink-0" />

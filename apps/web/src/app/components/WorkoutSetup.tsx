@@ -43,8 +43,6 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
     { value: 'lower-body', label: 'Lower Body' },
   ];
 
-  const durations = [30, 45, 60];
-
   const intensityOptions: { value: WorkoutIntensity; label: string; sub: string; color: string }[] =
     [
       {
@@ -144,22 +142,25 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
 
           {/* Duration */}
           <div>
-            <label className="text-sm font-medium text-neutral-300 mb-3 block">Duration</label>
-            <div className="grid grid-cols-3 gap-3">
-              {durations.map((min) => (
-                <button
-                  key={min}
-                  onClick={() => setDuration(min)}
-                  className={`py-4 px-4 rounded-xl border-2 transition-all ${
-                    duration === min
-                      ? 'bg-gradient-to-br from-blue-600 to-blue-700 border-blue-500 text-white shadow-lg shadow-blue-900/50 scale-[1.02]'
-                      : 'glass-dark border-neutral-700/50 text-neutral-300 hover:border-neutral-600 hover:bg-white/5 shadow-lg'
-                  }`}
-                >
-                  <div className="text-2xl font-bold">{min}</div>
-                  <div className="text-xs mt-1 opacity-80">min</div>
-                </button>
-              ))}
+            <label className="text-sm font-medium text-neutral-300 mb-3 block">
+              Duration —{' '}
+              <span className="text-blue-400 font-bold">{duration} min</span>
+            </label>
+            <div className="glass-dark rounded-2xl px-4 py-5 border border-neutral-700/50 shadow-lg">
+              <input
+                type="range"
+                min={30}
+                max={90}
+                step={5}
+                value={duration}
+                onChange={(e) => setDuration(Number(e.target.value))}
+                className="w-full accent-blue-500 cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-neutral-500 mt-2 px-0.5">
+                <span>30 min</span>
+                <span>60 min</span>
+                <span>90 min</span>
+              </div>
             </div>
           </div>
 

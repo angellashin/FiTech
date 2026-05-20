@@ -365,6 +365,7 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
 export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) {
   const [exercises, setExercises] = useState(plan.exercises);
   const [isEditing, setIsEditing] = useState(false);
+  const [editSnapshot, setEditSnapshot] = useState<typeof exercises>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [guideExercise, setGuideExercise] = useState<Exercise | null>(null);
 
@@ -480,20 +481,19 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setIsEditing(!isEditing);
-              setShowPicker(false);
-            }}
-            className={`px-4 py-2 rounded-xl flex items-center gap-2 transition-colors ${
-              isEditing
-                ? 'bg-blue-600 text-white'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-          >
-            {isEditing ? <Check className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-            <span className="text-sm font-medium">{isEditing ? 'Done' : 'Edit'}</span>
-          </button>
+          {!isEditing && (
+            <button
+              onClick={() => {
+                setEditSnapshot([...exercises]);
+                setIsEditing(true);
+                setShowPicker(false);
+              }}
+              className="px-4 py-2 rounded-xl flex items-center gap-2 transition-colors bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span className="text-sm font-medium">Edit</span>
+            </button>
+          )}
         </header>
 
         {isEditing ? (
@@ -527,13 +527,23 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
               </button>
             </div>
 
-            <div className="px-6 pt-4 pb-6">
+            <div className="px-6 pt-4 pb-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setExercises(editSnapshot);
+                  setIsEditing(false);
+                  setShowPicker(false);
+                }}
+                className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-2xl py-4 font-semibold transition-all"
+              >
+                Undo
+              </button>
               <button
                 onClick={() => {
                   setIsEditing(false);
                   setShowPicker(false);
                 }}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-semibold transition-all"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-semibold transition-all"
               >
                 Confirm
               </button>

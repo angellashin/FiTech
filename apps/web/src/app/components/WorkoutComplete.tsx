@@ -212,6 +212,41 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
             </div>
           </div>
 
+          <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
+            {saved ? (
+              <div className="flex items-center justify-center gap-3 py-2 text-green-400">
+                <BookmarkCheck className="w-5 h-5" />
+                <span className="font-medium">"{routineName}" saved to My Routines!</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <Bookmark className="w-4 h-4 text-neutral-400" />
+                  <span className="text-sm text-neutral-400">Save this routine for later?</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={routineName}
+                    onChange={(e) => setRoutineName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveRoutine()}
+                    placeholder="e.g. Push Day A"
+                    maxLength={40}
+                    className="flex-1 bg-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveRoutine}
+                    disabled={!routineName.trim()}
+                    className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-sm font-medium transition-all"
+                  >
+                    Save
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <div className="bg-gradient-to-br from-blue-950/40 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-blue-500/20">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-blue-300" />
@@ -344,41 +379,6 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
               </div>
             </div>
           )}
-
-          <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
-            {saved ? (
-              <div className="flex items-center justify-center gap-3 py-2 text-green-400">
-                <BookmarkCheck className="w-5 h-5" />
-                <span className="font-medium">"{routineName}" saved to My Routines!</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-4">
-                  <Bookmark className="w-4 h-4 text-neutral-400" />
-                  <span className="text-sm text-neutral-400">Save this routine for later?</span>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={routineName}
-                    onChange={(e) => setRoutineName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSaveRoutine()}
-                    placeholder="e.g. Push Day A"
-                    maxLength={40}
-                    className="flex-1 bg-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveRoutine}
-                    disabled={!routineName.trim()}
-                    className="px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-700 disabled:text-neutral-500 text-sm font-medium transition-all"
-                  >
-                    Save
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
 
           <button
             type="button"
