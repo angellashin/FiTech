@@ -20,7 +20,7 @@ import type { WorkoutPlan, Exercise, MuscleGroup, SetType } from '../domain/work
 import { SET_TYPE_LABEL } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 import { exerciseLibrary } from '../services/workoutPlanner';
-import { getExerciseGuide } from '../services/exerciseGuide';
+import { getExerciseGuide, getExerciseImageSrc } from '../services/exerciseGuide';
 import { getFavoriteExercises } from '../utils/userSettings';
 import { ExerciseGuideSheet } from './ExerciseGuideSheet';
 import {
@@ -397,7 +397,7 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
               key={ex.name}
               disabled={isAlready}
               onClick={() => toggleSelect(ex.name)}
-              className={`w-full flex items-center gap-4 px-5 py-4 border-b border-neutral-800/60 transition-colors text-left ${
+              className={`w-full flex items-center gap-3 px-4 py-3 border-b border-neutral-800/60 transition-colors text-left ${
                 isAlready ? 'opacity-30 cursor-not-allowed' : 'hover:bg-neutral-800/40'
               }`}
             >
@@ -407,6 +407,15 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
                 }`}
               >
                 {isChecked && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <div className="w-11 h-11 rounded-xl bg-white overflow-hidden flex-shrink-0">
+                <img
+                  src={getExerciseImageSrc(ex.name)}
+                  alt={ex.name}
+                  className="w-full h-full object-contain p-0.5"
+                  loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
