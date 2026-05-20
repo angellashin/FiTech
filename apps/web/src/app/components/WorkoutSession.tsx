@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, Bell, Info, BookOpen } from 'lucide-react';
+import { Volume2, VolumeX, X, Bell, Info } from 'lucide-react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
 import {
   saveWorkoutHistory,
@@ -11,8 +11,6 @@ import { useAudioCoach } from '../hooks/useAudioCoach';
 import { useEarbudControls } from '../hooks/useEarbudControls';
 import { getUserSettings, setUserSetting } from '../utils/userSettings';
 import { buildSessionAnalytics } from '../services/workoutAnalytics';
-import { getExerciseGuide } from '../services/exerciseGuide';
-import { ExerciseGuideSheet } from './ExerciseGuideSheet';
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
@@ -36,7 +34,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     getUserSettings();
   const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [guideExercise, setGuideExercise] = useState<Exercise | null>(null);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
@@ -70,7 +67,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   }, [audioUnlocked]);
 
   const currentExercise = exercises[currentExerciseIndex];
-  const currentGuide = currentExercise ? getExerciseGuide(currentExercise) : null;
   const totalExercises = exercises.length || 1;
   const progress = (completedExercises.length / totalExercises) * 100;
 
@@ -418,106 +414,72 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         </div>
       )}
 
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 overflow-y-auto">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6">
         {audioMessage && (
-          <div className="mb-6 px-6 py-3 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center gap-3 animate-fade-in">
-            <Volume2 className="w-5 h-5 text-blue-400 flex-shrink-0" />
-            <div>
-              <div className="text-sm text-blue-100">{audioMessage}</div>
-              <div className="text-xs text-blue-300/70 mt-1">
-                {isAudioSupported
-                  ? 'Browser speech guidance ready'
-                  : 'Speech synthesis unsupported; showing text guidance'}
-              </div>
-            </div>
+          <div className="mb-5 w-full px-4 py-2.5 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center gap-2.5">
+            <Volume2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            <div className="text-xs text-blue-100 line-clamp-2">{audioMessage}</div>
           </div>
         )}
 
         {isResting ? (
           <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-6">
+            <div className="flex items-center justify-center gap-2 mb-5">
               <Bell
                 className={`w-5 h-5 ${restTimeLeft === 0 ? 'text-orange-500 animate-bounce' : 'text-neutral-500'}`}
               />
               <div className="text-neutral-400">Rest Time</div>
             </div>
-            <div className="w-48 h-48 rounded-full bg-neutral-900 flex items-center justify-center mb-8 relative">
+            <div className="w-44 h-44 rounded-full bg-neutral-900 flex items-center justify-center mb-6 relative">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
                 <circle
-                  cx="96"
-                  cy="96"
-                  r="88"
+                  cx="88"
+                  cy="88"
+                  r="80"
                   stroke="currentColor"
                   strokeWidth="8"
                   fill="none"
                   className="text-neutral-800"
                 />
                 <circle
-                  cx="96"
-                  cy="96"
-                  r="88"
+                  cx="88"
+                  cy="88"
+                  r="80"
                   stroke="currentColor"
                   strokeWidth="8"
                   fill="none"
                   className="text-blue-600"
-                  strokeDasharray={`${2 * Math.PI * 88}`}
-                  strokeDashoffset={`${2 * Math.PI * 88 * (1 - restTimeLeft / (currentExercise?.restTime || 1))}`}
+                  strokeDasharray={`${2 * Math.PI * 80}`}
+                  strokeDashoffset={`${2 * Math.PI * 80 * (1 - restTimeLeft / (currentExercise?.restTime || 1))}`}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="text-6xl font-bold">{restTimeLeft}</div>
             </div>
-            <div className="text-lg text-neutral-300 mb-4">Next: Set {currentSet}</div>
+            <div className="text-base text-neutral-300 mb-2">Next: Set {currentSet}</div>
             <div className="text-sm text-neutral-500">Single tap to skip rest</div>
           </div>
         ) : (
           <div className="text-center w-full">
-            <div className="mb-8">
-              {currentExercise && currentGuide && (
-                <button
-                  type="button"
-                  onClick={() => setGuideExercise(currentExercise)}
-                  className="mx-auto mb-5 flex w-full max-w-xs items-center gap-3 rounded-3xl border border-white/10 bg-white/5 p-3 text-left hover:bg-white/10 transition-colors"
-                >
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-white p-1">
-                    <img
-                      src={currentGuide.imageSrc}
-                      alt={`${currentExercise.name} form illustration`}
-                      className="h-full w-full object-contain"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="mb-1 inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-semibold text-blue-200">
-                      <BookOpen className="h-3 w-3" />
-                      Form guide
-                    </div>
-                    <div className="text-xs leading-relaxed text-neutral-400">
-                      {currentGuide.equipment} · {currentGuide.primaryFocus}
-                    </div>
-                  </div>
-                </button>
-              )}
-              <h2 className="text-4xl font-bold mb-2">{currentExercise?.name}</h2>
-              <p className="text-lg text-neutral-400">{currentExercise?.muscleGroup}</p>
-            </div>
+            <h2 className="text-4xl font-bold mb-1">{currentExercise?.name}</h2>
+            <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
 
-            <div className="relative bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-8 mb-8 max-w-md mx-auto shadow-2xl border border-neutral-800/50 overflow-hidden">
+            <div className="relative bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 max-w-md mx-auto shadow-2xl border border-neutral-800/50 overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
-              <div className="relative grid grid-cols-3 gap-6">
+              <div className="relative grid grid-cols-3 gap-4">
                 <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
-                  <div className="text-4xl font-bold text-blue-400 mb-2">
+                  <div className="text-4xl font-bold text-blue-400 mb-1">
                     {currentSet}/{currentExercise?.sets}
                   </div>
                   <div className="text-sm text-neutral-400">Sets</div>
                 </div>
                 <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
-                  <div className="text-4xl font-bold text-white mb-2">{currentExercise?.reps}</div>
+                  <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
                   <div className="text-sm text-neutral-400">Reps</div>
                 </div>
                 <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
                   <div
-                    className={`font-bold text-orange-400 mb-2 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}
+                    className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}
                   >
                     {currentExercise?.restTime}s
                   </div>
@@ -604,7 +566,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
           </div>
         </div>
       </div>
-      <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
     </div>
   );
 }

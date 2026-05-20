@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import {
   ArrowLeft,
   Play,
@@ -20,8 +20,25 @@ import { getRecommendedSets } from '../utils/workoutHistory';
 import { exerciseLibrary } from '../services/workoutPlanner';
 import { getExerciseGuide } from '../services/exerciseGuide';
 import { ExerciseGuideSheet } from './ExerciseGuideSheet';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface PlanPreviewProps {
   plan: WorkoutPlan;
@@ -150,54 +167,32 @@ const ExerciseCard = ({
   );
 };
 
-// ── Edit mode: simple draggable row ──────────────────────────────────────
-interface EditRowProps {
+// ── Edit mode: sortable row ───────────────────────────────────────────────
+interface SortableRowProps {
   exercise: Exercise;
   index: number;
   onDelete: (id: string) => void;
-  moveExercise: (from: number, to: number) => void;
+  overlay?: boolean;
 }
 
-const EditRow = ({ exercise, index, onDelete, moveExercise }: EditRowProps) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const [{ handlerId }, drop] = useDrop<
-    { index: number },
-    void,
-    { handlerId: string | symbol | null }
-  >({
-    accept: 'exercise',
-    collect(monitor) {
-      return { handlerId: monitor.getHandlerId() };
-    },
-    hover(item: { index: number }, monitor) {
-      if (!ref.current) return;
-      const dragIndex = item.index;
-      const hoverIndex = index;
-      if (dragIndex === hoverIndex) return;
-      const rect = ref.current.getBoundingClientRect();
-      const midY = (rect.bottom - rect.top) / 2;
-      const clientY = monitor.getClientOffset()!.y - rect.top;
-      if (dragIndex < hoverIndex && clientY < midY) return;
-      if (dragIndex > hoverIndex && clientY > midY) return;
-      moveExercise(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
+const SortableRow = ({ exercise, index, onDelete, overlay = false }: SortableRowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: exercise.id,
   });
 
-  const [{ isDragging }, drag] = useDrag({
-    type: 'exercise',
-    item: () => ({ id: exercise.id, index }),
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  });
-
-  drag(drop(ref));
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   return (
     <div
-      ref={ref}
-      data-handler-id={handlerId ? String(handlerId) : undefined}
-      className={`flex items-center gap-3 px-4 py-3.5 border-b border-neutral-800 transition-all ${isDragging ? 'opacity-40' : 'opacity-100'}`}
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`flex items-center gap-3 px-4 py-3.5 border-b border-neutral-800 transition-colors ${
+        isDragging && !overlay ? 'opacity-30' : 'opacity-100'
+      } ${overlay ? 'bg-neutral-800 rounded-xl shadow-2xl border border-blue-500/30' : ''}`}
     >
       <span className="text-sm text-neutral-500 w-5 text-center">{index + 1}</span>
       <div className="flex-1 min-w-0">
@@ -205,13 +200,18 @@ const EditRow = ({ exercise, index, onDelete, moveExercise }: EditRowProps) => {
           {exercise.muscleGroup} | {exercise.name}
         </span>
       </div>
-      <button
-        onClick={() => onDelete(exercise.id)}
-        className="w-8 h-8 flex items-center justify-center text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0"
+      {!overlay && (
+        <button
+          onClick={() => onDelete(exercise.id)}
+          className="w-8 h-8 flex items-center justify-center text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+      <div
+        {...listeners}
+        className="w-8 h-8 flex items-center justify-center text-neutral-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
       >
-        <Trash2 className="w-4 h-4" />
-      </button>
-      <div className="w-8 h-8 flex items-center justify-center text-neutral-500 cursor-move flex-shrink-0">
         <GripVertical className="w-4 h-4" />
       </div>
     </div>
@@ -366,8 +366,32 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
   const [exercises, setExercises] = useState(plan.exercises);
   const [isEditing, setIsEditing] = useState(false);
   const [editSnapshot, setEditSnapshot] = useState<typeof exercises>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [guideExercise, setGuideExercise] = useState<Exercise | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (over && active.id !== over.id) {
+      const oldIndex = exercises.findIndex((ex) => ex.id === active.id);
+      const newIndex = exercises.findIndex((ex) => ex.id === over.id);
+      setExercises(arrayMove(exercises, oldIndex, newIndex));
+    }
+  };
 
   const totalExercises = exercises.length;
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
@@ -456,15 +480,9 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
     onStartSession({ ...plan, exercises });
   };
 
-  const moveExercise = (dragIndex: number, hoverIndex: number) => {
-    const updated = [...exercises];
-    const [dragged] = updated.splice(dragIndex, 1);
-    updated.splice(hoverIndex, 0, dragged);
-    setExercises(updated);
-  };
+  const activeExercise = activeId ? exercises.find((ex) => ex.id === activeId) ?? null : null;
 
   return (
-    <DndProvider backend={HTML5Backend}>
       <div className="size-full flex flex-col bg-neutral-950">
         <header className="px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -497,7 +515,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
         </header>
 
         {isEditing ? (
-          /* ── EDIT MODE: simple list ─────────────────────────────── */
+          /* ── EDIT MODE: sortable list ───────────────────────────── */
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-auto">
               <div className="mx-6 mb-3 bg-neutral-900 rounded-2xl overflow-hidden">
@@ -506,15 +524,37 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                     No exercises yet. Add one below.
                   </div>
                 ) : (
-                  exercises.map((exercise, index) => (
-                    <EditRow
-                      key={exercise.id}
-                      exercise={exercise}
-                      index={index}
-                      onDelete={handleDeleteExercise}
-                      moveExercise={moveExercise}
-                    />
-                  ))
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={() => setActiveId(null)}
+                  >
+                    <SortableContext
+                      items={exercises.map((ex) => ex.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {exercises.map((exercise, index) => (
+                        <SortableRow
+                          key={exercise.id}
+                          exercise={exercise}
+                          index={index}
+                          onDelete={handleDeleteExercise}
+                        />
+                      ))}
+                    </SortableContext>
+                    <DragOverlay>
+                      {activeExercise && (
+                        <SortableRow
+                          exercise={activeExercise}
+                          index={exercises.findIndex((ex) => ex.id === activeExercise.id)}
+                          onDelete={handleDeleteExercise}
+                          overlay
+                        />
+                      )}
+                    </DragOverlay>
+                  </DndContext>
                 )}
               </div>
 
@@ -683,6 +723,5 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
         )}
         <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
       </div>
-    </DndProvider>
   );
 }
