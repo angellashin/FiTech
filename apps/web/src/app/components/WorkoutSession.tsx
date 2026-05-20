@@ -195,14 +195,30 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     const setCompleteMessage = `Set ${currentSet} complete.`;
     const setCompletedEvent = createEvent('set_completed', setCompleteMessage);
 
+    // 슈퍼세트: 다음 운동이 있으면 쉬지 않고 바로 넘어감
+    const isSuperset = currentExercise.setDetails?.[currentSet - 1]?.setType === 'superset';
+    const hasNextExercise = currentExerciseIndex < nextExercises.length - 1;
+
     if (currentSet < currentExercise.sets) {
-      const restMessage = `${setCompleteMessage} Rest for ${currentExercise.restTime} seconds.`;
-      const restEvent = createEvent('rest_started', restMessage, currentExercise, currentSet + 1);
-      setEvents((previous) => [...previous, setCompletedEvent, restEvent]);
-      setIsResting(true);
-      setRestTimeLeft(currentExercise.restTime);
-      setCurrentSet(currentSet + 1);
-      setAudioMessage(restMessage);
+      if (isSuperset && hasNextExercise) {
+        const nextExercise = nextExercises[currentExerciseIndex + 1];
+        const message = `${setCompleteMessage} Superset — go to ${nextExercise.name}!`;
+        const supersetEvent = createEvent('rest_started', message, nextExercise, 1);
+        setEvents((previous) => [...previous, setCompletedEvent, supersetEvent]);
+        setCurrentExerciseIndex(currentExerciseIndex + 1);
+        setCurrentSet(1);
+        setIsResting(false);
+        setRestTimeLeft(0);
+        setAudioMessage(message);
+      } else {
+        const restMessage = `${setCompleteMessage} Rest for ${currentExercise.restTime} seconds.`;
+        const restEvent = createEvent('rest_started', restMessage, currentExercise, currentSet + 1);
+        setEvents((previous) => [...previous, setCompletedEvent, restEvent]);
+        setIsResting(true);
+        setRestTimeLeft(currentExercise.restTime);
+        setCurrentSet(currentSet + 1);
+        setAudioMessage(restMessage);
+      }
       return;
     }
 
@@ -212,16 +228,27 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     );
     rememberCompletedExercise(currentExercise.id);
 
-    if (currentExerciseIndex < nextExercises.length - 1) {
+    if (hasNextExercise) {
       const nextExercise = nextExercises[currentExerciseIndex + 1];
-      const transitionMessage = `Exercise complete. Next: ${nextExercise.name}. Rest for ${currentExercise.restTime} seconds.`;
-      const restEvent = createEvent('rest_started', transitionMessage, nextExercise, 1);
-      setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, restEvent]);
-      setCurrentExerciseIndex(currentExerciseIndex + 1);
-      setCurrentSet(1);
-      setIsResting(true);
-      setRestTimeLeft(currentExercise.restTime);
-      setAudioMessage(transitionMessage);
+      if (isSuperset) {
+        const message = `${currentExercise.name} complete. Superset — go to ${nextExercise.name}!`;
+        const supersetEvent = createEvent('rest_started', message, nextExercise, 1);
+        setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, supersetEvent]);
+        setCurrentExerciseIndex(currentExerciseIndex + 1);
+        setCurrentSet(1);
+        setIsResting(false);
+        setRestTimeLeft(0);
+        setAudioMessage(message);
+      } else {
+        const transitionMessage = `Exercise complete. Next: ${nextExercise.name}. Rest for ${currentExercise.restTime} seconds.`;
+        const restEvent = createEvent('rest_started', transitionMessage, nextExercise, 1);
+        setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, restEvent]);
+        setCurrentExerciseIndex(currentExerciseIndex + 1);
+        setCurrentSet(1);
+        setIsResting(true);
+        setRestTimeLeft(currentExercise.restTime);
+        setAudioMessage(transitionMessage);
+      }
       return;
     }
 

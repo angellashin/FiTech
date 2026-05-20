@@ -67,6 +67,13 @@ const SET_TYPE_STYLE: Record<SetType, string> = {
   superset: 'bg-emerald-600 text-white',
 };
 
+const SET_TYPE_OPTIONS: { type: SetType; label: string; desc: string; color: string }[] = [
+  { type: 'normal',   label: '일반',     desc: '기본 세트',                     color: 'bg-neutral-700 text-neutral-200' },
+  { type: 'failure',  label: 'F  실패',  desc: '더 못할 때까지 최대한',          color: 'bg-red-600 text-white' },
+  { type: 'dropset',  label: 'D  드롭',  desc: '무게 낮추고 바로 이어서',        color: 'bg-purple-600 text-white' },
+  { type: 'superset', label: 'S  슈퍼',  desc: '다음 운동과 쉬지 않고 연달아',   color: 'bg-emerald-600 text-white' },
+];
+
 const ExerciseCard = ({
   exercise,
   index,
@@ -77,6 +84,7 @@ const ExerciseCard = ({
   onRemoveSet,
   onOpenGuide,
 }: DraggableExerciseItemProps) => {
+  const [typePickerIdx, setTypePickerIdx] = useState<number | null>(null);
   const sets = exercise.setDetails ?? [];
   const guide = getExerciseGuide(exercise);
   const isBodyweight = guide.type === 'Bodyweight / Reps' || guide.type === 'Hold / Time';
@@ -126,17 +134,38 @@ const ExerciseCard = ({
         <div className="space-y-1.5">
           {sets.map((set, idx) => {
             const setType: SetType = set.setType ?? 'normal';
-            const nextType = SET_TYPE_CYCLE[(SET_TYPE_CYCLE.indexOf(setType) + 1) % SET_TYPE_CYCLE.length];
             return (
-            <div key={idx} className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 items-center`}>
+            <div key={idx} className={`relative grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 items-center`}>
               <button
                 type="button"
-                onClick={() => onUpdateSetType(exercise.id, idx, nextType)}
-                title={setType === 'normal' ? 'Tap to set type' : `${setType} — tap to change`}
+                onClick={() => setTypePickerIdx(typePickerIdx === idx ? null : idx)}
                 className={`rounded-lg py-1.5 text-center text-sm font-bold transition-colors ${SET_TYPE_STYLE[setType]}`}
               >
                 {SET_TYPE_LABEL[setType] || idx + 1}
               </button>
+              {typePickerIdx === idx && (
+                <div className="absolute left-0 top-10 z-30 w-56 bg-neutral-800 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden">
+                  <div className="px-3 pt-3 pb-1 text-[11px] text-neutral-500 font-semibold uppercase tracking-wide">세트 타입</div>
+                  {SET_TYPE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.type}
+                      type="button"
+                      onClick={() => { onUpdateSetType(exercise.id, idx, opt.type); setTypePickerIdx(null); }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-neutral-700 transition-colors ${setType === opt.type ? 'bg-neutral-700/60' : ''}`}
+                    >
+                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${opt.color}`}>
+                        {opt.label.split('  ')[0]}
+                      </span>
+                      <div className="text-left">
+                        <div className="text-sm font-medium text-white">{opt.label.split('  ')[1] ?? '일반'}</div>
+                        <div className="text-[11px] text-neutral-500">{opt.desc}</div>
+                      </div>
+                      {setType === opt.type && <span className="ml-auto text-blue-400 text-xs">✓</span>}
+                    </button>
+                  ))}
+                  <div className="h-1" />
+                </div>
+              )}
               {!isBodyweight && (
                 <input
                   type="number"
