@@ -414,14 +414,14 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         </div>
       )}
 
-      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6">
-        {audioMessage && (
-          <div className="mb-5 w-full px-4 py-2.5 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center gap-2.5">
-            <Volume2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
-            <div className="text-xs text-blue-100 line-clamp-2">{audioMessage}</div>
-          </div>
-        )}
+      {audioMessage && (
+        <div className="mx-6 mb-2 px-4 py-2.5 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center gap-2.5 flex-shrink-0">
+          <Volume2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
+          <div className="text-xs text-blue-100 line-clamp-2">{audioMessage}</div>
+        </div>
+      )}
 
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6">
         {isResting ? (
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-5">
