@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { Volume2, VolumeX, X, Bell } from 'lucide-react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
+import { getExerciseImageSrc } from '../services/exerciseGuide';
 import {
   saveWorkoutHistory,
   updateWorkoutSession,
@@ -379,8 +380,18 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         ) : (
           /* Exercise view */
           <div className="text-center w-full">
-            <h2 className="text-4xl font-bold mb-1">{currentExercise?.name}</h2>
-            <p className="text-base text-neutral-400 mb-8">{currentExercise?.muscleGroup}</p>
+            {currentExercise && (
+              <div className="w-36 h-36 rounded-3xl bg-white mx-auto mb-5 overflow-hidden shadow-lg">
+                <img
+                  src={getExerciseImageSrc(currentExercise.name)}
+                  alt={currentExercise.name}
+                  className="w-full h-full object-contain p-2"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+              </div>
+            )}
+            <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
+            <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
             <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
               <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
                 <div className="text-4xl font-bold text-blue-400 mb-1">
