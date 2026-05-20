@@ -15,7 +15,8 @@ import {
   Sparkles,
   Info,
 } from 'lucide-react';
-import type { WorkoutPlan, Exercise, MuscleGroup } from '../domain/workout';
+import type { WorkoutPlan, Exercise, MuscleGroup, SetType } from '../domain/workout';
+import { SET_TYPE_CYCLE, SET_TYPE_LABEL } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 import { exerciseLibrary } from '../services/workoutPlanner';
 import { getExerciseGuide } from '../services/exerciseGuide';
@@ -51,16 +52,25 @@ interface DraggableExerciseItemProps {
   exercise: Exercise;
   index: number;
   onUpdateSet: (id: string, setIndex: number, field: 'weight' | 'reps', value: number) => void;
+  onUpdateSetType: (id: string, setIndex: number, type: SetType) => void;
   onUpdateRestTime: (id: string, value: number) => void;
   onAddSet: (id: string) => void;
   onRemoveSet: (id: string, setIndex: number) => void;
   onOpenGuide: (exercise: Exercise) => void;
 }
 
+const SET_TYPE_STYLE: Record<SetType, string> = {
+  normal: 'bg-neutral-700 text-neutral-200',
+  failure: 'bg-red-600 text-white',
+  dropset: 'bg-purple-600 text-white',
+  superset: 'bg-emerald-600 text-white',
+};
+
 const ExerciseCard = ({
   exercise,
   index,
   onUpdateSet,
+  onUpdateSetType,
   onUpdateRestTime,
   onAddSet,
   onRemoveSet,
@@ -113,11 +123,19 @@ const ExerciseCard = ({
           <div></div>
         </div>
         <div className="space-y-1.5">
-          {sets.map((set, idx) => (
+          {sets.map((set, idx) => {
+            const setType: SetType = set.setType ?? 'normal';
+            const nextType = SET_TYPE_CYCLE[(SET_TYPE_CYCLE.indexOf(setType) + 1) % SET_TYPE_CYCLE.length];
+            return (
             <div key={idx} className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 items-center`}>
-              <div className="glass-dark rounded-lg py-1.5 text-center text-sm font-medium">
-                {idx + 1}
-              </div>
+              <button
+                type="button"
+                onClick={() => onUpdateSetType(exercise.id, idx, nextType)}
+                title={setType === 'normal' ? 'Tap to set type' : `${setType} — tap to change`}
+                className={`rounded-lg py-1.5 text-center text-sm font-bold transition-colors ${SET_TYPE_STYLE[setType]}`}
+              >
+                {SET_TYPE_LABEL[setType] || idx + 1}
+              </button>
               {!isBodyweight && (
                 <input
                   type="number"
@@ -146,7 +164,8 @@ const ExerciseCard = ({
                 <Minus className="w-4 h-4" />
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
         <button
           onClick={() => onAddSet(exercise.id)}
@@ -443,6 +462,18 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
     );
   };
 
+  const handleUpdateSetType = (exerciseId: string, setIndex: number, type: SetType) => {
+    setExercises(
+      exercises.map((ex) => {
+        if (ex.id !== exerciseId || !ex.setDetails) return ex;
+        return {
+          ...ex,
+          setDetails: ex.setDetails.map((s, i) => (i === setIndex ? { ...s, setType: type } : s)),
+        };
+      }),
+    );
+  };
+
   const handleAddSet = (exerciseId: string) => {
     setExercises(
       exercises.map((ex) => {
@@ -684,6 +715,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                         exercise={exercise}
                         index={index}
                         onUpdateSet={handleUpdateSet}
+                        onUpdateSetType={handleUpdateSetType}
                         onUpdateRestTime={handleUpdateRestTime}
                         onAddSet={handleAddSet}
                         onRemoveSet={handleRemoveSet}

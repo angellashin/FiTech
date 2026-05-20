@@ -27,10 +27,22 @@ export interface WorkoutPlan {
   rationale?: string[];
 }
 
+export type SetType = 'normal' | 'failure' | 'dropset' | 'superset';
+
+export const SET_TYPE_CYCLE: SetType[] = ['normal', 'failure', 'dropset', 'superset'];
+
+export const SET_TYPE_LABEL: Record<SetType, string> = {
+  normal: '',
+  failure: 'F',
+  dropset: 'D',
+  superset: 'S',
+};
+
 export interface ExerciseSet {
   weight: number;
   reps: number;
   completed: boolean;
+  setType?: SetType;
 }
 
 export interface Exercise {
