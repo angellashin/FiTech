@@ -114,7 +114,7 @@ const ExerciseCard = ({
           <p className="text-sm text-neutral-400">
             {exercise.muscleGroup} · {guide.equipment}
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex gap-2">
             <button
               type="button"
               onClick={() => onOpenGuide(exercise)}
@@ -133,7 +133,7 @@ const ExerciseCard = ({
               }`}
             >
               <Link2 className="h-3.5 w-3.5" />
-              {exercise.isSuperset ? 'Superset ON' : 'Superset'}
+              Superset
             </button>
           </div>
         </div>
