@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, Bell } from 'lucide-react';
+import { Volume2, VolumeX, X, Bell, Link2 } from 'lucide-react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
 import { getExerciseImageSrc } from '../services/exerciseGuide';
 import {
@@ -35,6 +35,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     getUserSettings();
   const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
+  // null = not in superset; number = index of the A exercise (we're currently on B)
+  const [supersetAIndex, setSupersetAIndex] = useState<number | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
 
@@ -195,60 +197,87 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     const setCompleteMessage = `Set ${currentSet} complete.`;
     const setCompletedEvent = createEvent('set_completed', setCompleteMessage);
 
-    // 슈퍼세트: 다음 운동이 있으면 쉬지 않고 바로 넘어감
-    const isSuperset = currentExercise.setDetails?.[currentSet - 1]?.setType === 'superset';
-    const hasNextExercise = currentExerciseIndex < nextExercises.length - 1;
+    // ── Superset: A phase → jump to B, no rest ──────────────────────────
+    const isOnA = currentExercise.isSuperset === true && supersetAIndex === null;
+    if (isOnA && currentExerciseIndex + 1 < nextExercises.length) {
+      const bIndex = currentExerciseIndex + 1;
+      const bExercise = nextExercises[bIndex];
+      const message = `${setCompleteMessage} Superset — now ${bExercise.name}!`;
+      setEvents((previous) => [...previous, setCompletedEvent]);
+      setSupersetAIndex(currentExerciseIndex);
+      setCurrentExerciseIndex(bIndex);
+      // currentSet stays — B does the same round number
+      setIsResting(false);
+      setRestTimeLeft(0);
+      setAudioMessage(message);
+      return;
+    }
 
-    if (currentSet < currentExercise.sets) {
-      if (isSuperset && hasNextExercise) {
-        const nextExercise = nextExercises[currentExerciseIndex + 1];
-        const message = `${setCompleteMessage} Superset — go to ${nextExercise.name}!`;
-        const supersetEvent = createEvent('rest_started', message, nextExercise, 1);
-        setEvents((previous) => [...previous, setCompletedEvent, supersetEvent]);
-        setCurrentExerciseIndex(currentExerciseIndex + 1);
-        setCurrentSet(1);
-        setIsResting(false);
-        setRestTimeLeft(0);
-        setAudioMessage(message);
-      } else {
-        const restMessage = `${setCompleteMessage} Rest for ${currentExercise.restTime} seconds.`;
-        const restEvent = createEvent('rest_started', restMessage, currentExercise, currentSet + 1);
-        setEvents((previous) => [...previous, setCompletedEvent, restEvent]);
+    // ── Superset: B phase → rest, then back to A's next round ───────────
+    const isOnB = supersetAIndex !== null;
+    if (isOnB) {
+      const aIdx = supersetAIndex!;
+      const aExercise = nextExercises[aIdx];
+      const nextRound = currentSet + 1;
+      setSupersetAIndex(null);
+
+      if (nextRound <= aExercise.sets) {
+        const restMessage = `Round ${currentSet} done. Rest ${aExercise.restTime}s.`;
+        setEvents((previous) => [...previous, setCompletedEvent]);
+        setCurrentExerciseIndex(aIdx);
+        setCurrentSet(nextRound);
         setIsResting(true);
-        setRestTimeLeft(currentExercise.restTime);
-        setCurrentSet(currentSet + 1);
+        setRestTimeLeft(aExercise.restTime);
         setAudioMessage(restMessage);
+      } else {
+        const bExercise = nextExercises[currentExerciseIndex];
+        const doneEvent = createEvent('exercise_completed', `Superset complete: ${aExercise.name} + ${bExercise.name}.`);
+        rememberCompletedExercise(aExercise.id);
+        rememberCompletedExercise(bExercise.id);
+        const afterBIndex = currentExerciseIndex + 1;
+        if (afterBIndex < nextExercises.length) {
+          const nextEx = nextExercises[afterBIndex];
+          const message = `Superset done! Next: ${nextEx.name}.`;
+          setEvents((previous) => [...previous, setCompletedEvent, doneEvent]);
+          setCurrentExerciseIndex(afterBIndex);
+          setCurrentSet(1);
+          setIsResting(true);
+          setRestTimeLeft(aExercise.restTime);
+          setAudioMessage(message);
+        } else {
+          completeSession(nextExercises, [...events, setCompletedEvent, doneEvent]);
+        }
       }
       return;
     }
 
-    const exerciseCompleteEvent = createEvent(
-      'exercise_completed',
-      `${currentExercise.name} complete.`,
-    );
+    // ── Normal (non-superset) flow ───────────────────────────────────────
+    const hasNextExercise = currentExerciseIndex < nextExercises.length - 1;
+
+    if (currentSet < currentExercise.sets) {
+      const restMessage = `${setCompleteMessage} Rest for ${currentExercise.restTime} seconds.`;
+      const restEvent = createEvent('rest_started', restMessage, currentExercise, currentSet + 1);
+      setEvents((previous) => [...previous, setCompletedEvent, restEvent]);
+      setIsResting(true);
+      setRestTimeLeft(currentExercise.restTime);
+      setCurrentSet(currentSet + 1);
+      setAudioMessage(restMessage);
+      return;
+    }
+
+    const exerciseCompleteEvent = createEvent('exercise_completed', `${currentExercise.name} complete.`);
     rememberCompletedExercise(currentExercise.id);
 
     if (hasNextExercise) {
       const nextExercise = nextExercises[currentExerciseIndex + 1];
-      if (isSuperset) {
-        const message = `${currentExercise.name} complete. Superset — go to ${nextExercise.name}!`;
-        const supersetEvent = createEvent('rest_started', message, nextExercise, 1);
-        setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, supersetEvent]);
-        setCurrentExerciseIndex(currentExerciseIndex + 1);
-        setCurrentSet(1);
-        setIsResting(false);
-        setRestTimeLeft(0);
-        setAudioMessage(message);
-      } else {
-        const transitionMessage = `Exercise complete. Next: ${nextExercise.name}. Rest for ${currentExercise.restTime} seconds.`;
-        const restEvent = createEvent('rest_started', transitionMessage, nextExercise, 1);
-        setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, restEvent]);
-        setCurrentExerciseIndex(currentExerciseIndex + 1);
-        setCurrentSet(1);
-        setIsResting(true);
-        setRestTimeLeft(currentExercise.restTime);
-        setAudioMessage(transitionMessage);
-      }
+      const transitionMessage = `Exercise complete. Next: ${nextExercise.name}. Rest for ${currentExercise.restTime} seconds.`;
+      const restEvent = createEvent('rest_started', transitionMessage, nextExercise, 1);
+      setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, restEvent]);
+      setCurrentExerciseIndex(currentExerciseIndex + 1);
+      setCurrentSet(1);
+      setIsResting(true);
+      setRestTimeLeft(currentExercise.restTime);
+      setAudioMessage(transitionMessage);
       return;
     }
 
@@ -404,41 +433,124 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
             <div className="text-base text-neutral-300 mb-1">Next: Set {currentSet}</div>
             <div className="text-sm text-neutral-500">Single tap to skip rest</div>
           </div>
-        ) : (
-          /* Exercise view */
-          <div className="text-center w-full">
-            {currentExercise && (
-              <div className="w-36 h-36 rounded-3xl bg-white mx-auto mb-5 overflow-hidden shadow-lg">
-                <img
-                  src={getExerciseImageSrc(currentExercise.name)}
-                  alt={currentExercise.name}
-                  className="w-full h-full object-contain p-2"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                />
-              </div>
-            )}
-            <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
-            <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
-            <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
-              <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                <div className="text-4xl font-bold text-blue-400 mb-1">
-                  {currentSet}/{currentExercise?.sets}
+        ) : (() => {
+          const isOnA = currentExercise?.isSuperset === true && supersetAIndex === null;
+          const isOnB = supersetAIndex !== null;
+          const isInSuperset = isOnA || isOnB;
+          const partnerExercise = isOnA
+            ? exercises[currentExerciseIndex + 1]
+            : isOnB
+              ? exercises[supersetAIndex!]
+              : null;
+          const supersetTotalRounds = isOnA
+            ? currentExercise?.sets
+            : isOnB
+              ? exercises[supersetAIndex!]?.sets
+              : 1;
+
+          return isInSuperset && partnerExercise ? (
+            /* Superset dual-card view */
+            <div className="w-full px-1">
+              <div className="flex items-center justify-center mb-4">
+                <div className="flex items-center gap-2 bg-emerald-600/20 border border-emerald-500/30 rounded-full px-4 py-1.5">
+                  <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-xs font-bold text-emerald-300">
+                    SUPERSET · Round {currentSet} / {supersetTotalRounds}
+                  </span>
                 </div>
-                <div className="text-sm text-neutral-400">Sets</div>
               </div>
-              <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
-                <div className="text-sm text-neutral-400">Reps</div>
-              </div>
-              <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                <div className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
-                  {currentExercise?.restTime}s
+
+              {/* Active exercise */}
+              <div className="bg-neutral-900 border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
+                <div className="text-[10px] font-bold text-emerald-400 mb-2 tracking-widest">NOW</div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex-shrink-0">
+                    <img
+                      src={getExerciseImageSrc(currentExercise!.name)}
+                      alt={currentExercise!.name}
+                      className="w-full h-full object-contain p-1"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-base leading-tight">{currentExercise!.name}</div>
+                    <div className="text-xs text-neutral-400 mt-0.5">{currentExercise!.muscleGroup}</div>
+                  </div>
                 </div>
-                <div className="text-sm text-neutral-400">Rest</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="glass-dark rounded-xl p-3 text-center">
+                    <div className="text-2xl font-bold text-blue-400">{currentSet}/{currentExercise!.sets}</div>
+                    <div className="text-xs text-neutral-400">Sets</div>
+                  </div>
+                  <div className="glass-dark rounded-xl p-3 text-center">
+                    <div className="text-2xl font-bold text-white">{currentExercise!.reps}</div>
+                    <div className="text-xs text-neutral-400">Reps</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chain connector */}
+              <div className="flex items-center justify-center my-2 gap-2">
+                <div className="flex-1 h-px bg-emerald-800/50" />
+                <Link2 className="w-4 h-4 text-emerald-700" />
+                <div className="flex-1 h-px bg-emerald-800/50" />
+              </div>
+
+              {/* Partner exercise (dimmed) */}
+              <div className="bg-neutral-900/60 border border-neutral-700/50 rounded-2xl p-4 opacity-55">
+                <div className="text-[10px] font-bold text-neutral-500 mb-2 tracking-widest">NEXT</div>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex-shrink-0">
+                    <img
+                      src={getExerciseImageSrc(partnerExercise.name)}
+                      alt={partnerExercise.name}
+                      className="w-full h-full object-contain p-1"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-base leading-tight">{partnerExercise.name}</div>
+                    <div className="text-xs text-neutral-500 mt-0.5">{partnerExercise.muscleGroup}</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            /* Normal single exercise view */
+            <div className="text-center w-full">
+              {currentExercise && (
+                <div className="w-36 h-36 rounded-3xl bg-white mx-auto mb-5 overflow-hidden shadow-lg">
+                  <img
+                    src={getExerciseImageSrc(currentExercise.name)}
+                    alt={currentExercise.name}
+                    className="w-full h-full object-contain p-2"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
+              <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
+              <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
+              <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
+                <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                  <div className="text-4xl font-bold text-blue-400 mb-1">
+                    {currentSet}/{currentExercise?.sets}
+                  </div>
+                  <div className="text-sm text-neutral-400">Sets</div>
+                </div>
+                <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                  <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
+                  <div className="text-sm text-neutral-400">Reps</div>
+                </div>
+                <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                  <div className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
+                    {currentExercise?.restTime}s
+                  </div>
+                  <div className="text-sm text-neutral-400">Rest</div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Tap buttons + earbud guide */}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import {
   ArrowLeft,
   Play,
@@ -14,9 +14,10 @@ import {
   Minus,
   Sparkles,
   Info,
+  Link2,
 } from 'lucide-react';
 import type { WorkoutPlan, Exercise, MuscleGroup, SetType } from '../domain/workout';
-import { SET_TYPE_CYCLE, SET_TYPE_LABEL } from '../domain/workout';
+import { SET_TYPE_LABEL } from '../domain/workout';
 import { getRecommendedSets } from '../utils/workoutHistory';
 import { exerciseLibrary } from '../services/workoutPlanner';
 import { getExerciseGuide } from '../services/exerciseGuide';
@@ -54,6 +55,7 @@ interface DraggableExerciseItemProps {
   index: number;
   onUpdateSet: (id: string, setIndex: number, field: 'weight' | 'reps', value: number) => void;
   onUpdateSetType: (id: string, setIndex: number, type: SetType) => void;
+  onToggleSuperset: (id: string) => void;
   onUpdateRestTime: (id: string, value: number) => void;
   onAddSet: (id: string) => void;
   onRemoveSet: (id: string, setIndex: number) => void;
@@ -64,14 +66,12 @@ const SET_TYPE_STYLE: Record<SetType, string> = {
   normal: 'bg-neutral-700 text-neutral-200',
   failure: 'bg-red-600 text-white',
   dropset: 'bg-purple-600 text-white',
-  superset: 'bg-emerald-600 text-white',
 };
 
 const SET_TYPE_OPTIONS: { type: SetType; label: string; desc: string; color: string }[] = [
-  { type: 'normal',   label: '일반',     desc: '기본 세트',                     color: 'bg-neutral-700 text-neutral-200' },
-  { type: 'failure',  label: 'F  실패',  desc: '더 못할 때까지 최대한',          color: 'bg-red-600 text-white' },
-  { type: 'dropset',  label: 'D  드롭',  desc: '무게 낮추고 바로 이어서',        color: 'bg-purple-600 text-white' },
-  { type: 'superset', label: 'S  슈퍼',  desc: '다음 운동과 쉬지 않고 연달아',   color: 'bg-emerald-600 text-white' },
+  { type: 'normal',  label: '일반',    desc: '기본 세트',              color: 'bg-neutral-700 text-neutral-200' },
+  { type: 'failure', label: 'F  실패', desc: '더 못할 때까지 최대한',   color: 'bg-red-600 text-white' },
+  { type: 'dropset', label: 'D  드롭', desc: '무게 낮추고 바로 이어서', color: 'bg-purple-600 text-white' },
 ];
 
 const ExerciseCard = ({
@@ -79,6 +79,7 @@ const ExerciseCard = ({
   index,
   onUpdateSet,
   onUpdateSetType,
+  onToggleSuperset,
   onUpdateRestTime,
   onAddSet,
   onRemoveSet,
@@ -113,14 +114,28 @@ const ExerciseCard = ({
           <p className="text-sm text-neutral-400">
             {exercise.muscleGroup} · {guide.equipment}
           </p>
-          <button
-            type="button"
-            onClick={() => onOpenGuide(exercise)}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200 hover:bg-blue-500/20 transition-colors"
-          >
-            <Info className="h-3.5 w-3.5" />
-            Form guide
-          </button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenGuide(exercise)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200 hover:bg-blue-500/20 transition-colors"
+            >
+              <Info className="h-3.5 w-3.5" />
+              Form guide
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleSuperset(exercise.id)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                exercise.isSuperset
+                  ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
+                  : 'border-neutral-700 bg-neutral-800/50 text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300'
+              }`}
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              {exercise.isSuperset ? 'Superset ON' : 'Superset'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -547,6 +562,12 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
     );
   };
 
+  const handleToggleSuperset = (exerciseId: string) => {
+    setExercises(exercises.map((ex) =>
+      ex.id === exerciseId ? { ...ex, isSuperset: !ex.isSuperset } : ex,
+    ));
+  };
+
   const handlePickerAdd = (picked: Exercise[]) => {
     setExercises((prev) => [...prev, ...picked]);
     setShowPicker(false);
@@ -752,17 +773,27 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                     </div>
                   ) : (
                     exercises.map((exercise, index) => (
-                      <ExerciseCard
-                        key={exercise.id}
-                        exercise={exercise}
-                        index={index}
-                        onUpdateSet={handleUpdateSet}
-                        onUpdateSetType={handleUpdateSetType}
-                        onUpdateRestTime={handleUpdateRestTime}
-                        onAddSet={handleAddSet}
-                        onRemoveSet={handleRemoveSet}
-                        onOpenGuide={setGuideExercise}
-                      />
+                      <Fragment key={exercise.id}>
+                        <ExerciseCard
+                          exercise={exercise}
+                          index={index}
+                          onUpdateSet={handleUpdateSet}
+                          onUpdateSetType={handleUpdateSetType}
+                          onToggleSuperset={handleToggleSuperset}
+                          onUpdateRestTime={handleUpdateRestTime}
+                          onAddSet={handleAddSet}
+                          onRemoveSet={handleRemoveSet}
+                          onOpenGuide={setGuideExercise}
+                        />
+                        {exercise.isSuperset && index < exercises.length - 1 && (
+                          <div className="flex items-center justify-center -my-0.5 py-0.5 z-10">
+                            <div className="flex items-center gap-1.5 bg-emerald-900/30 border border-emerald-600/40 rounded-full px-3 py-1.5">
+                              <Link2 className="w-3 h-3 text-emerald-500" />
+                              <span className="text-xs font-bold text-emerald-400">Superset</span>
+                            </div>
+                          </div>
+                        )}
+                      </Fragment>
                     ))
                   )}
                 </div>

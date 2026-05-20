@@ -27,15 +27,14 @@ export interface WorkoutPlan {
   rationale?: string[];
 }
 
-export type SetType = 'normal' | 'failure' | 'dropset' | 'superset';
+export type SetType = 'normal' | 'failure' | 'dropset';
 
-export const SET_TYPE_CYCLE: SetType[] = ['normal', 'failure', 'dropset', 'superset'];
+export const SET_TYPE_CYCLE: SetType[] = ['normal', 'failure', 'dropset'];
 
 export const SET_TYPE_LABEL: Record<SetType, string> = {
   normal: '',
   failure: 'F',
   dropset: 'D',
-  superset: 'S',
 };
 
 export interface ExerciseSet {
@@ -53,6 +52,7 @@ export interface Exercise {
   restTime: number;
   muscleGroup: string;
   setDetails?: ExerciseSet[];
+  isSuperset?: boolean;
 }
 
 export type WorkoutReviewRating = 1 | 2 | 3 | 4 | 5;
