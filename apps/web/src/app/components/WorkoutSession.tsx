@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, Bell, Info } from 'lucide-react';
+import { Volume2, VolumeX, X, Bell } from 'lucide-react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
 import {
   saveWorkoutHistory,
@@ -33,7 +33,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const { audioGuidance: savedAudioGuidance, restNotifications: restNotificationsEnabled } =
     getUserSettings();
   const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
@@ -292,7 +291,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     run();
   };
 
-  const { diagnostics: earbud, activateAudio } = useEarbudControls(
+  useEarbudControls(
     {
       onSingleTap: () => flashAndRun('singleTap', handleSingleTap),
       onDoubleTap: () => flashAndRun('doubleTap', handleDoubleTap),
@@ -314,6 +313,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
 
   return (
     <div className="size-full flex flex-col bg-neutral-950">
+      {/* Progress bar */}
       <div className="h-1 bg-neutral-800">
         <div
           className="h-full bg-blue-600 transition-all duration-300"
@@ -321,28 +321,16 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         />
       </div>
 
-      <header className="px-6 py-6 flex items-center justify-between">
+      {/* Header */}
+      <header className="px-6 py-5 flex items-center justify-between">
         <div>
           <div className="text-sm text-neutral-400">
             Exercise {currentExerciseIndex + 1} of {exercises.length}
             <span className="text-neutral-600 ml-2">({completedExercises.length} completed)</span>
           </div>
-          <div className="text-xs text-neutral-500 mt-1">
-            {plan.goal} • {plan.muscleGroup}
-          </div>
+          <div className="text-xs text-neutral-500 mt-0.5">{plan.muscleGroup}</div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowDiagnostics((v) => !v)}
-            aria-label={showDiagnostics ? 'Hide earbud diagnostics' : 'Show earbud diagnostics'}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-              earbud.active
-                ? 'bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600/50'
-                : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-            }`}
-          >
-            <Info className="w-5 h-5" />
-          </button>
           <button
             onClick={toggleAudio}
             aria-label={audioEnabled ? 'Disable audio guidance' : 'Enable audio guidance'}
@@ -360,69 +348,10 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         </div>
       </header>
 
-      {showDiagnostics && (
-        <div className="mx-6 mb-2 px-4 py-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-100 text-xs space-y-1">
-          <div className="flex items-center justify-between">
-            <div className="font-medium">Earbud diagnostics</div>
-            <button
-              onClick={() => setShowDiagnostics(false)}
-              aria-label="Close diagnostics"
-              className="text-emerald-200/80 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div>
-            Platform: <span className="font-mono">{earbud.platform}</span>
-          </div>
-          <div>
-            Active: <span className="font-mono">{String(earbud.active)}</span>
-          </div>
-          <div>
-            Silent audio:{' '}
-            <span
-              className={`font-mono ${earbud.isAudioPlaying ? 'text-emerald-300' : 'text-red-300'}`}
-            >
-              {earbud.isAudioPlaying ? 'playing ✓' : 'not playing ✗'}
-            </span>
-          </div>
-          <div>
-            Raw events received: <span className="font-mono">{earbud.rawEventCount}</span>
-          </div>
-          <div>
-            Last raw event: <span className="font-mono">{earbud.lastRawEvent ?? '—'}</span>
-          </div>
-          <div>
-            Last tap: <span className="font-mono">{earbud.lastTapKind ?? '—'}</span>
-          </div>
-          {earbud.errors.length > 0 && (
-            <div className="text-red-300">Errors: {earbud.errors.join(' · ')}</div>
-          )}
-          {/* Show activate button when audio is not playing */}
-          {!earbud.isAudioPlaying && earbud.platform === 'mediasession' && (
-            <button
-              onClick={activateAudio}
-              className="mt-2 w-full py-2 rounded-lg bg-emerald-600/40 hover:bg-emerald-600/60 border border-emerald-500/50 text-emerald-100 text-xs font-medium transition-colors"
-            >
-              Tap here to activate earbud control
-            </button>
-          )}
-          <div className="text-emerald-200/70 pt-1">
-            Press your earbud button to see the counter go up. If "Raw events" stays at 0, close any
-            music apps (Spotify, YouTube Music, etc.) — they may be intercepting media buttons.
-          </div>
-        </div>
-      )}
-
-      {audioMessage && (
-        <div className="mx-6 mb-2 px-4 py-2.5 bg-blue-600/20 border border-blue-500/30 rounded-xl flex items-center gap-2.5 flex-shrink-0">
-          <Volume2 className="w-4 h-4 text-blue-400 flex-shrink-0" />
-          <div className="text-xs text-blue-100 line-clamp-2">{audioMessage}</div>
-        </div>
-      )}
-
+      {/* Main content — vertically centered */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6">
         {isResting ? (
+          /* Rest view */
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-5">
               <Bell
@@ -432,22 +361,10 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
             </div>
             <div className="w-44 h-44 rounded-full bg-neutral-900 flex items-center justify-center mb-6 relative">
               <svg className="absolute inset-0 w-full h-full -rotate-90">
+                <circle cx="88" cy="88" r="80" stroke="currentColor" strokeWidth="8" fill="none" className="text-neutral-800" />
                 <circle
-                  cx="88"
-                  cy="88"
-                  r="80"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="none"
-                  className="text-neutral-800"
-                />
-                <circle
-                  cx="88"
-                  cy="88"
-                  r="80"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="none"
+                  cx="88" cy="88" r="80"
+                  stroke="currentColor" strokeWidth="8" fill="none"
                   className="text-blue-600"
                   strokeDasharray={`${2 * Math.PI * 80}`}
                   strokeDashoffset={`${2 * Math.PI * 80 * (1 - restTimeLeft / (currentExercise?.restTime || 1))}`}
@@ -456,113 +373,89 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
               </svg>
               <div className="text-6xl font-bold">{restTimeLeft}</div>
             </div>
-            <div className="text-base text-neutral-300 mb-2">Next: Set {currentSet}</div>
+            <div className="text-base text-neutral-300 mb-1">Next: Set {currentSet}</div>
             <div className="text-sm text-neutral-500">Single tap to skip rest</div>
           </div>
         ) : (
+          /* Exercise view */
           <div className="text-center w-full">
             <h2 className="text-4xl font-bold mb-1">{currentExercise?.name}</h2>
-            <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
-
-            <div className="relative bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 max-w-md mx-auto shadow-2xl border border-neutral-800/50 overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
-              <div className="relative grid grid-cols-3 gap-4">
-                <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
-                  <div className="text-4xl font-bold text-blue-400 mb-1">
-                    {currentSet}/{currentExercise?.sets}
-                  </div>
-                  <div className="text-sm text-neutral-400">Sets</div>
+            <p className="text-base text-neutral-400 mb-8">{currentExercise?.muscleGroup}</p>
+            <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
+              <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                <div className="text-4xl font-bold text-blue-400 mb-1">
+                  {currentSet}/{currentExercise?.sets}
                 </div>
-                <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
-                  <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
-                  <div className="text-sm text-neutral-400">Reps</div>
+                <div className="text-sm text-neutral-400">Sets</div>
+              </div>
+              <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
+                <div className="text-sm text-neutral-400">Reps</div>
+              </div>
+              <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                <div className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
+                  {currentExercise?.restTime}s
                 </div>
-                <div className="text-center glass-dark rounded-2xl p-4 shadow-lg">
-                  <div
-                    className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}
-                  >
-                    {currentExercise?.restTime}s
-                  </div>
-                  <div className="text-sm text-neutral-400">Rest</div>
-                </div>
+                <div className="text-sm text-neutral-400">Rest</div>
               </div>
             </div>
           </div>
         )}
       </div>
 
+      {/* Tap buttons + earbud guide */}
       <div className="px-6 pb-8">
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-4">
           <button
             onClick={handleSingleTap}
-            className={`flex flex-col items-center gap-2 px-4 py-4 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-900/50 hover:shadow-xl hover:shadow-blue-900/60 hover:scale-[1.02] active:scale-[0.98] ${
-              flashTap === 'singleTap' ? 'ring-4 ring-emerald-400 scale-[1.05]' : ''
+            className={`flex flex-col items-center gap-2 py-4 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-900/50 active:scale-[0.97] ${
+              flashTap === 'singleTap' ? 'ring-4 ring-emerald-400 scale-[1.04]' : ''
             }`}
           >
-            <div className="w-12 h-12 rounded-full glass flex items-center justify-center shadow-inner">
-              <div className="w-4 h-4 rounded-full bg-white shadow-lg shadow-white/50" />
+            <div className="w-11 h-11 rounded-full glass flex items-center justify-center">
+              <div className="w-3.5 h-3.5 rounded-full bg-white" />
             </div>
             <div className="text-xs font-medium">Single Tap</div>
           </button>
           <button
             onClick={handleDoubleTap}
-            className={`flex flex-col items-center gap-2 px-4 py-4 rounded-2xl glass-dark hover:bg-white/10 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] ${
-              flashTap === 'doubleTap' ? 'ring-4 ring-emerald-400 scale-[1.05]' : ''
+            className={`flex flex-col items-center gap-2 py-4 rounded-2xl glass-dark hover:bg-white/10 transition-all shadow-lg active:scale-[0.97] ${
+              flashTap === 'doubleTap' ? 'ring-4 ring-emerald-400 scale-[1.04]' : ''
             }`}
           >
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center gap-1 shadow-inner">
-              <div className="w-3 h-3 rounded-full bg-neutral-300 shadow-lg" />
-              <div className="w-3 h-3 rounded-full bg-neutral-300 shadow-lg" />
+            <div className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-neutral-300" />
+              <div className="w-3 h-3 rounded-full bg-neutral-300" />
             </div>
             <div className="text-xs font-medium">Double Tap</div>
           </button>
           <button
             onClick={handleTripleTap}
-            className={`flex flex-col items-center gap-2 px-4 py-4 rounded-2xl glass-dark hover:bg-white/10 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] ${
-              flashTap === 'tripleTap' ? 'ring-4 ring-emerald-400 scale-[1.05]' : ''
+            className={`flex flex-col items-center gap-2 py-4 rounded-2xl glass-dark hover:bg-white/10 transition-all shadow-lg active:scale-[0.97] ${
+              flashTap === 'tripleTap' ? 'ring-4 ring-emerald-400 scale-[1.04]' : ''
             }`}
           >
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center gap-0.5 shadow-inner">
-              <div className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-lg" />
-              <div className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-lg" />
-              <div className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-lg" />
+            <div className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center gap-0.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+              <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
             </div>
             <div className="text-xs font-medium">Triple Tap</div>
           </button>
         </div>
-        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-4 border border-neutral-800/50 shadow-lg">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm text-neutral-400">Earbud Controls</div>
-            <div
-              className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider ${
-                earbud.active ? 'text-emerald-400' : 'text-neutral-500'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  earbud.active ? 'bg-emerald-400 animate-pulse' : 'bg-neutral-600'
-                }`}
-              />
-              {earbud.platform === 'capacitor'
-                ? 'Native'
-                : earbud.platform === 'mediasession'
-                  ? 'Browser'
-                  : 'Off'}
-            </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="glass-dark rounded-xl p-2.5">
+            <div className="font-medium text-white mb-0.5">Single Tap</div>
+            <div className="text-neutral-500">{isResting ? 'Skip rest' : 'Complete set'}</div>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-center text-xs">
-            <div className="glass-dark rounded-lg p-2">
-              <div className="font-medium text-white mb-1">Single Tap</div>
-              <div className="text-neutral-500">Complete set / Skip rest</div>
-            </div>
-            <div className="glass-dark rounded-lg p-2">
-              <div className="font-medium text-white mb-1">Double Tap</div>
-              <div className="text-neutral-500">Skip exercise</div>
-            </div>
-            <div className="glass-dark rounded-lg p-2">
-              <div className="font-medium text-white mb-1">Triple Tap</div>
-              <div className="text-neutral-500">Mark occupied / Move down</div>
-            </div>
+          <div className="glass-dark rounded-xl p-2.5">
+            <div className="font-medium text-white mb-0.5">Double Tap</div>
+            <div className="text-neutral-500">Skip exercise</div>
+          </div>
+          <div className="glass-dark rounded-xl p-2.5">
+            <div className="font-medium text-white mb-0.5">Triple Tap</div>
+            <div className="text-neutral-500">Move to end</div>
           </div>
         </div>
       </div>
