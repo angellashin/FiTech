@@ -34,33 +34,33 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
         role="dialog"
         aria-modal="true"
         aria-label={`${guide.name} exercise guide`}
-        className="relative w-full max-w-[430px] max-h-[88vh] overflow-hidden rounded-t-[2rem] bg-white text-neutral-950 shadow-2xl"
+        className="relative w-full max-w-[430px] max-h-[88vh] overflow-hidden rounded-t-[2rem] bg-neutral-900 text-white shadow-2xl border-t border-neutral-700/50"
       >
-        <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-neutral-200" />
+        <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-neutral-600" />
         <header className="flex items-center justify-between px-5 py-4">
           <button
             type="button"
             aria-label="Save exercise guide"
-            className="h-9 w-9 rounded-full border border-neutral-200 text-neutral-400 flex items-center justify-center"
+            className="h-9 w-9 rounded-full border border-neutral-700 text-neutral-400 flex items-center justify-center hover:bg-neutral-800"
           >
             <Bookmark className="h-4 w-4" />
           </button>
           <div className="text-center">
-            <h2 className="text-base font-bold">{guide.name}</h2>
+            <h2 className="text-base font-bold text-white">{guide.name}</h2>
             <p className="text-[11px] text-neutral-400">Beginner form guide</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close exercise guide"
-            className="h-9 w-9 rounded-full border border-neutral-200 text-neutral-500 flex items-center justify-center hover:bg-neutral-100"
+            className="h-9 w-9 rounded-full border border-neutral-700 text-neutral-400 flex items-center justify-center hover:bg-neutral-800"
           >
             <X className="h-4 w-4" />
           </button>
         </header>
 
         <div className="px-5 pb-5 overflow-y-auto max-h-[calc(88vh-4.5rem)]">
-          <div className="mx-auto mb-5 grid w-full max-w-[260px] grid-cols-3 rounded-full border border-neutral-200 bg-neutral-50 p-1 text-xs font-semibold">
+          <div className="mx-auto mb-5 grid w-full max-w-[260px] grid-cols-3 rounded-full border border-neutral-700 bg-neutral-800 p-1 text-xs font-semibold">
             {(Object.keys(tabLabels) as GuideTab[]).map((tab) => (
               <button
                 key={tab}
@@ -68,8 +68,8 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
                 onClick={() => setActiveTab(tab)}
                 className={`rounded-full py-2 transition-all ${
                   activeTab === tab
-                    ? 'bg-white text-neutral-950 shadow-sm ring-1 ring-neutral-200'
-                    : 'text-neutral-400'
+                    ? 'bg-neutral-700 text-white shadow-sm'
+                    : 'text-neutral-500 hover:text-neutral-300'
                 }`}
               >
                 {tabLabels[tab]}
@@ -88,32 +88,32 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
             </div>
           </div>
 
-          <div className="mb-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-50 text-center">
-            <div className="border-r border-neutral-100 px-3 py-4">
-              <div className="text-[11px] font-semibold text-neutral-400">Equipment</div>
-              <div className="mt-1 text-sm font-bold text-neutral-800">{guide.equipment}</div>
+          <div className="mb-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-800 text-center">
+            <div className="border-r border-neutral-700 px-3 py-4">
+              <div className="text-[11px] font-semibold text-neutral-500">Equipment</div>
+              <div className="mt-1 text-sm font-bold text-white">{guide.equipment}</div>
             </div>
             <div className="px-3 py-4">
-              <div className="text-[11px] font-semibold text-neutral-400">Type</div>
-              <div className="mt-1 text-sm font-bold text-neutral-800">{guide.type}</div>
+              <div className="text-[11px] font-semibold text-neutral-500">Type</div>
+              <div className="mt-1 text-sm font-bold text-white">{guide.type}</div>
             </div>
           </div>
 
           {activeTab === 'about' && (
             <div className="space-y-3">
-              <div className="rounded-2xl bg-blue-50 p-4 text-sm text-blue-950">
-                <div className="mb-2 flex items-center gap-2 font-bold">
-                  <Target className="h-4 w-4 text-blue-600" />
+              <div className="rounded-2xl bg-blue-500/10 border border-blue-500/20 p-4 text-sm text-blue-100">
+                <div className="mb-2 flex items-center gap-2 font-bold text-blue-300">
+                  <Target className="h-4 w-4" />
                   Main focus
                 </div>
-                <p className="leading-relaxed">{guide.primaryFocus}</p>
+                <p className="leading-relaxed text-blue-100">{guide.primaryFocus}</p>
               </div>
-              <div className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-950">
-                <div className="mb-2 flex items-center gap-2 font-bold">
-                  <Lightbulb className="h-4 w-4 text-amber-600" />
+              <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-100">
+                <div className="mb-2 flex items-center gap-2 font-bold text-amber-300">
+                  <Lightbulb className="h-4 w-4" />
                   Beginner tip
                 </div>
-                <p className="leading-relaxed">{guide.beginnerTip}</p>
+                <p className="leading-relaxed text-amber-100">{guide.beginnerTip}</p>
               </div>
             </div>
           )}
@@ -121,11 +121,11 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
           {activeTab === 'steps' && (
             <div className="space-y-3">
               {guide.instructions.map((instruction, index) => (
-                <div key={instruction} className="flex gap-3 rounded-2xl bg-neutral-50 p-4">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">
+                <div key={instruction} className="flex gap-3 rounded-2xl bg-neutral-800 p-4">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
                     {index + 1}
                   </div>
-                  <p className="text-sm leading-relaxed text-neutral-700">{instruction}</p>
+                  <p className="text-sm leading-relaxed text-neutral-300">{instruction}</p>
                 </div>
               ))}
             </div>
@@ -134,14 +134,14 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
           {activeTab === 'safety' && (
             <div className="space-y-3">
               {guide.safetyCues.map((cue) => (
-                <div key={cue} className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                <div key={cue} className="flex items-center gap-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
-                  <p className="text-sm font-medium text-emerald-950">{cue}</p>
+                  <p className="text-sm font-medium text-emerald-100">{cue}</p>
                 </div>
               ))}
-              <p className="px-1 text-xs leading-relaxed text-neutral-400">
+              <p className="px-1 text-xs leading-relaxed text-neutral-500">
                 If you feel joint pain, dizziness, or sharp discomfort, stop the set and choose a
                 lighter variation.
               </p>
