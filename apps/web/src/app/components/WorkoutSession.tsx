@@ -1,8 +1,9 @@
 import { useCallback, useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, Bell, Link2 } from 'lucide-react';
+import { Volume2, VolumeX, X, Bell, Link2, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
 import { getExerciseImageSrc } from '../services/exerciseGuide';
+import { ExerciseGuideSheet } from './ExerciseGuideSheet';
 import {
   saveWorkoutHistory,
   updateWorkoutSession,
@@ -36,8 +37,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     getUserSettings();
   const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
-  // null = not in superset; number = index of the A exercise (we're currently on B)
   const [supersetAIndex, setSupersetAIndex] = useState<number | null>(null);
+  const [guideExercise, setGuideExercise] = useState<{ name: string; muscleGroup: string } | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
 
@@ -380,8 +381,15 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       </div>
 
       {/* Header */}
-      <header className="px-6 py-5 flex items-center justify-between">
-        <div>
+      <header className="px-4 py-4 flex items-center gap-3">
+        <button
+          onClick={onBack}
+          aria-label="Back to plan"
+          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors flex-shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="flex-1 min-w-0">
           <div className="text-sm text-neutral-400">
             Exercise {currentExerciseIndex + 1} of {exercises.length}
             <span className="text-neutral-600 ml-2">({completedExercises.length} completed)</span>
@@ -489,14 +497,18 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                     <div className="bg-neutral-900 border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
                       <div className="text-[10px] font-bold text-emerald-400 mb-2 tracking-widest">NOW</div>
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-14 h-14 rounded-xl bg-neutral-950 overflow-hidden flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setGuideExercise({ name: currentExercise!.name, muscleGroup: currentExercise!.muscleGroup })}
+                          className="w-14 h-14 rounded-xl bg-neutral-950 overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
+                        >
                           <img
                             src={getExerciseImageSrc(currentExercise!.name)}
                             alt={currentExercise!.name}
                             className="w-full h-full object-contain p-1"
                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                           />
-                        </div>
+                        </button>
                         <div className="min-w-0">
                           <div className="font-bold text-base leading-tight">{currentExercise!.name}</div>
                           <div className="text-xs text-neutral-400 mt-0.5">{currentExercise!.muscleGroup}</div>
@@ -555,14 +567,19 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                   /* Normal single exercise view */
                   <div className="text-center w-full">
                     {currentExercise && (
-                      <div className="w-36 h-36 rounded-3xl bg-neutral-950 mx-auto mb-5 overflow-hidden shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => setGuideExercise({ name: currentExercise.name, muscleGroup: currentExercise.muscleGroup })}
+                        className="w-36 h-36 rounded-3xl bg-neutral-950 mx-auto mb-5 overflow-hidden shadow-lg block hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
+                        aria-label={`Open ${currentExercise.name} guide`}
+                      >
                         <img
                           src={getExerciseImageSrc(currentExercise.name)}
                           alt={currentExercise.name}
                           className="w-full h-full object-contain p-1"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                         />
-                      </div>
+                      </button>
                     )}
                     <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
                     <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
@@ -657,6 +674,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
           </div>
         </div>
       </div>
+
+      <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
     </div>
   );
 }

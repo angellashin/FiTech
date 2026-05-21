@@ -396,11 +396,8 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
           return (
             <button
               key={ex.name}
-              disabled={isAlready}
               onClick={() => toggleSelect(ex.name)}
-              className={`w-full flex items-center gap-3 px-4 py-3 border-b border-neutral-800/60 transition-colors text-left ${
-                isAlready ? 'opacity-30 cursor-not-allowed' : 'hover:bg-neutral-800/40'
-              }`}
+              className="w-full flex items-center gap-3 px-4 py-3 border-b border-neutral-800/60 transition-colors text-left hover:bg-neutral-800/40"
             >
               <div
                 className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
@@ -423,6 +420,9 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
                   <span className="text-sm font-medium text-white">{ex.name}</span>
                   {favorites.includes(ex.name) && (
                     <span className="text-yellow-400 text-xs">★</span>
+                  )}
+                  {isAlready && (
+                    <span className="text-[10px] text-neutral-500 bg-neutral-800 rounded px-1 py-0.5">추가됨</span>
                   )}
                 </div>
                 <div className="text-xs text-neutral-500 mt-0.5">
