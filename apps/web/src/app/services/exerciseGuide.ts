@@ -48,10 +48,23 @@ const withAppBasePath = (assetPath: string): string => {
   return `${base.replace(/\/$/, '')}/${assetPath.replace(/^\//, '')}`;
 };
 
+const gifExercises = new Set([
+  'barbell-bench-press', 'decline-bench-press', 'dumbbell-fly', 'deadlift', 'pull-up',
+  'barbell-row', 'lat-pulldown', 'seated-cable-row', 't-bar-row', 'straight-arm-pulldown',
+  'hyperextension', 'overhead-press', 'lateral-raise', 'front-raise', 'reverse-fly',
+  'arnold-press', 'upright-row', 'cable-lateral-raise', 'shrugs', 'tricep-pushdown',
+  'skull-crusher', 'overhead-tricep-extension', 'tricep-dips', 'cable-kickback', 'tate-press',
+  'barbell-curl', 'hammer-curl', 'concentration-curl', 'cable-curl', 'preacher-curl',
+  'spider-curl', 'reverse-curl', 'leg-raise', 'russian-twist', 'ab-wheel-rollout',
+  'hanging-knee-raise', 'dead-bug', 'bicycle-crunch', 'mountain-climber', 'romanian-deadlift',
+  'lunges', 'leg-extension', 'sumo-deadlift', 'calf-raise',
+]);
+
+const webpExercises = new Set(['pec-deck-machine', 'landmine-press', 'diamond-push-up']);
+
 export const getExerciseImageSrc = (exerciseName: string): string => {
   const slug = slugExerciseName(exerciseName);
-  const webpFallback = new Set(['pec-deck-machine', 'landmine-press', 'diamond-push-up']);
-  const ext = webpFallback.has(slug) ? 'webp' : 'jpg';
+  const ext = gifExercises.has(slug) ? 'gif' : webpExercises.has(slug) ? 'webp' : 'jpg';
   return withAppBasePath(`exercise-guides/${slug}.${ext}`);
 };
 
