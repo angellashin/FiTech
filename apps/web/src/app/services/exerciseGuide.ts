@@ -48,8 +48,12 @@ const withAppBasePath = (assetPath: string): string => {
   return `${base.replace(/\/$/, '')}/${assetPath.replace(/^\//, '')}`;
 };
 
-export const getExerciseImageSrc = (exerciseName: string): string =>
-  withAppBasePath(`exercise-guides/${slugExerciseName(exerciseName)}.webp`);
+export const getExerciseImageSrc = (exerciseName: string): string => {
+  const slug = slugExerciseName(exerciseName);
+  const webpFallback = new Set(['pec-deck-machine', 'landmine-press', 'diamond-push-up']);
+  const ext = webpFallback.has(slug) ? 'webp' : 'jpg';
+  return withAppBasePath(`exercise-guides/${slug}.${ext}`);
+};
 
 const titleCaseMuscle = (muscleGroup?: string) => {
   if (!muscleGroup) return 'Full body';
