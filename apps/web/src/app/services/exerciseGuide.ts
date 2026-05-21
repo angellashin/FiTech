@@ -58,9 +58,13 @@ const gifExercises = new Set([
   'spider-curl', 'reverse-curl', 'leg-raise', 'russian-twist', 'ab-wheel-rollout',
   'hanging-knee-raise', 'dead-bug', 'bicycle-crunch', 'mountain-climber', 'romanian-deadlift',
   'lunges', 'leg-extension', 'sumo-deadlift', 'calf-raise',
+  'incline-dumbbell-press', 'cable-fly', 'push-up', 'incline-cable-fly', 'dips',
+  'dumbbell-row', 'face-pull', 'diamond-push-up', 'dumbbell-curl', 'incline-dumbbell-curl',
+  'chin-up', 'plank', 'crunch', 'cable-crunch', 'back-squat',
+  'hip-thrust', 'leg-press', 'leg-curl', 'step-up', 'close-grip-bench-press',
 ]);
 
-const webpExercises = new Set(['pec-deck-machine', 'landmine-press', 'diamond-push-up']);
+const webpExercises = new Set(['pec-deck-machine', 'landmine-press']);
 
 export const getExerciseImageSrc = (exerciseName: string): string => {
   const slug = slugExerciseName(exerciseName);
