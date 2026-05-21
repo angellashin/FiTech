@@ -11,10 +11,16 @@ import {
   Bookmark,
   Trash2,
   CalendarDays,
+  Edit2,
+  Plus,
+  X,
+  ChevronLeft,
 } from 'lucide-react';
-import { getAllSessions, getSavedRoutines, deleteRoutine } from '../utils/workoutHistory';
+import { getAllSessions, getSavedRoutines, deleteRoutine, updateRoutine } from '../utils/workoutHistory';
 import type { WorkoutSessionRecord, SavedRoutine } from '../utils/workoutHistory';
-import type { MuscleGroup, WorkoutPlan } from '../domain/workout';
+import type { MuscleGroup, WorkoutPlan, Exercise } from '../domain/workout';
+import { exerciseLibrary } from '../services/workoutPlanner';
+import type { ExerciseTemplate } from '../services/workoutPlanner';
 
 interface HomeProps {
   onStartWorkout: () => void;
@@ -82,10 +88,63 @@ export function Home({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savedRoutines, setSavedRoutines] = useState<SavedRoutine[]>(() => getSavedRoutines());
 
+  // Routine edit state
+  const [editingRoutine, setEditingRoutine] = useState<SavedRoutine | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editExercises, setEditExercises] = useState<Exercise[]>([]);
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [addFilter, setAddFilter] = useState<MuscleGroup | 'all'>('all');
+
   const handleDeleteRoutine = (id: string) => {
     deleteRoutine(id);
     setSavedRoutines(getSavedRoutines());
   };
+
+  const openEditRoutine = (routine: SavedRoutine) => {
+    setEditingRoutine(routine);
+    setEditName(routine.name);
+    setEditExercises([...routine.exercises]);
+    setShowAddExercise(false);
+    setAddFilter('all');
+  };
+
+  const handleRemoveExercise = (exerciseId: string) => {
+    setEditExercises((prev) => prev.filter((e) => e.id !== exerciseId));
+  };
+
+  const handleAddExercise = (template: ExerciseTemplate) => {
+    const newExercise: Exercise = {
+      id: `${template.name.toLowerCase().replace(/\s+/g, '-')}_${Date.now()}`,
+      name: template.name,
+      sets: template.sets,
+      reps: template.reps,
+      restTime: template.restTime,
+      muscleGroup: template.muscleGroup,
+      setDetails: Array.from({ length: template.sets }, () => ({
+        weight: 0,
+        reps: template.reps,
+        completed: false,
+      })),
+    };
+    setEditExercises((prev) => [...prev, newExercise]);
+  };
+
+  const handleSaveRoutine = () => {
+    if (!editingRoutine) return;
+    updateRoutine(editingRoutine.id, {
+      name: editName.trim() || editingRoutine.name,
+      exercises: editExercises,
+    });
+    setSavedRoutines(getSavedRoutines());
+    setEditingRoutine(null);
+  };
+
+  const muscleGroupKeys = Object.keys(exerciseLibrary) as MuscleGroup[];
+
+  const filteredLibraryExercises =
+    addFilter === 'all'
+      ? muscleGroupKeys.flatMap((g) => exerciseLibrary[g])
+      : (exerciseLibrary[addFilter] ?? []);
 
   const allSessions = getAllSessions();
   const now = new Date();
@@ -101,7 +160,7 @@ export function Home({
     .slice(0, 3);
 
   return (
-    <div className="size-full flex flex-col bg-gradient-to-b from-[#0a0a0a] from-[8%] to-[#707070] to-[95%] overflow-auto">
+    <div className="relative size-full flex flex-col bg-gradient-to-b from-[#0a0a0a] from-[8%] to-[#707070] to-[95%] overflow-auto">
       <header className="px-6 py-8">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
@@ -195,12 +254,22 @@ export function Home({
                           .join(', ')}
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteRoutine(routine.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openEditRoutine(routine)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-500/20 text-neutral-500 hover:text-blue-400 transition-colors"
+                        aria-label="Edit routine"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRoutine(routine.id)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors"
+                        aria-label="Delete routine"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   <button
                     onClick={() => onLoadPlan(routineToPlan(routine))}
@@ -373,6 +442,191 @@ export function Home({
           </div>
         </div>
       </div>
+
+    {/* ── Edit Routine Bottom Sheet ── */}
+    {editingRoutine && (
+      <div className="absolute inset-0 z-50 flex flex-col justify-end">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={() => setEditingRoutine(null)}
+        />
+
+        {/* Sheet */}
+        <div className="relative bg-neutral-900 rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
+          {/* Drag handle */}
+          <div className="w-10 h-1 rounded-full bg-neutral-700 mx-auto mt-4 mb-1 flex-shrink-0" />
+
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-3 flex-shrink-0 border-b border-neutral-800">
+            {showAddExercise ? (
+              <button
+                onClick={() => setShowAddExercise(false)}
+                className="flex items-center gap-2 text-blue-400 text-sm font-medium"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Back
+              </button>
+            ) : (
+              <h2 className="text-lg font-semibold">Edit Routine</h2>
+            )}
+            <button
+              onClick={() => setEditingRoutine(null)}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+            {!showAddExercise ? (
+              /* ─── EDIT MODE ─── */
+              <div className="space-y-4">
+                {/* Name input */}
+                <div>
+                  <label className="text-sm text-neutral-400 block mb-2">Routine Name</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    maxLength={40}
+                    className="w-full bg-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+                  />
+                </div>
+
+                {/* Exercise list */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-neutral-400">
+                      Exercises ({editExercises.length})
+                    </span>
+                  </div>
+                  {editExercises.length === 0 ? (
+                    <div className="text-center py-6 text-neutral-500 text-sm rounded-xl border border-dashed border-neutral-700">
+                      No exercises. Add some below.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {editExercises.map((exercise) => (
+                        <div
+                          key={exercise.id}
+                          className="flex items-center gap-3 bg-neutral-800/60 rounded-xl px-4 py-3"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{exercise.name}</div>
+                            <div className="text-xs text-neutral-400">
+                              {exercise.muscleGroup} · {exercise.sets}×{exercise.reps}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveExercise(exercise.id)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Add exercise button */}
+                <button
+                  onClick={() => setShowAddExercise(true)}
+                  className="w-full flex items-center justify-center gap-2 border border-dashed border-blue-500/40 hover:border-blue-500/70 text-blue-400 hover:text-blue-300 rounded-xl py-3 text-sm font-medium transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Exercise
+                </button>
+              </div>
+            ) : (
+              /* ─── ADD EXERCISE MODE ─── */
+              <div className="space-y-4">
+                {/* Muscle group filter pills */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setAddFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      addFilter === 'all'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {muscleGroupKeys.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setAddFilter(g)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
+                        addFilter === g
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                      }`}
+                    >
+                      {g.replace('-', ' ')}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Exercise list */}
+                <div className="space-y-2">
+                  {filteredLibraryExercises.map((template) => {
+                    const alreadyAdded = editExercises.some((e) => e.name === template.name);
+                    return (
+                      <div
+                        key={template.name}
+                        className="flex items-center gap-3 bg-neutral-800/60 rounded-xl px-4 py-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{template.name}</div>
+                          <div className="text-xs text-neutral-400">
+                            {template.muscleGroup} · {template.sets}×{template.reps}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (!alreadyAdded) handleAddExercise(template);
+                          }}
+                          disabled={alreadyAdded}
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${
+                            alreadyAdded
+                              ? 'text-neutral-600 cursor-not-allowed'
+                              : 'hover:bg-blue-500/20 text-neutral-400 hover:text-blue-400'
+                          }`}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer buttons — only shown in edit mode */}
+          {!showAddExercise && (
+            <div className="flex gap-3 px-6 py-4 flex-shrink-0 border-t border-neutral-800">
+              <button
+                onClick={() => setEditingRoutine(null)}
+                className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveRoutine}
+                disabled={editExercises.length === 0}
+                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+              >
+                Save Changes
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
     </div>
   );
 }
