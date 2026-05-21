@@ -104,11 +104,11 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
           </div>
 
           <div className="mb-5 flex justify-center">
-            <div className="aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl bg-white p-2">
+            <div className="aspect-square w-full max-w-[280px] overflow-hidden rounded-3xl bg-white">
               <img
                 src={guide.imageSrc}
                 alt={`${guide.name} form illustration`}
-                className="h-full w-full object-contain"
+                className="h-full w-full object-cover"
                 loading="lazy"
               />
             </div>
