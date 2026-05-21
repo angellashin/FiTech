@@ -15,14 +15,20 @@
 - 운동 추가 화면: 근육 그룹 필터 pill (All / Chest / Back 등 7개), 이미 추가된 운동은 + 비활성화
 - Save Changes 즉시 localStorage 저장 + 홈 카드 카운트 실시간 반영
 - X/Cancel 버튼으로 변경 취소
+- **운동 캘린더 뷰** — WorkoutHistory 화면 상단에 월간 달력 추가
+  - 운동한 날에 파란 점, 오늘은 초록 링 표시
+  - `<` `>` 로 월 이동, 하단에 "N workouts this month"
+  - 날짜 탭 → 해당 날 세션만 필터링, 뱃지+X로 해제
 
-**수정 파일**: `apps/web/src/app/components/Home.tsx` 단독 수정 (workoutHistory.ts의 `updateRoutine`은 이미 구현돼 있었음)
+**수정 파일**:
+- `apps/web/src/app/components/Home.tsx` — Saved Routines 편집 기능
+- `apps/web/src/app/components/WorkoutHistory.tsx` — 캘린더 뷰 (+133줄)
 
 **다음 사람이 할 일**:
 1. 현재 CSS invert 방식의 Dark Mode를 Tailwind `dark:` 클래스로 고도화
 2. 프로필 사진 업로드 (현재 이니셜+색상만 지원)
 3. Saved Routines에 드래그로 순서 변경 기능 추가 (선택사항)
-4. GIF 잔여 6개 추가 (64/70 → 70/70) — exerciseGuide.ts 참고
+4. GIF 잔여 4개 추가 — Dumbbell Shoulder Press, Machine Shoulder Press, JM Press, Single Arm Pushdown (`exerciseGuide.ts`의 `gifExercises` Set에 슬러그 추가 + public/exercise-guides/ 에 gif 파일 배치)
 
 **현재 브랜치 상태**:
 - `main` 직접 push (junseo와 동일한 방식)

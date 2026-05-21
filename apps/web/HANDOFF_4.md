@@ -76,6 +76,7 @@ Home 화면 "My Routines" 섹션의 각 루틴 카드에 **Edit(✏️) 버튼**
 | Log Out (확인 다이얼로그 포함) | 준서(5/20) |
 | Saved Routines 저장/불러오기 | 준서(5/20) |
 | **Saved Routines 편집 (운동 추가/삭제)** | **이윤제(5/21)** |
+| **운동 캘린더 뷰 (WorkoutHistory 화면)** | **이윤제(5/21)** |
 | My Gym Equipment (기구 프로필) | 준서(5/20) |
 | LLM 운동 계획 생성 (Gemini 2.5 Flash) | 준서(5/20) |
 | Personal Records 전체 보기 (상위 3개 / View all 토글) | 준서(5/20) |
@@ -89,7 +90,7 @@ Home 화면 "My Routines" 섹션의 각 루틴 카드에 **Edit(✏️) 버튼**
 | **Dark Mode 고도화** | 현재 CSS `filter: invert(1) hue-rotate(180deg)` 방식. Tailwind `dark:` 클래스로 전환하면 색상 제어 정밀도 향상 |
 | **프로필 사진 업로드** | 현재 이니셜+색상만 지원. Supabase Storage 또는 base64 localStorage 활용 가능 |
 | **Saved Routines 순서 변경** | 드래그 앤 드롭 — `@dnd-kit` 이미 설치돼 있음 (`PlanPreview.tsx`에서 활용 예시 참고) |
-| **GIF 6개 잔여** | 64/70 완료. `exerciseGuide.ts`의 `gifMap`에서 누락 항목 확인 |
+| **GIF 4개 잔여** | 64/70 + webp 2개(pec-deck-machine, landmine-press) = 66/70. 누락: Dumbbell Shoulder Press, Machine Shoulder Press, JM Press, Single Arm Pushdown |
 
 ---
 
