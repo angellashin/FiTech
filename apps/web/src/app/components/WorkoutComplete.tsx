@@ -10,6 +10,7 @@ import {
   Bookmark,
   BookmarkCheck,
   Sparkles,
+  Edit3,
 } from 'lucide-react';
 import {
   WORKOUT_REVIEW_FACE_OPTIONS,
@@ -88,6 +89,36 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
   const [sessionRating, setSessionRating] = useState<WorkoutReviewRating | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [reviewSaved, setReviewSaved] = useState(false);
+
+  // Actual weight correction
+  const [editedExercises, setEditedExercises] = useState<Exercise[]>(() =>
+    exercises.map((ex) => ({
+      ...ex,
+      setDetails: ex.setDetails?.map((s) => ({ ...s })) ?? [],
+    })),
+  );
+  const [weightsSaved, setWeightsSaved] = useState(false);
+
+  const handleEditWeight = (exIdx: number, setIdx: number, weight: number) => {
+    setWeightsSaved(false);
+    setEditedExercises((prev) =>
+      prev.map((ex, i) => {
+        if (i !== exIdx || !ex.setDetails) return ex;
+        return {
+          ...ex,
+          setDetails: ex.setDetails.map((s, j) => (j === setIdx ? { ...s, weight } : s)),
+        };
+      }),
+    );
+  };
+
+  const handleSaveWeights = () => {
+    const updated = updateWorkoutSession(sessionId, { exercises: editedExercises });
+    if (updated) {
+      updateWorkoutSession(updated.id, { analytics: buildSessionAnalytics(updated) });
+    }
+    setWeightsSaved(true);
+  };
 
   const handleSaveRoutine = () => {
     if (!routineName.trim()) return;
@@ -211,6 +242,57 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
               </div>
             </div>
           </div>
+
+          {/* Actual weight correction */}
+          {editedExercises.some((ex) => ex.setDetails?.some((s) => s.weight > 0)) && (
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
+              <div className="flex items-center gap-2 mb-4">
+                <Edit3 className="w-4 h-4 text-neutral-400" />
+                <span className="text-sm text-neutral-400">실제 사용한 무게가 달랐나요?</span>
+              </div>
+              <div className="space-y-4">
+                {editedExercises.map((ex, exIdx) => {
+                  const sets = ex.setDetails ?? [];
+                  if (sets.every((s) => s.weight === 0)) return null;
+                  return (
+                    <div key={ex.id}>
+                      <div className="text-sm font-semibold text-white mb-2">{ex.name}</div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {sets.map((set, setIdx) => (
+                          <div
+                            key={setIdx}
+                            className="flex items-center gap-1.5 bg-neutral-800/60 rounded-lg px-2.5 py-2"
+                          >
+                            <span className="text-xs text-neutral-500 w-10 flex-shrink-0">
+                              Set {setIdx + 1}
+                            </span>
+                            <input
+                              type="number"
+                              value={set.weight || ''}
+                              onChange={(e) =>
+                                handleEditWeight(exIdx, setIdx, parseInt(e.target.value) || 0)
+                              }
+                              className="flex-1 min-w-0 bg-transparent text-white text-sm text-center focus:outline-none"
+                              placeholder="0"
+                            />
+                            <span className="text-xs text-neutral-500">kg</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveWeights}
+                disabled={weightsSaved}
+                className="w-full mt-4 rounded-xl bg-neutral-700 hover:bg-neutral-600 disabled:bg-neutral-800 disabled:text-neutral-500 py-2.5 text-sm font-medium transition-all"
+              >
+                {weightsSaved ? '✓ 저장됨' : '무게 저장'}
+              </button>
+            </div>
+          )}
 
           <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-neutral-800/50">
             {saved ? (
