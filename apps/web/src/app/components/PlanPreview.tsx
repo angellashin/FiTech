@@ -58,6 +58,7 @@ interface DraggableExerciseItemProps {
   onUpdateSetType: (id: string, setIndex: number, type: SetType) => void;
   onToggleSuperset: (id: string) => void;
   onUpdateRestTime: (id: string, value: number) => void;
+  onApplyWeightToAll: (id: string, weight: number) => void;
   onAddSet: (id: string) => void;
   onRemoveSet: (id: string, setIndex: number) => void;
   onOpenGuide: (exercise: Exercise) => void;
@@ -82,6 +83,7 @@ const ExerciseCard = ({
   onUpdateSetType,
   onToggleSuperset,
   onUpdateRestTime,
+  onApplyWeightToAll,
   onAddSet,
   onRemoveSet,
   onOpenGuide,
@@ -143,7 +145,19 @@ const ExerciseCard = ({
       <div className="space-y-2">
         <div className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 text-xs text-neutral-500 px-1`}>
           <div>Set</div>
-          {!isBodyweight && <div>kg</div>}
+          {!isBodyweight && (
+            <div className="flex items-center gap-1">
+              <span>kg</span>
+              <button
+                type="button"
+                onClick={() => onApplyWeightToAll(exercise.id, sets[0]?.weight ?? 0)}
+                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                title="첫 번째 세트 무게를 모든 세트에 적용"
+              >
+                전체
+              </button>
+            </div>
+          )}
           <div>Reps</div>
           <div></div>
         </div>
@@ -529,6 +543,18 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
     );
   };
 
+  const handleApplyWeightToAll = (exerciseId: string, weight: number) => {
+    setExercises(
+      exercises.map((ex) => {
+        if (ex.id !== exerciseId || !ex.setDetails) return ex;
+        return {
+          ...ex,
+          setDetails: ex.setDetails.map((s) => ({ ...s, weight })),
+        };
+      }),
+    );
+  };
+
   const handleUpdateSetType = (exerciseId: string, setIndex: number, type: SetType) => {
     setExercises(
       exercises.map((ex) => {
@@ -796,6 +822,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                           onUpdateSetType={handleUpdateSetType}
                           onToggleSuperset={handleToggleSuperset}
                           onUpdateRestTime={handleUpdateRestTime}
+                          onApplyWeightToAll={handleApplyWeightToAll}
                           onAddSet={handleAddSet}
                           onRemoveSet={handleRemoveSet}
                           onOpenGuide={setGuideExercise}
