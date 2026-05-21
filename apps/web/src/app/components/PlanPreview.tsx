@@ -802,7 +802,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                         />
                         </motion.div>
                         {exercise.isSuperset && index < exercises.length - 1 && (
-                          <div className="flex items-center justify-center -my-0.5 py-0.5 z-10">
+                          <div className="flex items-center justify-center py-2 z-10">
                             <div className="flex items-center gap-1.5 bg-emerald-900/30 border border-emerald-600/40 rounded-full px-3 py-1.5">
                               <Link2 className="w-3 h-3 text-emerald-500" />
                               <span className="text-xs font-bold text-emerald-400">Superset</span>
