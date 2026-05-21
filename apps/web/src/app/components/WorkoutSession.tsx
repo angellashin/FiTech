@@ -505,7 +505,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                           <img
                             src={getExerciseImageSrc(currentExercise!.name)}
                             alt={currentExercise!.name}
-                            className="w-full h-full object-contain p-1"
+                            className="w-full h-full object-contain"
                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                           />
                         </button>
@@ -548,11 +548,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                     <div className="bg-neutral-900/60 border border-neutral-700/50 rounded-2xl p-4 opacity-55">
                       <div className="text-[10px] font-bold text-neutral-500 mb-2 tracking-widest">NEXT</div>
                       <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-xl bg-neutral-950 overflow-hidden flex-shrink-0">
+                        <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex-shrink-0">
                           <img
                             src={getExerciseImageSrc(partnerExercise.name)}
                             alt={partnerExercise.name}
-                            className="w-full h-full object-contain p-1"
+                            className="w-full h-full object-contain"
                             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                           />
                         </div>
@@ -570,13 +570,13 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                       <button
                         type="button"
                         onClick={() => setGuideExercise({ name: currentExercise.name, muscleGroup: currentExercise.muscleGroup })}
-                        className="w-36 h-36 rounded-3xl bg-neutral-950 mx-auto mb-5 overflow-hidden shadow-lg block hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
+                        className="w-36 h-36 rounded-3xl bg-white mx-auto mb-5 overflow-hidden shadow-lg block hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
                         aria-label={`Open ${currentExercise.name} guide`}
                       >
                         <img
                           src={getExerciseImageSrc(currentExercise.name)}
                           alt={currentExercise.name}
-                          className="w-full h-full object-contain p-1"
+                          className="w-full h-full object-contain"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                         />
                       </button>
