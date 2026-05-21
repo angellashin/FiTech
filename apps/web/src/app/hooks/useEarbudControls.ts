@@ -227,20 +227,32 @@ export function useEarbudControls(handlers: EarbudHandlers, enabled = true): Ear
       });
       navigator.mediaSession.playbackState = 'playing';
 
-      const onPress = (event: string) => () => registerBrowserTap(event);
-      navigator.mediaSession.setActionHandler('play', onPress('play'));
-      navigator.mediaSession.setActionHandler('pause', onPress('pause'));
-      // Different earbud models fire different events on multi-press
-      navigator.mediaSession.setActionHandler('nexttrack', onPress('nexttrack'));
-      navigator.mediaSession.setActionHandler('previoustrack', onPress('previoustrack'));
+      // iOS converts physical button multi-press into distinct events at the OS level:
+      //   single press  → 'pause' / 'play'
+      //   double press  → 'nexttrack'        (one event, not two play events)
+      //   triple press  → 'previoustrack'    (one event, not three play events)
+      // So nexttrack / previoustrack must map DIRECTLY to doubleTap / tripleTap,
+      // while play/pause go through the accumulator for devices that fire multiple events.
+      const onAccumulate = (event: string) => () => registerBrowserTap(event);
+      navigator.mediaSession.setActionHandler('play', onAccumulate('play'));
+      navigator.mediaSession.setActionHandler('pause', onAccumulate('pause'));
+      // Direct mapping for iOS double/triple press
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        recordEvent('nexttrack');
+        fireTap('doubleTap');
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        recordEvent('previoustrack');
+        fireTap('tripleTap');
+      });
       // Some earbuds use seekforward/seekbackward instead of next/previous
       try {
-        navigator.mediaSession.setActionHandler('seekforward', onPress('seekforward'));
+        navigator.mediaSession.setActionHandler('seekforward', onAccumulate('seekforward'));
       } catch {
         // Optional MediaSession action is not supported in every browser.
       }
       try {
-        navigator.mediaSession.setActionHandler('seekbackward', onPress('seekbackward'));
+        navigator.mediaSession.setActionHandler('seekbackward', onAccumulate('seekbackward'));
       } catch {
         // Optional MediaSession action is not supported in every browser.
       }
