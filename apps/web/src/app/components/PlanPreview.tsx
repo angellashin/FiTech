@@ -89,6 +89,7 @@ const ExerciseCard = ({
   onOpenGuide,
 }: DraggableExerciseItemProps) => {
   const [typePickerIdx, setTypePickerIdx] = useState<number | null>(null);
+  const [syncWeight, setSyncWeight] = useState(false);
   const sets = exercise.setDetails ?? [];
   const guide = getExerciseGuide(exercise);
   const isBodyweight = guide.type === 'Bodyweight / Reps' || guide.type === 'Hold / Time';
@@ -145,21 +146,24 @@ const ExerciseCard = ({
       <div className="space-y-2">
         <div className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 text-xs text-neutral-500 px-1`}>
           <div>Set</div>
-          {!isBodyweight && (
-            <div className="flex items-center gap-1">
-              <span>kg</span>
-              <button
-                type="button"
-                onClick={() => onApplyWeightToAll(exercise.id, sets[0]?.weight ?? 0)}
-                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                title="첫 번째 세트 무게를 모든 세트에 적용"
-              >
-                전체
-              </button>
-            </div>
-          )}
+          {!isBodyweight && <div>kg</div>}
           <div>Reps</div>
-          <div></div>
+          {!isBodyweight ? (
+            <button
+              type="button"
+              onClick={() => setSyncWeight((prev) => !prev)}
+              title={syncWeight ? '무게 개별 편집으로 전환' : '모든 세트 동일 무게 적용'}
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                syncWeight
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-neutral-700 text-neutral-400 hover:bg-neutral-600'
+              }`}
+            >
+              <Link2 className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <div />
+          )}
         </div>
         <div className="space-y-1.5">
           {sets.map((set, idx) => {
@@ -200,10 +204,15 @@ const ExerciseCard = ({
                 <input
                   type="number"
                   value={set.weight || ''}
-                  onChange={(e) =>
-                    onUpdateSet(exercise.id, idx, 'weight', parseInt(e.target.value) || 0)
-                  }
-                  className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    if (syncWeight) {
+                      onApplyWeightToAll(exercise.id, val);
+                    } else {
+                      onUpdateSet(exercise.id, idx, 'weight', val);
+                    }
+                  }}
+                  className={`min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 ${syncWeight ? 'focus:ring-blue-500 ring-1 ring-blue-500/40' : 'focus:ring-blue-600'}`}
                   placeholder="-"
                 />
               )}
