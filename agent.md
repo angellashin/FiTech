@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-05-21 — 이윤제 (branch: `main`, 기반: `junseo`)
+
+**한 줄 요약**: Saved Routines 편집 기능(운동 추가/삭제) 구현 완료. Home 화면 루틴 카드에 Edit 버튼 추가.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_4.md`](apps/web/HANDOFF_4.md)
+
+**구현한 기능**:
+- Saved Routines 편집 바텀 시트 — 루틴명 수정, 운동 삭제(X 버튼), 운동 추가(라이브러리에서 선택)
+- 운동 추가 화면: 근육 그룹 필터 pill (All / Chest / Back 등 7개), 이미 추가된 운동은 + 비활성화
+- Save Changes 즉시 localStorage 저장 + 홈 카드 카운트 실시간 반영
+- X/Cancel 버튼으로 변경 취소
+
+**수정 파일**: `apps/web/src/app/components/Home.tsx` 단독 수정 (workoutHistory.ts의 `updateRoutine`은 이미 구현돼 있었음)
+
+**다음 사람이 할 일**:
+1. 현재 CSS invert 방식의 Dark Mode를 Tailwind `dark:` 클래스로 고도화
+2. 프로필 사진 업로드 (현재 이니셜+색상만 지원)
+3. Saved Routines에 드래그로 순서 변경 기능 추가 (선택사항)
+4. GIF 잔여 6개 추가 (64/70 → 70/70) — exerciseGuide.ts 참고
+
+**현재 브랜치 상태**:
+- `main` 직접 push (junseo와 동일한 방식)
+- `npm run build` ✅ (vite build 성공)
+- TypeScript 에러: pre-existing 에러 8개 (이전 팀 상속분, 본 PR 무관)
+
+---
+
 ## 2026-05-16 — 이윤제 (branch: `yunje`, 기반: `sangjun`)
 
 **한 줄 요약**: sangjun의 이어폰 기능이 APK에서 작동하지 않던 근본 원인들을 전부 잡고, 실기기에서 싱글·더블·트리플 탭 전부 동작 확인까지 완료했다.
