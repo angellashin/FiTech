@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, CalendarDays, RotateCcw, Search, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
 import type { WorkoutPlan } from '../domain/workout';
 import {
   calculateExerciseVolume,
@@ -43,10 +43,37 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
+
+  // Calendar state
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   const sessions = getAllSessions().sort(
     (a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(),
   );
   void version;
+
+  // Build date → session count map (used for calendar dots)
+  const sessionCountByDate = new Map<string, number>();
+  for (const s of sessions) {
+    const key = s.completedAt.slice(0, 10);
+    sessionCountByDate.set(key, (sessionCountByDate.get(key) ?? 0) + 1);
+  }
+
+  // Calendar computed values
+  const calYear = calendarMonth.getFullYear();
+  const calMonthIdx = calendarMonth.getMonth();
+  const daysInMonth = new Date(calYear, calMonthIdx + 1, 0).getDate();
+  const firstWeekday = new Date(calYear, calMonthIdx, 1).getDay();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const monthPrefix = `${calYear}-${String(calMonthIdx + 1).padStart(2, '0')}`;
+  const workoutsThisMonth = [...sessionCountByDate.entries()]
+    .filter(([date]) => date.startsWith(monthPrefix))
+    .reduce((sum, [, count]) => sum + count, 0);
+
   const filteredSessions = sessions.filter((session) => {
     const haystack = [
       getSessionTitle(session),
@@ -57,8 +84,14 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
       .toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
+
+  // Apply date filter from calendar selection
+  const displayedSessions = selectedDate
+    ? filteredSessions.filter((s) => s.completedAt.startsWith(selectedDate))
+    : filteredSessions;
+
   const selected =
-    filteredSessions.find((session) => session.id === selectedId) ?? filteredSessions[0] ?? null;
+    displayedSessions.find((session) => session.id === selectedId) ?? displayedSessions[0] ?? null;
   const selectedAnalytics = selected ? buildSessionAnalytics(selected) : null;
   const selectedExerciseWork =
     selected?.exercises
@@ -104,6 +137,82 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
           </div>
         </div>
 
+        {/* Calendar */}
+        <div className="glass-dark rounded-2xl p-4 mb-4">
+          {/* Month navigation */}
+          <div className="flex items-center justify-between mb-2">
+            <button
+              type="button"
+              onClick={() => setCalendarMonth(new Date(calYear, calMonthIdx - 1, 1))}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-700 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-semibold">
+              {calendarMonth.toLocaleString('en', { month: 'long', year: 'numeric' })}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCalendarMonth(new Date(calYear, calMonthIdx + 1, 1))}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-700 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Day-of-week header */}
+          <div className="grid grid-cols-7 mb-1">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+              <div key={d} className="text-center text-xs text-neutral-500 py-1">
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Day cells */}
+          <div className="grid grid-cols-7 gap-y-1">
+            {Array.from({ length: firstWeekday }).map((_, i) => (
+              <div key={`blank-${i}`} />
+            ))}
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const day = i + 1;
+              const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`;
+              const count = sessionCountByDate.get(dateStr) ?? 0;
+              const isToday = dateStr === todayStr;
+              const isSelected = dateStr === selectedDate;
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => setSelectedDate(isSelected ? null : dateStr)}
+                  className={`relative mx-auto w-8 h-8 flex items-center justify-center rounded-full text-sm transition-colors
+                    ${isSelected
+                      ? 'bg-blue-500 text-white font-semibold'
+                      : count > 0
+                      ? 'text-white hover:bg-neutral-700'
+                      : 'text-neutral-500 hover:bg-neutral-800'
+                    }`}
+                >
+                  {isToday && !isSelected && (
+                    <span className="absolute inset-0 rounded-full ring-1 ring-emerald-400/60" />
+                  )}
+                  {day}
+                  {count > 0 && !isSelected && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-400" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Monthly summary */}
+          <div className="mt-3 pt-3 border-t border-neutral-800 text-xs text-neutral-400 text-center">
+            {workoutsThisMonth > 0
+              ? `${workoutsThisMonth} workout${workoutsThisMonth > 1 ? 's' : ''} this month`
+              : 'No workouts this month'}
+          </div>
+        </div>
+
         <div className="relative mb-5">
           <Search className="w-4 h-4 text-neutral-500 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
@@ -114,15 +223,34 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
           />
         </div>
 
-        {filteredSessions.length === 0 && (
+        {/* Active date filter badge */}
+        {selectedDate && (
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-1.5 bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-full px-3 py-1 text-xs font-medium">
+              <CalendarDays className="w-3 h-3" />
+              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+              &nbsp;·&nbsp;
+              {displayedSessions.length} session{displayedSessions.length !== 1 ? 's' : ''}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedDate(null)}
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700 transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+
+        {displayedSessions.length === 0 && (
           <div className="glass-dark rounded-3xl p-8 text-center text-neutral-400">
             <CalendarDays className="w-8 h-8 mx-auto mb-3" />
-            No workouts found yet.
+            {selectedDate ? 'No workouts on this day.' : 'No workouts found yet.'}
           </div>
         )}
 
         <div className="space-y-4">
-          {filteredSessions.map((session) => {
+          {displayedSessions.map((session) => {
             const isSelected = selected?.id === session.id;
             return (
               <div
