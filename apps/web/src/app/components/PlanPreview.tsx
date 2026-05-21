@@ -1,4 +1,5 @@
 import { useState, Fragment } from 'react';
+import { motion } from 'motion/react';
 import {
   ArrowLeft,
   Play,
@@ -783,6 +784,11 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                   ) : (
                     exercises.map((exercise, index) => (
                       <Fragment key={exercise.id}>
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.055, duration: 0.28, ease: 'easeOut' }}
+                        >
                         <ExerciseCard
                           exercise={exercise}
                           index={index}
@@ -794,6 +800,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                           onRemoveSet={handleRemoveSet}
                           onOpenGuide={setGuideExercise}
                         />
+                        </motion.div>
                         {exercise.isSuperset && index < exercises.length - 1 && (
                           <div className="flex items-center justify-center -my-0.5 py-0.5 z-10">
                             <div className="flex items-center gap-1.5 bg-emerald-900/30 border border-emerald-600/40 rounded-full px-3 py-1.5">

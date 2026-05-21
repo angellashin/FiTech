@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import { Volume2, VolumeX, X, Bell, Link2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
 import { getExerciseImageSrc } from '../services/exerciseGuide';
 import {
@@ -407,150 +408,197 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
 
       {/* Main content — vertically centered */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6">
-        {isResting ? (
-          /* Rest view */
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-5">
-              <Bell
-                className={`w-5 h-5 ${restTimeLeft === 0 ? 'text-orange-500 animate-bounce' : 'text-neutral-500'}`}
-              />
-              <div className="text-neutral-400">Rest Time</div>
-            </div>
-            <div className="w-44 h-44 rounded-full bg-neutral-900 flex items-center justify-center mb-6 relative">
-              <svg className="absolute inset-0 w-full h-full -rotate-90">
-                <circle cx="88" cy="88" r="80" stroke="currentColor" strokeWidth="8" fill="none" className="text-neutral-800" />
-                <circle
-                  cx="88" cy="88" r="80"
-                  stroke="currentColor" strokeWidth="8" fill="none"
-                  className="text-blue-600"
-                  strokeDasharray={`${2 * Math.PI * 80}`}
-                  strokeDashoffset={`${2 * Math.PI * 80 * (1 - restTimeLeft / (currentExercise?.restTime || 1))}`}
-                  strokeLinecap="round"
+        <AnimatePresence mode="wait">
+          {isResting ? (
+            /* Rest view */
+            <motion.div
+              key="rest"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.18 }}
+              className="text-center"
+            >
+              <div className="flex items-center justify-center gap-2 mb-5">
+                <Bell
+                  className={`w-5 h-5 ${restTimeLeft === 0 ? 'text-orange-500 animate-bounce' : 'text-neutral-500'}`}
                 />
-              </svg>
-              <div className="text-6xl font-bold">{restTimeLeft}</div>
-            </div>
-            <div className="text-base text-neutral-300 mb-1">Next: Set {currentSet}</div>
-            <div className="text-sm text-neutral-500">Single tap to skip rest</div>
-          </div>
-        ) : (() => {
-          const isOnA = currentExercise?.isSuperset === true && supersetAIndex === null;
-          const isOnB = supersetAIndex !== null;
-          const isInSuperset = isOnA || isOnB;
-          const partnerExercise = isOnA
-            ? exercises[currentExerciseIndex + 1]
-            : isOnB
-              ? exercises[supersetAIndex!]
-              : null;
-          const supersetTotalRounds = isOnA
-            ? currentExercise?.sets
-            : isOnB
-              ? exercises[supersetAIndex!]?.sets
-              : 1;
-
-          return isInSuperset && partnerExercise ? (
-            /* Superset dual-card view */
-            <div className="w-full px-1">
-              <div className="flex items-center justify-center mb-4">
-                <div className="flex items-center gap-2 bg-emerald-600/20 border border-emerald-500/30 rounded-full px-4 py-1.5">
-                  <Link2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-xs font-bold text-emerald-300">
-                    SUPERSET · Round {currentSet} / {supersetTotalRounds}
-                  </span>
-                </div>
+                <div className="text-neutral-400">Rest Time</div>
               </div>
-
-              {/* Active exercise */}
-              <div className="bg-neutral-900 border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
-                <div className="text-[10px] font-bold text-emerald-400 mb-2 tracking-widest">NOW</div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex-shrink-0">
-                    <img
-                      src={getExerciseImageSrc(currentExercise!.name)}
-                      alt={currentExercise!.name}
-                      className="w-full h-full object-contain p-1"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-base leading-tight">{currentExercise!.name}</div>
-                    <div className="text-xs text-neutral-400 mt-0.5">{currentExercise!.muscleGroup}</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="glass-dark rounded-xl p-3 text-center">
-                    <div className="text-2xl font-bold text-blue-400">{currentSet}/{currentExercise!.sets}</div>
-                    <div className="text-xs text-neutral-400">Sets</div>
-                  </div>
-                  <div className="glass-dark rounded-xl p-3 text-center">
-                    <div className="text-2xl font-bold text-white">{currentExercise!.reps}</div>
-                    <div className="text-xs text-neutral-400">Reps</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chain connector */}
-              <div className="flex items-center justify-center my-2 gap-2">
-                <div className="flex-1 h-px bg-emerald-800/50" />
-                <Link2 className="w-4 h-4 text-emerald-700" />
-                <div className="flex-1 h-px bg-emerald-800/50" />
-              </div>
-
-              {/* Partner exercise (dimmed) */}
-              <div className="bg-neutral-900/60 border border-neutral-700/50 rounded-2xl p-4 opacity-55">
-                <div className="text-[10px] font-bold text-neutral-500 mb-2 tracking-widest">NEXT</div>
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex-shrink-0">
-                    <img
-                      src={getExerciseImageSrc(partnerExercise.name)}
-                      alt={partnerExercise.name}
-                      className="w-full h-full object-contain p-1"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-bold text-base leading-tight">{partnerExercise.name}</div>
-                    <div className="text-xs text-neutral-500 mt-0.5">{partnerExercise.muscleGroup}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Normal single exercise view */
-            <div className="text-center w-full">
-              {currentExercise && (
-                <div className="w-36 h-36 rounded-3xl bg-white mx-auto mb-5 overflow-hidden shadow-lg">
-                  <img
-                    src={getExerciseImageSrc(currentExercise.name)}
-                    alt={currentExercise.name}
-                    className="w-full h-full object-contain p-2"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              <div className="w-44 h-44 rounded-full bg-neutral-900 flex items-center justify-center mb-6 relative">
+                {restTimeLeft === 0 && (
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-orange-500/20"
+                    animate={{ scale: [1, 1.14, 1], opacity: [0.5, 0, 0.5] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
                   />
-                </div>
-              )}
-              <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
-              <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
-              <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
-                <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                  <div className="text-4xl font-bold text-blue-400 mb-1">
-                    {currentSet}/{currentExercise?.sets}
-                  </div>
-                  <div className="text-sm text-neutral-400">Sets</div>
-                </div>
-                <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                  <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
-                  <div className="text-sm text-neutral-400">Reps</div>
-                </div>
-                <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                  <div className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
-                    {currentExercise?.restTime}s
-                  </div>
-                  <div className="text-sm text-neutral-400">Rest</div>
-                </div>
+                )}
+                <svg className="absolute inset-0 w-full h-full -rotate-90">
+                  <circle cx="88" cy="88" r="80" stroke="currentColor" strokeWidth="8" fill="none" className="text-neutral-800" />
+                  <circle
+                    cx="88" cy="88" r="80"
+                    stroke="currentColor" strokeWidth="8" fill="none"
+                    className="text-blue-600"
+                    strokeDasharray={`${2 * Math.PI * 80}`}
+                    strokeDashoffset={`${2 * Math.PI * 80 * (1 - restTimeLeft / (currentExercise?.restTime || 1))}`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="text-6xl font-bold">{restTimeLeft}</div>
               </div>
-            </div>
-          );
-        })()}
+              <div className="text-base text-neutral-300 mb-1">Next: Set {currentSet}</div>
+              <div className="text-sm text-neutral-500">Single tap to skip rest</div>
+            </motion.div>
+          ) : (() => {
+            const isOnA = currentExercise?.isSuperset === true && supersetAIndex === null;
+            const isOnB = supersetAIndex !== null;
+            const isInSuperset = isOnA || isOnB;
+            const partnerExercise = isOnA
+              ? exercises[currentExerciseIndex + 1]
+              : isOnB
+                ? exercises[supersetAIndex!]
+                : null;
+            const supersetTotalRounds = isOnA
+              ? currentExercise?.sets
+              : isOnB
+                ? exercises[supersetAIndex!]?.sets
+                : 1;
+
+            return (
+              <motion.div
+                key={`ex-${currentExerciseIndex}-${supersetAIndex ?? 'a'}`}
+                initial={{ opacity: 0, y: 32 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="w-full"
+              >
+                {isInSuperset && partnerExercise ? (
+                  /* Superset dual-card view */
+                  <div className="w-full px-1">
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="flex items-center gap-2 bg-emerald-600/20 border border-emerald-500/30 rounded-full px-4 py-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-xs font-bold text-emerald-300">
+                          SUPERSET · Round {currentSet} / {supersetTotalRounds}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Active exercise */}
+                    <div className="bg-neutral-900 border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
+                      <div className="text-[10px] font-bold text-emerald-400 mb-2 tracking-widest">NOW</div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-14 h-14 rounded-xl bg-neutral-950 overflow-hidden flex-shrink-0">
+                          <img
+                            src={getExerciseImageSrc(currentExercise!.name)}
+                            alt={currentExercise!.name}
+                            className="w-full h-full object-contain p-1"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-base leading-tight">{currentExercise!.name}</div>
+                          <div className="text-xs text-neutral-400 mt-0.5">{currentExercise!.muscleGroup}</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="glass-dark rounded-xl p-3 text-center">
+                          <AnimatePresence mode="popLayout">
+                            <motion.div
+                              key={currentSet}
+                              initial={{ scale: 1.5, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0.7, opacity: 0 }}
+                              transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                              className="text-2xl font-bold text-blue-400"
+                            >
+                              {currentSet}/{currentExercise!.sets}
+                            </motion.div>
+                          </AnimatePresence>
+                          <div className="text-xs text-neutral-400">Sets</div>
+                        </div>
+                        <div className="glass-dark rounded-xl p-3 text-center">
+                          <div className="text-2xl font-bold text-white">{currentExercise!.reps}</div>
+                          <div className="text-xs text-neutral-400">Reps</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Chain connector */}
+                    <div className="flex items-center justify-center my-2 gap-2">
+                      <div className="flex-1 h-px bg-emerald-800/50" />
+                      <Link2 className="w-4 h-4 text-emerald-700" />
+                      <div className="flex-1 h-px bg-emerald-800/50" />
+                    </div>
+
+                    {/* Partner exercise (dimmed) */}
+                    <div className="bg-neutral-900/60 border border-neutral-700/50 rounded-2xl p-4 opacity-55">
+                      <div className="text-[10px] font-bold text-neutral-500 mb-2 tracking-widest">NEXT</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-xl bg-neutral-950 overflow-hidden flex-shrink-0">
+                          <img
+                            src={getExerciseImageSrc(partnerExercise.name)}
+                            alt={partnerExercise.name}
+                            className="w-full h-full object-contain p-1"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-base leading-tight">{partnerExercise.name}</div>
+                          <div className="text-xs text-neutral-500 mt-0.5">{partnerExercise.muscleGroup}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Normal single exercise view */
+                  <div className="text-center w-full">
+                    {currentExercise && (
+                      <div className="w-36 h-36 rounded-3xl bg-neutral-950 mx-auto mb-5 overflow-hidden shadow-lg">
+                        <img
+                          src={getExerciseImageSrc(currentExercise.name)}
+                          alt={currentExercise.name}
+                          className="w-full h-full object-contain p-1"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+                    <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
+                    <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
+                    <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
+                      <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                        <AnimatePresence mode="popLayout">
+                          <motion.div
+                            key={currentSet}
+                            initial={{ scale: 1.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.7, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                            className="text-4xl font-bold text-blue-400 mb-1"
+                          >
+                            {currentSet}/{currentExercise?.sets}
+                          </motion.div>
+                        </AnimatePresence>
+                        <div className="text-sm text-neutral-400">Sets</div>
+                      </div>
+                      <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                        <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
+                        <div className="text-sm text-neutral-400">Reps</div>
+                      </div>
+                      <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                        <div className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
+                          {currentExercise?.restTime}s
+                        </div>
+                        <div className="text-sm text-neutral-400">Rest</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
       </div>
 
       {/* Tap buttons + earbud guide */}
