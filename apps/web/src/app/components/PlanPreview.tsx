@@ -89,7 +89,7 @@ const ExerciseCard = ({
   onOpenGuide,
 }: DraggableExerciseItemProps) => {
   const [typePickerIdx, setTypePickerIdx] = useState<number | null>(null);
-  const [syncWeight, setSyncWeight] = useState(false);
+  const [pendingWeight, setPendingWeight] = useState<number | null>(null);
   const sets = exercise.setDetails ?? [];
   const guide = getExerciseGuide(exercise);
   const isBodyweight = guide.type === 'Bodyweight / Reps' || guide.type === 'Hold / Time';
@@ -148,22 +148,7 @@ const ExerciseCard = ({
           <div>Set</div>
           {!isBodyweight && <div>kg</div>}
           <div>Reps</div>
-          {!isBodyweight ? (
-            <button
-              type="button"
-              onClick={() => setSyncWeight((prev) => !prev)}
-              title={syncWeight ? '무게 개별 편집으로 전환' : '모든 세트 동일 무게 적용'}
-              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
-                syncWeight
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-neutral-700 text-neutral-400 hover:bg-neutral-600'
-              }`}
-            >
-              <Link2 className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <div />
-          )}
+          <div />
         </div>
         <div className="space-y-1.5">
           {sets.map((set, idx) => {
@@ -206,13 +191,11 @@ const ExerciseCard = ({
                   value={set.weight || ''}
                   onChange={(e) => {
                     const val = parseInt(e.target.value) || 0;
-                    if (syncWeight) {
-                      onApplyWeightToAll(exercise.id, val);
-                    } else {
-                      onUpdateSet(exercise.id, idx, 'weight', val);
-                    }
+                    onUpdateSet(exercise.id, idx, 'weight', val);
+                    if (sets.length > 1 && val > 0) setPendingWeight(val);
+                    else setPendingWeight(null);
                   }}
-                  className={`min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 ${syncWeight ? 'focus:ring-blue-500 ring-1 ring-blue-500/40' : 'focus:ring-blue-600'}`}
+                  className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                   placeholder="-"
                 />
               )}
@@ -236,6 +219,24 @@ const ExerciseCard = ({
             );
           })}
         </div>
+        {pendingWeight !== null && (
+          <div className="flex items-center gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => { onApplyWeightToAll(exercise.id, pendingWeight); setPendingWeight(null); }}
+              className="flex-1 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+            >
+              ↓ {pendingWeight}kg 모든 세트에 적용
+            </button>
+            <button
+              type="button"
+              onClick={() => setPendingWeight(null)}
+              className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
+            >
+              <X className="w-3.5 h-3.5 text-neutral-400" />
+            </button>
+          </div>
+        )}
         <button
           onClick={() => onAddSet(exercise.id)}
           className="w-full mt-1 py-1.5 bg-neutral-800/60 hover:bg-neutral-700 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5 text-neutral-400 hover:text-white"
