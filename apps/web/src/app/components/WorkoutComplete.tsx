@@ -269,8 +269,10 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
                             <input
                               type="number"
                               value={set.weight || ''}
+                              step="0.5"
+                              min="0"
                               onChange={(e) =>
-                                handleEditWeight(exIdx, setIdx, parseInt(e.target.value) || 0)
+                                handleEditWeight(exIdx, setIdx, parseFloat(e.target.value) || 0)
                               }
                               className="flex-1 min-w-0 bg-transparent text-white text-sm text-center focus:outline-none"
                               placeholder="0"
