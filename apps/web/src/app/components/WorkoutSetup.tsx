@@ -215,7 +215,8 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
             {showGym && (
               <div className="glass-dark rounded-2xl p-4 space-y-4">
                 <p className="text-xs text-neutral-500 leading-relaxed">
-                  체크한 기구만 사용하는 운동으로 AI가 구성해줘요. 미선택 시 전체 대상.
+                  AI will build workouts using only the equipment you select. If none are selected,
+                  all exercises are available.
                 </p>
                 {EQUIPMENT_CATEGORIES.map((cat) => (
                   <div key={cat.label}>

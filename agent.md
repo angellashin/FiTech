@@ -124,3 +124,20 @@
 **참고**:
 - 배포/push는 아직 하지 않음. 로컬 변경 상태.
 - 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+---
+
+## 2026-05-24 — Codex follow-up (branch: `main`, local)
+
+**한 줄 요약**: Workout Setup의 `My Gym Equipment` 안내 문구를 영어로 통일했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSetup.tsx` — 한국어 helper copy를 영어로 변경
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run build` ✅

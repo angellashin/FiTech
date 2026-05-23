@@ -58,3 +58,21 @@
 - `npm run lint` ✅
 - `npm run test` ✅ — 7 files / 50 tests passed
 - `npm run build` ✅
+
+---
+
+## 3. Workout Setup — My Gym Equipment helper copy 영어화
+
+**사용자 의도:** `My Gym Equipment` 선택 안내 문구에 남아 있던 한국어를 영어 UI 문구로 통일.
+
+**업데이트 내용:**
+- 기존 문구 `체크한 기구만 사용하는 운동으로 AI가 구성해줘요. 미선택 시 전체 대상.`를 영어로 변경.
+- 새 문구: `AI will build workouts using only the equipment you select. If none are selected, all exercises are available.`
+
+**수정 파일:**
+- `src/app/components/WorkoutSetup.tsx`
+
+**검증:**
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run build` ✅
