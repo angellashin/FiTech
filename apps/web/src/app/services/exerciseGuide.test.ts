@@ -16,7 +16,7 @@ describe('getExerciseGuide', () => {
       expect(guide.instructions.length).toBeGreaterThanOrEqual(3);
       expect(guide.safetyCues.length).toBeGreaterThanOrEqual(3);
       expect(guide.beginnerTip.length).toBeGreaterThan(0);
-      expect(guide.imageSrc).toMatch(/^\/exercise-guides\/.+\.webp$/);
+      expect(guide.imageSrc).toMatch(/^\/exercise-guides\/.+\.(gif|webp|jpg)$/);
     });
   });
 

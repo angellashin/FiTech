@@ -1,10 +1,25 @@
 import { useCallback, useState, useEffect } from 'react';
-import { Volume2, VolumeX, X, Bell, Link2, ArrowLeft } from 'lucide-react';
+import {
+  Volume2,
+  VolumeX,
+  X,
+  Bell,
+  Link2,
+  ArrowLeft,
+  Dumbbell,
+  RefreshCw,
+  Check,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
-import { getExerciseImageSrc } from '../services/exerciseGuide';
+import {
+  getExerciseEquipment,
+  getExerciseImageSrc,
+  getExerciseType,
+} from '../services/exerciseGuide';
 import { ExerciseGuideSheet } from './ExerciseGuideSheet';
 import {
+  getRecommendedSets,
   saveWorkoutHistory,
   updateWorkoutSession,
   type WorkoutSessionEvent,
@@ -14,12 +29,190 @@ import { useAudioCoach } from '../hooks/useAudioCoach';
 import { useEarbudControls } from '../hooks/useEarbudControls';
 import { getUserSettings, setUserSetting } from '../utils/userSettings';
 import { buildSessionAnalytics } from '../services/workoutAnalytics';
+import { adaptForGoal, exerciseLibrary, type ExerciseTemplate } from '../services/workoutPlanner';
 
 interface WorkoutSessionProps {
   plan: WorkoutPlan;
   onComplete: (sessionId: string, exercises: Exercise[]) => void;
   onBack: () => void;
 }
+
+const formatKg = (weight: number) =>
+  Number.isInteger(weight) ? `${weight}` : weight.toFixed(1).replace(/\.0$/, '');
+
+const getSetTarget = (exercise: Exercise | undefined, setNumber: number) => {
+  const plannedSet = exercise?.setDetails?.[Math.max(0, setNumber - 1)];
+  return {
+    weight: plannedSet?.weight ?? 0,
+    reps: plannedSet?.reps ?? exercise?.reps ?? 0,
+    setType: plannedSet?.setType,
+  };
+};
+
+const getWeightDisplay = (exercise: Exercise | undefined, setNumber: number) => {
+  const target = getSetTarget(exercise, setNumber);
+  if (target.weight > 0) return `${formatKg(target.weight)}kg`;
+  if (!exercise) return '—';
+  return getExerciseType(exercise.name) === 'Hold / Time' ? 'Hold' : 'Body';
+};
+
+const getRepDisplay = (exercise: Exercise | undefined, setNumber: number) => {
+  const target = getSetTarget(exercise, setNumber);
+  if (!exercise) return '—';
+  return getExerciseType(exercise.name) === 'Hold / Time' ? `${target.reps}s` : target.reps;
+};
+
+const getSetTargetDisplay = (exercise: Exercise | undefined, setNumber: number) => {
+  if (!exercise) return '—';
+  const target = getSetTarget(exercise, setNumber);
+  if (getExerciseType(exercise.name) === 'Hold / Time') {
+    return `${target.reps}s hold`;
+  }
+  if (target.weight > 0) {
+    return `${formatKg(target.weight)}kg · ${target.reps} reps`;
+  }
+  return `Bodyweight · ${target.reps} reps`;
+};
+
+const getSetTargetSpeech = (exercise: Exercise | undefined, setNumber: number) => {
+  if (!exercise) return '';
+  const target = getSetTarget(exercise, setNumber);
+  const setTypeCue =
+    target.setType === 'failure'
+      ? ' to failure'
+      : target.setType === 'dropset'
+        ? ' as a drop set'
+        : '';
+
+  if (getExerciseType(exercise.name) === 'Hold / Time') {
+    return `hold for ${target.reps} seconds${setTypeCue}`;
+  }
+
+  if (target.weight > 0) {
+    return `${formatKg(target.weight)} kilograms for ${target.reps} reps${setTypeCue}`;
+  }
+
+  return `bodyweight for ${target.reps} reps${setTypeCue}`;
+};
+
+const getExerciseStartSpeech = (exercise: Exercise | undefined, setNumber: number) => {
+  if (!exercise) return 'No exercise selected.';
+  return `Set ${setNumber} of ${exercise.name}: ${getSetTargetSpeech(exercise, setNumber)}.`;
+};
+
+const allExerciseTemplates = Object.values(exerciseLibrary).flat();
+
+interface ReplacementPickerProps {
+  currentExercise: Exercise;
+  plannedExercises: Exercise[];
+  onReplace: (template: ExerciseTemplate) => void;
+  onClose: () => void;
+}
+
+const ReplacementPicker = ({
+  currentExercise,
+  plannedExercises,
+  onReplace,
+  onClose,
+}: ReplacementPickerProps) => {
+  const [showAll, setShowAll] = useState(false);
+  const alreadyPlanned = new Set(
+    plannedExercises
+      .filter((exercise) => exercise.id !== currentExercise.id)
+      .map((exercise) => exercise.name),
+  );
+  const availableTemplates = allExerciseTemplates.filter(
+    (template) => template.name !== currentExercise.name && !alreadyPlanned.has(template.name),
+  );
+  const sameGroupTemplates = availableTemplates.filter(
+    (template) => template.muscleGroup === currentExercise.muscleGroup,
+  );
+  const visibleTemplates =
+    showAll || sameGroupTemplates.length === 0 ? availableTemplates : sameGroupTemplates;
+
+  return (
+    <div className="absolute inset-0 z-30 bg-neutral-950 flex flex-col">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-orange-500/15 text-orange-300 flex items-center justify-center flex-shrink-0">
+            <Dumbbell className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold">Change exercise</h2>
+            <p className="text-xs text-neutral-500 mt-0.5 truncate">
+              Replace {currentExercise.name} if the machine is busy.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close replacement picker"
+          className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="flex gap-2 px-4 py-3 border-b border-neutral-800">
+        <button
+          type="button"
+          onClick={() => setShowAll(false)}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            !showAll ? 'bg-white text-neutral-950' : 'bg-neutral-800 text-neutral-400'
+          }`}
+        >
+          Same muscle
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            showAll ? 'bg-white text-neutral-950' : 'bg-neutral-800 text-neutral-400'
+          }`}
+        >
+          All options
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {visibleTemplates.length === 0 ? (
+          <div className="px-6 py-10 text-center text-neutral-500">
+            No replacement exercises available outside the current plan.
+          </div>
+        ) : (
+          visibleTemplates.map((template) => (
+            <button
+              key={`${template.muscleGroup}-${template.name}`}
+              type="button"
+              onClick={() => onReplace(template)}
+              className="w-full flex items-center gap-3 px-4 py-3 border-b border-neutral-800/60 text-left hover:bg-neutral-800/50 transition-colors"
+            >
+              <div className="w-12 h-12 rounded-xl bg-white overflow-hidden flex-shrink-0">
+                <img
+                  src={getExerciseImageSrc(template.name)}
+                  alt={template.name}
+                  className="w-full h-full object-contain p-0.5"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-white">{template.name}</div>
+                <div className="text-xs text-neutral-500 mt-0.5">
+                  {template.muscleGroup} · {getExerciseEquipment(template.name)} · {template.sets}×
+                  {template.reps}
+                </div>
+              </div>
+              <Check className="w-4 h-4 text-blue-400 flex-shrink-0" />
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
 
 export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps) {
   const [exercises, setExercises] = useState<Exercise[]>(plan.exercises);
@@ -28,7 +221,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const [isResting, setIsResting] = useState(false);
   const [restTimeLeft, setRestTimeLeft] = useState(0);
   const [audioMessage, setAudioMessage] = useState<string>(
-    'Audio guidance active. Single tap when you complete your first set.',
+    `Audio guidance active. ${getExerciseStartSpeech(plan.exercises[0], 1)} Single tap when the set is complete.`,
   );
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   const [events, setEvents] = useState<WorkoutSessionEvent[]>([]);
@@ -38,9 +231,12 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const [audioEnabled, setAudioEnabled] = useState(savedAudioGuidance);
   const [flashTap, setFlashTap] = useState<'singleTap' | 'doubleTap' | 'tripleTap' | null>(null);
   const [supersetAIndex, setSupersetAIndex] = useState<number | null>(null);
-  const [guideExercise, setGuideExercise] = useState<{ name: string; muscleGroup: string } | null>(null);
+  const [guideExercise, setGuideExercise] = useState<{ name: string; muscleGroup: string } | null>(
+    null,
+  );
+  const [showReplacementPicker, setShowReplacementPicker] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const { isSupported: isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
+  const { isSupported: _isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
 
   // 모바일 브라우저 오디오 잠금 해제 — 화면 첫 터치 시 AudioContext + speechSynthesis 활성화
   useEffect(() => {
@@ -110,14 +306,16 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         }
         if (restTimeLeft === 1) {
           if (restNotificationsEnabled) playTone(440, 1.2, 0.5); // 0s: 땅!
-          setAudioMessage('Rest complete. Ready for next set.');
+          setAudioMessage(
+            `Rest complete. ${getExerciseStartSpeech(currentExercise, currentSet)} Single tap when the set is complete.`,
+          );
         }
       }, 1000);
       return () => clearTimeout(timer);
     } else if (isResting && restTimeLeft === 0) {
       setIsResting(false);
     }
-  }, [isResting, playTone, restNotificationsEnabled, restTimeLeft]);
+  }, [currentExercise, currentSet, isResting, playTone, restNotificationsEnabled, restTimeLeft]);
 
   const createEvent = (
     type: WorkoutSessionEventType,
@@ -184,7 +382,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (!currentExercise) return;
 
     if (isResting) {
-      const message = `Starting set ${currentSet} of ${currentExercise.name}.`;
+      const message = `${getExerciseStartSpeech(currentExercise, currentSet)} Single tap when the set is complete.`;
       const restSkippedEvent = createEvent('rest_skipped', message);
       setEvents((previous) => [...previous, restSkippedEvent]);
       setIsResting(false);
@@ -204,7 +402,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (isOnA && currentExerciseIndex + 1 < nextExercises.length) {
       const bIndex = currentExerciseIndex + 1;
       const bExercise = nextExercises[bIndex];
-      const message = `${setCompleteMessage} Superset — now ${bExercise.name}!`;
+      const message = `${setCompleteMessage} Superset — ${getExerciseStartSpeech(bExercise, currentSet)}`;
       setEvents((previous) => [...previous, setCompletedEvent]);
       setSupersetAIndex(currentExerciseIndex);
       setCurrentExerciseIndex(bIndex);
@@ -224,7 +422,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       setSupersetAIndex(null);
 
       if (nextRound <= aExercise.sets) {
-        const restMessage = `Round ${currentSet} done. Rest ${aExercise.restTime}s.`;
+        const restMessage = `Round ${currentSet} done. Rest ${aExercise.restTime} seconds, then ${getExerciseStartSpeech(aExercise, nextRound)}`;
         setEvents((previous) => [...previous, setCompletedEvent]);
         setCurrentExerciseIndex(aIdx);
         setCurrentSet(nextRound);
@@ -233,13 +431,16 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         setAudioMessage(restMessage);
       } else {
         const bExercise = nextExercises[currentExerciseIndex];
-        const doneEvent = createEvent('exercise_completed', `Superset complete: ${aExercise.name} + ${bExercise.name}.`);
+        const doneEvent = createEvent(
+          'exercise_completed',
+          `Superset complete: ${aExercise.name} + ${bExercise.name}.`,
+        );
         rememberCompletedExercise(aExercise.id);
         rememberCompletedExercise(bExercise.id);
         const afterBIndex = currentExerciseIndex + 1;
         if (afterBIndex < nextExercises.length) {
           const nextEx = nextExercises[afterBIndex];
-          const message = `Superset done! Next: ${nextEx.name}.`;
+          const message = `Superset done. Next: ${nextEx.name}. Rest ${aExercise.restTime} seconds, then ${getExerciseStartSpeech(nextEx, 1)}`;
           setEvents((previous) => [...previous, setCompletedEvent, doneEvent]);
           setCurrentExerciseIndex(afterBIndex);
           setCurrentSet(1);
@@ -257,7 +458,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     const hasNextExercise = currentExerciseIndex < nextExercises.length - 1;
 
     if (currentSet < currentExercise.sets) {
-      const restMessage = `${setCompleteMessage} Rest for ${currentExercise.restTime} seconds.`;
+      const restMessage = `${setCompleteMessage} Rest for ${currentExercise.restTime} seconds, then ${getExerciseStartSpeech(currentExercise, currentSet + 1)}`;
       const restEvent = createEvent('rest_started', restMessage, currentExercise, currentSet + 1);
       setEvents((previous) => [...previous, setCompletedEvent, restEvent]);
       setIsResting(true);
@@ -267,12 +468,15 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       return;
     }
 
-    const exerciseCompleteEvent = createEvent('exercise_completed', `${currentExercise.name} complete.`);
+    const exerciseCompleteEvent = createEvent(
+      'exercise_completed',
+      `${currentExercise.name} complete.`,
+    );
     rememberCompletedExercise(currentExercise.id);
 
     if (hasNextExercise) {
       const nextExercise = nextExercises[currentExerciseIndex + 1];
-      const transitionMessage = `Exercise complete. Next: ${nextExercise.name}. Rest for ${currentExercise.restTime} seconds.`;
+      const transitionMessage = `Exercise complete. Next: ${nextExercise.name}. Rest for ${currentExercise.restTime} seconds, then ${getExerciseStartSpeech(nextExercise, 1)}`;
       const restEvent = createEvent('rest_started', transitionMessage, nextExercise, 1);
       setEvents((previous) => [...previous, setCompletedEvent, exerciseCompleteEvent, restEvent]);
       setCurrentExerciseIndex(currentExerciseIndex + 1);
@@ -295,7 +499,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
 
     if (currentExerciseIndex < exercises.length - 1) {
       const nextExercise = exercises[currentExerciseIndex + 1];
-      const message = `${skipMessage} Next: ${nextExercise.name}.`;
+      const message = `${skipMessage} Next: ${getExerciseStartSpeech(nextExercise, 1)}`;
       setEvents((previous) => [...previous, skipEvent]);
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setCurrentSet(1);
@@ -312,7 +516,10 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     if (!currentExercise) return;
 
     if (currentExerciseIndex >= exercises.length - 1) {
-      setAudioMessage('Already at the last exercise. No alternative order is available.');
+      setShowReplacementPicker(true);
+      setAudioMessage(
+        `${currentExercise.name} is the last planned exercise. Choose a replacement on screen if this machine is busy.`,
+      );
       return;
     }
 
@@ -323,7 +530,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     newExercises.push(currentEx);
 
     const nextExercise = newExercises[currentExerciseIndex];
-    const message = `${currentEx.name} marked occupied and moved to end. Next: ${nextExercise.name}.`;
+    const message = `${currentEx.name} marked occupied and moved to end. Next: ${getExerciseStartSpeech(nextExercise, 1)}`;
     const occupiedEvent = createEvent('equipment_occupied', message, currentEx, undefined);
 
     setExercises(newExercises);
@@ -331,6 +538,47 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     setCurrentSet(1);
     setIsResting(false);
     setRestTimeLeft(0);
+    setAudioMessage(message);
+  };
+
+  const handleReplaceCurrentExercise = (template: ExerciseTemplate) => {
+    if (!currentExercise) return;
+
+    const previousExercise = currentExercise;
+    const hasLoggedSets = previousExercise.setDetails?.some((set) => set.completed) ?? false;
+    const adapted = adaptForGoal(template, plan.goal);
+    const replacement: Exercise = {
+      id: `swap-${Date.now()}-${template.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name: adapted.name,
+      sets: adapted.sets,
+      reps: adapted.reps,
+      restTime: adapted.restTime,
+      muscleGroup: adapted.muscleGroup,
+      isSuperset: hasLoggedSets ? false : previousExercise.isSuperset,
+      setDetails: getRecommendedSets(adapted.name, adapted.sets, adapted.reps, adapted.muscleGroup),
+    };
+    const nextExercises = hasLoggedSets
+      ? [
+          ...exercises.slice(0, currentExerciseIndex),
+          { ...previousExercise, isSuperset: false },
+          replacement,
+          ...exercises.slice(currentExerciseIndex + 1),
+        ]
+      : exercises.map((exercise, index) =>
+          index === currentExerciseIndex ? replacement : exercise,
+        );
+    const replacementIndex = hasLoggedSets ? currentExerciseIndex + 1 : currentExerciseIndex;
+    const message = `${previousExercise.name} marked unavailable. Switched to ${getExerciseStartSpeech(replacement, 1)} Single tap when the set is complete.`;
+    const swapEvent = createEvent('equipment_occupied', message, previousExercise, undefined);
+
+    setExercises(nextExercises);
+    setEvents((previous) => [...previous, swapEvent]);
+    setCurrentExerciseIndex(replacementIndex);
+    setCurrentSet(1);
+    setSupersetAIndex(null);
+    setIsResting(false);
+    setRestTimeLeft(0);
+    setShowReplacementPicker(false);
     setAudioMessage(message);
   };
 
@@ -371,7 +619,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   };
 
   return (
-    <div className="size-full flex flex-col bg-neutral-950">
+    <div className="size-full relative overflow-hidden flex flex-col bg-neutral-950">
       {/* Progress bar */}
       <div className="h-1 bg-neutral-800">
         <div
@@ -442,10 +690,22 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                   />
                 )}
                 <svg className="absolute inset-0 w-full h-full -rotate-90">
-                  <circle cx="88" cy="88" r="80" stroke="currentColor" strokeWidth="8" fill="none" className="text-neutral-800" />
                   <circle
-                    cx="88" cy="88" r="80"
-                    stroke="currentColor" strokeWidth="8" fill="none"
+                    cx="88"
+                    cy="88"
+                    r="80"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                    className="text-neutral-800"
+                  />
+                  <circle
+                    cx="88"
+                    cy="88"
+                    r="80"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
                     className="text-blue-600"
                     strokeDasharray={`${2 * Math.PI * 80}`}
                     strokeDashoffset={`${2 * Math.PI * 80 * (1 - restTimeLeft / (currentExercise?.restTime || 1))}`}
@@ -454,68 +714,208 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                 </svg>
                 <div className="text-6xl font-bold">{restTimeLeft}</div>
               </div>
-              <div className="text-base text-neutral-300 mb-1">Next: Set {currentSet}</div>
-              <div className="text-sm text-neutral-500">Single tap to skip rest</div>
-            </motion.div>
-          ) : (() => {
-            const isOnA = currentExercise?.isSuperset === true && supersetAIndex === null;
-            const isOnB = supersetAIndex !== null;
-            const isInSuperset = isOnA || isOnB;
-            const partnerExercise = isOnA
-              ? exercises[currentExerciseIndex + 1]
-              : isOnB
-                ? exercises[supersetAIndex!]
-                : null;
-            const supersetTotalRounds = isOnA
-              ? currentExercise?.sets
-              : isOnB
-                ? exercises[supersetAIndex!]?.sets
-                : 1;
-
-            return (
-              <motion.div
-                key={`ex-${currentExerciseIndex}-${supersetAIndex ?? 'a'}`}
-                initial={{ opacity: 0, y: 32 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -18 }}
-                transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="w-full"
+              <div className="text-base text-neutral-300 mb-1">Next: {currentExercise?.name}</div>
+              <div className="text-xl font-bold text-blue-300 mb-2">
+                {getSetTargetDisplay(currentExercise, currentSet)}
+              </div>
+              <div className="text-sm text-neutral-500 mb-4">Single tap to skip rest</div>
+              <button
+                type="button"
+                onClick={() => setShowReplacementPicker(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-sm font-medium text-orange-200 hover:bg-orange-500/20 transition-colors"
               >
-                {isInSuperset && partnerExercise ? (
-                  /* Superset dual-card view */
-                  <div className="w-full px-1">
-                    <div className="flex items-center justify-center mb-4">
-                      <div className="flex items-center gap-2 bg-emerald-600/20 border border-emerald-500/30 rounded-full px-4 py-1.5">
-                        <Link2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-xs font-bold text-emerald-300">
-                          SUPERSET · Round {currentSet} / {supersetTotalRounds}
-                        </span>
-                      </div>
-                    </div>
+                <RefreshCw className="w-4 h-4" />
+                Change next exercise
+              </button>
+            </motion.div>
+          ) : (
+            (() => {
+              const isOnA = currentExercise?.isSuperset === true && supersetAIndex === null;
+              const isOnB = supersetAIndex !== null;
+              const isInSuperset = isOnA || isOnB;
+              const partnerExercise = isOnA
+                ? exercises[currentExerciseIndex + 1]
+                : isOnB
+                  ? exercises[supersetAIndex!]
+                  : null;
+              const supersetTotalRounds = isOnA
+                ? currentExercise?.sets
+                : isOnB
+                  ? exercises[supersetAIndex!]?.sets
+                  : 1;
 
-                    {/* Active exercise */}
-                    <div className="bg-neutral-900 border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
-                      <div className="text-[10px] font-bold text-emerald-400 mb-2 tracking-widest">NOW</div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <button
-                          type="button"
-                          onClick={() => setGuideExercise({ name: currentExercise!.name, muscleGroup: currentExercise!.muscleGroup })}
-                          className="w-14 h-14 rounded-xl bg-neutral-950 overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
-                        >
-                          <img
-                            src={getExerciseImageSrc(currentExercise!.name)}
-                            alt={currentExercise!.name}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
-                        </button>
-                        <div className="min-w-0">
-                          <div className="font-bold text-base leading-tight">{currentExercise!.name}</div>
-                          <div className="text-xs text-neutral-400 mt-0.5">{currentExercise!.muscleGroup}</div>
+              return (
+                <motion.div
+                  key={`ex-${currentExerciseIndex}-${supersetAIndex ?? 'a'}`}
+                  initial={{ opacity: 0, y: 32 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -18 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  className="w-full"
+                >
+                  {isInSuperset && partnerExercise ? (
+                    /* Superset dual-card view */
+                    <div className="w-full px-1">
+                      <div className="flex items-center justify-center mb-4">
+                        <div className="flex items-center gap-2 bg-emerald-600/20 border border-emerald-500/30 rounded-full px-4 py-1.5">
+                          <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-xs font-bold text-emerald-300">
+                            SUPERSET · Round {currentSet} / {supersetTotalRounds}
+                          </span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="glass-dark rounded-xl p-3 text-center">
+
+                      {/* Active exercise */}
+                      <div className="bg-neutral-900 border border-emerald-500/40 rounded-2xl p-4 shadow-lg">
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <div className="text-[10px] font-bold text-emerald-400 tracking-widest">
+                            NOW
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowReplacementPicker(true)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-[11px] font-medium text-orange-200 hover:bg-orange-500/20 transition-colors"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Change
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-3 mb-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setGuideExercise({
+                                name: currentExercise!.name,
+                                muscleGroup: currentExercise!.muscleGroup,
+                              })
+                            }
+                            className="w-14 h-14 rounded-xl bg-neutral-950 overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
+                          >
+                            <img
+                              src={getExerciseImageSrc(currentExercise!.name)}
+                              alt={currentExercise!.name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </button>
+                          <div className="min-w-0">
+                            <div className="font-bold text-base leading-tight">
+                              {currentExercise!.name}
+                            </div>
+                            <div className="text-xs text-neutral-400 mt-0.5">
+                              {currentExercise!.muscleGroup}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="glass-dark rounded-xl p-3 text-center">
+                            <AnimatePresence mode="popLayout">
+                              <motion.div
+                                key={currentSet}
+                                initial={{ scale: 1.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.7, opacity: 0 }}
+                                transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                                className="text-2xl font-bold text-blue-400"
+                              >
+                                {currentSet}/{currentExercise!.sets}
+                              </motion.div>
+                            </AnimatePresence>
+                            <div className="text-xs text-neutral-400">Sets</div>
+                          </div>
+                          <div className="glass-dark rounded-xl p-3 text-center">
+                            <div className="text-2xl font-bold text-orange-300">
+                              {getWeightDisplay(currentExercise, currentSet)}
+                            </div>
+                            <div className="text-xs text-neutral-400">Weight</div>
+                          </div>
+                          <div className="glass-dark rounded-xl p-3 text-center">
+                            <div className="text-2xl font-bold text-white">
+                              {getRepDisplay(currentExercise, currentSet)}
+                            </div>
+                            <div className="text-xs text-neutral-400">Reps</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Chain connector */}
+                      <div className="flex items-center justify-center my-2 gap-2">
+                        <div className="flex-1 h-px bg-emerald-800/50" />
+                        <Link2 className="w-4 h-4 text-emerald-700" />
+                        <div className="flex-1 h-px bg-emerald-800/50" />
+                      </div>
+
+                      {/* Partner exercise (dimmed) */}
+                      <div className="bg-neutral-900/60 border border-neutral-700/50 rounded-2xl p-4 opacity-55">
+                        <div className="text-[10px] font-bold text-neutral-500 mb-2 tracking-widest">
+                          NEXT
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex-shrink-0">
+                            <img
+                              src={getExerciseImageSrc(partnerExercise.name)}
+                              alt={partnerExercise.name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-base leading-tight">
+                              {partnerExercise.name}
+                            </div>
+                            <div className="text-xs text-neutral-500 mt-0.5">
+                              {partnerExercise.muscleGroup}
+                            </div>
+                            <div className="text-xs text-blue-300/80 mt-1">
+                              {getSetTargetDisplay(partnerExercise, currentSet)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Normal single exercise view */
+                    <div className="text-center w-full">
+                      {currentExercise && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setGuideExercise({
+                              name: currentExercise.name,
+                              muscleGroup: currentExercise.muscleGroup,
+                            })
+                          }
+                          className="w-36 h-36 rounded-3xl bg-white mx-auto mb-5 overflow-hidden shadow-lg block hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
+                          aria-label={`Open ${currentExercise.name} guide`}
+                        >
+                          <img
+                            src={getExerciseImageSrc(currentExercise.name)}
+                            alt={currentExercise.name}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </button>
+                      )}
+                      <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
+                      <p className="text-base text-neutral-400 mb-3">
+                        {currentExercise?.muscleGroup}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowReplacementPicker(true)}
+                        className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-sm font-medium text-orange-200 hover:bg-orange-500/20 transition-colors"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Machine busy? Change exercise
+                      </button>
+                      <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
+                        <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
                           <AnimatePresence mode="popLayout">
                             <motion.div
                               key={currentSet}
@@ -523,98 +923,40 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                               animate={{ scale: 1, opacity: 1 }}
                               exit={{ scale: 0.7, opacity: 0 }}
                               transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                              className="text-2xl font-bold text-blue-400"
+                              className="text-4xl font-bold text-blue-400 mb-1"
                             >
-                              {currentSet}/{currentExercise!.sets}
+                              {currentSet}/{currentExercise?.sets}
                             </motion.div>
                           </AnimatePresence>
-                          <div className="text-xs text-neutral-400">Sets</div>
+                          <div className="text-sm text-neutral-400">Sets</div>
                         </div>
-                        <div className="glass-dark rounded-xl p-3 text-center">
-                          <div className="text-2xl font-bold text-white">{currentExercise!.reps}</div>
-                          <div className="text-xs text-neutral-400">Reps</div>
+                        <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                          <div className="text-3xl font-bold text-orange-300 mb-1 leading-tight">
+                            {getWeightDisplay(currentExercise, currentSet)}
+                          </div>
+                          <div className="text-sm text-neutral-400">Weight</div>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Chain connector */}
-                    <div className="flex items-center justify-center my-2 gap-2">
-                      <div className="flex-1 h-px bg-emerald-800/50" />
-                      <Link2 className="w-4 h-4 text-emerald-700" />
-                      <div className="flex-1 h-px bg-emerald-800/50" />
-                    </div>
-
-                    {/* Partner exercise (dimmed) */}
-                    <div className="bg-neutral-900/60 border border-neutral-700/50 rounded-2xl p-4 opacity-55">
-                      <div className="text-[10px] font-bold text-neutral-500 mb-2 tracking-widest">NEXT</div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 rounded-xl bg-white overflow-hidden flex-shrink-0">
-                          <img
-                            src={getExerciseImageSrc(partnerExercise.name)}
-                            alt={partnerExercise.name}
-                            className="w-full h-full object-contain"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                          />
+                        <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                          <div className="text-4xl font-bold text-white mb-1">
+                            {getRepDisplay(currentExercise, currentSet)}
+                          </div>
+                          <div className="text-sm text-neutral-400">Reps</div>
                         </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-base leading-tight">{partnerExercise.name}</div>
-                          <div className="text-xs text-neutral-500 mt-0.5">{partnerExercise.muscleGroup}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* Normal single exercise view */
-                  <div className="text-center w-full">
-                    {currentExercise && (
-                      <button
-                        type="button"
-                        onClick={() => setGuideExercise({ name: currentExercise.name, muscleGroup: currentExercise.muscleGroup })}
-                        className="w-36 h-36 rounded-3xl bg-white mx-auto mb-5 overflow-hidden shadow-lg block hover:ring-2 hover:ring-blue-500 transition-all active:scale-95"
-                        aria-label={`Open ${currentExercise.name} guide`}
-                      >
-                        <img
-                          src={getExerciseImageSrc(currentExercise.name)}
-                          alt={currentExercise.name}
-                          className="w-full h-full object-contain"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                        />
-                      </button>
-                    )}
-                    <h2 className="text-3xl font-bold mb-1">{currentExercise?.name}</h2>
-                    <p className="text-base text-neutral-400 mb-6">{currentExercise?.muscleGroup}</p>
-                    <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
-                      <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                        <AnimatePresence mode="popLayout">
-                          <motion.div
-                            key={currentSet}
-                            initial={{ scale: 1.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.7, opacity: 0 }}
-                            transition={{ type: 'spring', stiffness: 500, damping: 28 }}
-                            className="text-4xl font-bold text-blue-400 mb-1"
+                        <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
+                          <div
+                            className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}
                           >
-                            {currentSet}/{currentExercise?.sets}
-                          </motion.div>
-                        </AnimatePresence>
-                        <div className="text-sm text-neutral-400">Sets</div>
-                      </div>
-                      <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                        <div className="text-4xl font-bold text-white mb-1">{currentExercise?.reps}</div>
-                        <div className="text-sm text-neutral-400">Reps</div>
-                      </div>
-                      <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                        <div className={`font-bold text-orange-400 mb-1 leading-tight ${(currentExercise?.restTime ?? 0) >= 100 ? 'text-2xl' : 'text-4xl'}`}>
-                          {currentExercise?.restTime}s
+                            {currentExercise?.restTime}s
+                          </div>
+                          <div className="text-sm text-neutral-400">Rest</div>
                         </div>
-                        <div className="text-sm text-neutral-400">Rest</div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })()}
+                  )}
+                </motion.div>
+              );
+            })()
+          )}
         </AnimatePresence>
       </div>
 
@@ -676,6 +1018,14 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
       </div>
 
       <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
+      {showReplacementPicker && currentExercise && (
+        <ReplacementPicker
+          currentExercise={currentExercise}
+          plannedExercises={exercises}
+          onReplace={handleReplaceCurrentExercise}
+          onClose={() => setShowReplacementPicker(false)}
+        />
+      )}
     </div>
   );
 }

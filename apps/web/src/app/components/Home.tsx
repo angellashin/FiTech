@@ -16,7 +16,6 @@ import {
 import { getAllSessions, getSavedRoutines, saveRoutine } from '../utils/workoutHistory';
 import type { WorkoutSessionRecord, SavedRoutine } from '../utils/workoutHistory';
 import type { MuscleGroup, WorkoutPlan } from '../domain/workout';
-import { exerciseLibrary } from '../services/workoutPlanner';
 
 interface HomeProps {
   onStartWorkout: () => void;

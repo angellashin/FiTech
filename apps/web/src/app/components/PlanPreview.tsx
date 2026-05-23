@@ -789,23 +789,6 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                 </div>
               </div>
 
-              {rationaleItems.length > 0 && (
-                <div className="bg-gradient-to-br from-emerald-950/40 to-neutral-950 border border-emerald-500/20 rounded-3xl p-5 mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5 text-emerald-300" />
-                    <h3 className="text-lg font-semibold">Why this recommendation?</h3>
-                  </div>
-                  <div className="space-y-2">
-                    {rationaleItems.map((item) => (
-                      <div key={item} className="flex gap-2 text-sm text-emerald-50/85">
-                        <span className="text-emerald-300">•</span>
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="bg-neutral-900 rounded-3xl p-6 mb-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Dumbbell className="w-5 h-5 text-neutral-400" />
@@ -871,6 +854,23 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                   </div>
                 </div>
               </div>
+
+              {rationaleItems.length > 0 && (
+                <div className="bg-gradient-to-br from-emerald-950/40 to-neutral-950 border border-emerald-500/20 rounded-3xl p-5 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-5 h-5 text-emerald-300" />
+                    <h3 className="text-lg font-semibold">Why this recommendation?</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {rationaleItems.map((item) => (
+                      <div key={item} className="flex gap-2 text-sm text-emerald-50/85">
+                        <span className="text-emerald-300">•</span>
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-neutral-950 via-neutral-950 to-transparent px-6 pt-8 pb-6">

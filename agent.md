@@ -66,3 +66,61 @@
 - `npm run build` ✅
 - 실기기 이어폰 싱글·더블·트리플 탭 ✅
 - pre-existing lint 2개 / TS 에러 8개 (sangjun 상속분, 본 PR 무관)
+
+---
+
+## 2026-05-23 — Codex (branch: `main`, local)
+
+**한 줄 요약**: Plan Preview에서 운동 목록을 추천 이유보다 먼저 보이도록 UX 우선순위를 조정했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**구현한 기능**:
+- `Why this recommendation?` 섹션을 `Exercise List` 위에서 콘텐츠 하단으로 이동
+- 표시 순서: `Plan Summary → Exercise List → Hands-Free Workout → Why this recommendation?`
+- 추천 이유 카드의 기존 스타일/문구/조건부 렌더링은 유지
+
+**수정 파일**:
+- `apps/web/src/app/components/PlanPreview.tsx`
+- `apps/web/HANDOFF_5.md` — 이번 세션 온보딩 기록 시작
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run build` ✅
+
+**참고**:
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+---
+
+## 2026-05-24 — Codex (branch: `main`, local)
+
+**한 줄 요약**: Workout Session에서 운동 중 기구가 막히면 대체 운동으로 바꾸고, 화면/오디오가 현재 세트 목표 무게를 안내하도록 개선했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**구현한 기능**:
+- 운동 진행 화면에 현재 세트 `Weight` 카드 추가 (`kg`, bodyweight, hold 구분)
+- 휴식 화면에 다음 운동/다음 세트 목표 무게·반복수 표시
+- 오디오 안내가 시작/휴식 종료/운동 전환/스킵/슈퍼세트 전환 시 “몇 kg × 몇 reps”를 말하도록 변경
+- `Machine busy? Change exercise` / `Change next exercise` 버튼과 대체 운동 선택 시트 추가
+- 대체 운동은 같은 근육군을 우선 보여주고, `All options`에서 전체 운동으로 확장 가능
+- 대체 선택 시 기존 운동은 `equipment_occupied` 이벤트로 남겨 이후 추천 회피 신호에 반영
+- 이미 완료한 세트가 있으면 기존 기록은 보존하고 대체 운동을 다음 순서로 삽입
+- 마지막 운동에서 Triple Tap 시 대체 운동 선택 시트를 열도록 보완
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — 운동 중 무게 안내, 대체 운동 선택/교체 UX
+- `apps/web/src/app/components/Home.tsx` — 미사용 import 제거로 lint 통과
+- `apps/web/src/app/services/exerciseGuide.test.ts` — GIF/WebP/JPG 가이드 에셋 확장자 허용
+- `apps/web/HANDOFF_5.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 50 tests)
+- `cd apps/web && npm run build` ✅
+
+**참고**:
+- 배포/push는 아직 하지 않음. 로컬 변경 상태.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
