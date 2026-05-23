@@ -94,10 +94,12 @@ export function Home({
   const [editExercises, setEditExercises] = useState<Exercise[]>([]);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addFilter, setAddFilter] = useState<MuscleGroup | 'all'>('all');
+  const [routineToDelete, setRoutineToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const handleDeleteRoutine = (id: string) => {
     deleteRoutine(id);
     setSavedRoutines(getSavedRoutines());
+    setRoutineToDelete(null);
   };
 
   const openEditRoutine = (routine: SavedRoutine) => {
@@ -263,7 +265,7 @@ export function Home({
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteRoutine(routine.id)}
+                        onClick={() => setRoutineToDelete({ id: routine.id, name: routine.name })}
                         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors"
                         aria-label="Delete routine"
                       >
@@ -627,6 +629,31 @@ export function Home({
         </div>
       </div>
     )}
+      {/* ── Delete routine confirmation dialog ───────────────── */}
+      {routineToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
+          <div className="w-full max-w-sm bg-neutral-900 rounded-2xl p-6 border border-neutral-700 shadow-2xl">
+            <h2 className="text-lg font-semibold mb-2">Delete routine?</h2>
+            <p className="text-sm text-neutral-400 mb-6">
+              "{routineToDelete.name}" will be permanently deleted and cannot be recovered.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRoutineToDelete(null)}
+                className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteRoutine(routineToDelete.id)}
+                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
