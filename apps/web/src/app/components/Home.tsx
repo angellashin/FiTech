@@ -16,7 +16,7 @@ import {
   X,
   ChevronLeft,
 } from 'lucide-react';
-import { getAllSessions, getSavedRoutines, deleteRoutine, updateRoutine } from '../utils/workoutHistory';
+import { getAllSessions, getSavedRoutines, deleteRoutine, updateRoutine, saveRoutine } from '../utils/workoutHistory';
 import type { WorkoutSessionRecord, SavedRoutine } from '../utils/workoutHistory';
 import type { MuscleGroup, WorkoutPlan, Exercise } from '../domain/workout';
 import { exerciseLibrary } from '../services/workoutPlanner';
@@ -88,6 +88,11 @@ export function Home({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savedRoutines, setSavedRoutines] = useState<SavedRoutine[]>(() => getSavedRoutines());
 
+  // Save-as-routine state (for Recent Workouts)
+  const [savingRoutineId, setSavingRoutineId] = useState<string | null>(null);
+  const [routineSaveName, setRoutineSaveName] = useState('');
+  const [justSavedId, setJustSavedId] = useState<string | null>(null);
+
   // Routine edit state
   const [editingRoutine, setEditingRoutine] = useState<SavedRoutine | null>(null);
   const [editName, setEditName] = useState('');
@@ -95,6 +100,16 @@ export function Home({
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [addFilter, setAddFilter] = useState<MuscleGroup | 'all'>('all');
   const [routineToDelete, setRoutineToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const handleSaveAsRoutine = (session: WorkoutSessionRecord) => {
+    const name = routineSaveName.trim() || getSessionLabel(session);
+    saveRoutine(name, session.exercises);
+    setSavedRoutines(getSavedRoutines());
+    setSavingRoutineId(null);
+    setRoutineSaveName('');
+    setJustSavedId(session.id);
+    setTimeout(() => setJustSavedId(null), 2000);
+  };
 
   const handleDeleteRoutine = (id: string) => {
     deleteRoutine(id);
@@ -356,6 +371,49 @@ export function Home({
                           <RotateCcw className="w-4 h-4" />
                           Load This Workout
                         </button>
+
+                        {/* Save as Routine */}
+                        {justSavedId === session.id ? (
+                          <div className="w-full flex items-center justify-center gap-2 bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded-xl py-3 text-sm font-medium">
+                            <Bookmark className="w-4 h-4 fill-emerald-400" />
+                            Saved to My Routines!
+                          </div>
+                        ) : savingRoutineId === session.id ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={routineSaveName}
+                              onChange={(e) => setRoutineSaveName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveAsRoutine(session);
+                                if (e.key === 'Escape') { setSavingRoutineId(null); setRoutineSaveName(''); }
+                              }}
+                              placeholder={getSessionLabel(session)}
+                              autoFocus
+                              className="flex-1 bg-neutral-800 border border-neutral-600 rounded-xl px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
+                            />
+                            <button
+                              onClick={() => handleSaveAsRoutine(session)}
+                              className="px-4 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-400 rounded-xl text-sm font-medium transition-all"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => { setSavingRoutineId(null); setRoutineSaveName(''); }}
+                              className="px-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 rounded-xl text-sm transition-all"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setSavingRoutineId(session.id); setRoutineSaveName(''); }}
+                            className="w-full flex items-center justify-center gap-2 bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-400 hover:text-neutral-200 rounded-xl py-3 text-sm font-medium transition-all"
+                          >
+                            <Bookmark className="w-4 h-4" />
+                            Save as Routine
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

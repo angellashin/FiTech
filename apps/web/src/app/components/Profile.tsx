@@ -102,7 +102,7 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     },
     {
       q: 'Why is audio guidance not speaking?',
-      a: 'Make sure Audio Guidance is enabled in Settings. On first load, your browser may require a user interaction before allowing speech synthesis — tap anywhere on the screen to unlock it. Also check that your device volume is not muted.',
+      a: 'Make sure Audio Guidance is enabled in Settings. FiTech uses the Android native TTS engine — check that your device volume is not muted.',
     },
     {
       q: 'How are weights recommended?',
@@ -127,6 +127,26 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     {
       q: 'Does FiTech work without internet?',
       a: 'Yes. All core features — workout generation, session tracking, audio guidance, and history — work fully offline. Cloud sync to Supabase is optional and the app falls back to local-only mode automatically if no connection is available.',
+    },
+    {
+      q: 'How do I save a workout as a routine?',
+      a: "After completing a workout, tap the Bookmark button on the Workout Complete screen to save it as a routine. You can also save directly from the Home screen — expand any session under Recent Workouts and tap 'Save as Routine'.",
+    },
+    {
+      q: 'Can I edit a saved routine?',
+      a: 'Yes. In the My Routines section on the Home screen, tap the ✏️ button on any routine card. You can rename the routine, remove exercises with the × button, or add new ones filtered by muscle group.',
+    },
+    {
+      q: 'How does AI plan my workout?',
+      a: 'FiTech uses Gemini 2.5 Flash to select exercises based on your chosen muscle groups, session duration, and intensity. It also factors in your recent training history — fatigue levels, completion rates, and face-scale reviews — to adjust exercise selection and recommended weights. If there is no internet connection, a local algorithm is used automatically.',
+    },
+    {
+      q: 'Does my post-workout review affect future plans?',
+      a: 'Yes. The face-scale rating you give after each session is used to estimate muscle fatigue. Tougher ratings increase the fatigue score for that muscle group, which can trigger a deload (×0.85) or reduce (×0.90) multiplier on recommended weights in your next plan.',
+    },
+    {
+      q: 'How do I set my gym equipment?',
+      a: 'Go to Profile → My Gym Equipment and select the machines and equipment available at your gym. The AI planner will only pick exercises that match your available equipment.',
     },
   ];
 
@@ -447,7 +467,7 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
                 <div className="space-y-2">
                   {[
                     { label: 'Platform', value: 'Web + Android APK (Capacitor)' },
-                    { label: 'Audio', value: 'Web Speech API + Web Audio API' },
+                    { label: 'Audio', value: 'Android native TTS + Web Speech API (browser)' },
                     { label: 'Storage', value: 'localStorage + Supabase (optional)' },
                     { label: 'Earbud control', value: 'Android MediaSession / Web MediaSession' },
                   ].map(({ label, value }) => (
