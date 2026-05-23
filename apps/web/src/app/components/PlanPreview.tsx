@@ -482,6 +482,7 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [guideExercise, setGuideExercise] = useState<Exercise | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -630,7 +631,13 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
         <header className="px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={onBack}
+              onClick={() => {
+                if (isEditing) {
+                  setShowDiscardConfirm(true);
+                } else {
+                  onBack();
+                }
+              }}
               className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -883,6 +890,35 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
           </>
         )}
         <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
+
+        {/* ── Discard changes confirmation dialog ───────────────── */}
+        {showDiscardConfirm && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
+            <div className="w-full max-w-sm bg-neutral-900 rounded-2xl p-6 border border-neutral-700 shadow-2xl">
+              <h2 className="text-lg font-semibold mb-2">Discard changes?</h2>
+              <p className="text-sm text-neutral-400 mb-6">
+                You have unsaved edits to your workout plan. Going back will discard them.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDiscardConfirm(false)}
+                  className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium transition-colors"
+                >
+                  Keep Editing
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDiscardConfirm(false);
+                    onBack();
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
   );
 }
