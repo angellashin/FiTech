@@ -9,18 +9,14 @@ import {
   ChevronUp,
   RotateCcw,
   Bookmark,
-  Trash2,
   CalendarDays,
   Edit2,
-  Plus,
   X,
-  ChevronLeft,
 } from 'lucide-react';
-import { getAllSessions, getSavedRoutines, deleteRoutine, updateRoutine, saveRoutine } from '../utils/workoutHistory';
+import { getAllSessions, getSavedRoutines, deleteRoutine, saveRoutine } from '../utils/workoutHistory';
 import type { WorkoutSessionRecord, SavedRoutine } from '../utils/workoutHistory';
-import type { MuscleGroup, WorkoutPlan, Exercise } from '../domain/workout';
+import type { MuscleGroup, WorkoutPlan } from '../domain/workout';
 import { exerciseLibrary } from '../services/workoutPlanner';
-import type { ExerciseTemplate } from '../services/workoutPlanner';
 
 interface HomeProps {
   onStartWorkout: () => void;
@@ -28,6 +24,7 @@ interface HomeProps {
   onLoadPlan: (plan: WorkoutPlan) => void;
   onViewHistory: () => void;
   onViewProgressReport: () => void;
+  onViewRoutines: () => void;
 }
 
 const formatDate = (iso: string): string => {
@@ -84,6 +81,7 @@ export function Home({
   onLoadPlan,
   onViewHistory,
   onViewProgressReport,
+  onViewRoutines,
 }: HomeProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [savedRoutines, setSavedRoutines] = useState<SavedRoutine[]>(() => getSavedRoutines());
@@ -93,16 +91,19 @@ export function Home({
   const [routineSaveName, setRoutineSaveName] = useState('');
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
-  // Routine edit state
-  const [editingRoutine, setEditingRoutine] = useState<SavedRoutine | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editExercises, setEditExercises] = useState<Exercise[]>([]);
-  const [showAddExercise, setShowAddExercise] = useState(false);
-  const [addFilter, setAddFilter] = useState<MuscleGroup | 'all'>('all');
   const [routineToDelete, setRoutineToDelete] = useState<{ id: string; name: string } | null>(null);
 
+  const resolveRoutineName = (base: string): string => {
+    const existing = new Set(savedRoutines.map((r) => r.name));
+    if (!existing.has(base)) return base;
+    let n = 2;
+    while (existing.has(`${base} (${n})`)) n++;
+    return `${base} (${n})`;
+  };
+
   const handleSaveAsRoutine = (session: WorkoutSessionRecord) => {
-    const name = routineSaveName.trim() || getSessionLabel(session);
+    const base = routineSaveName.trim() || getSessionLabel(session);
+    const name = resolveRoutineName(base);
     saveRoutine(name, session.exercises);
     setSavedRoutines(getSavedRoutines());
     setSavingRoutineId(null);
@@ -117,51 +118,6 @@ export function Home({
     setRoutineToDelete(null);
   };
 
-  const openEditRoutine = (routine: SavedRoutine) => {
-    setEditingRoutine(routine);
-    setEditName(routine.name);
-    setEditExercises([...routine.exercises]);
-    setShowAddExercise(false);
-    setAddFilter('all');
-  };
-
-  const handleRemoveExercise = (exerciseId: string) => {
-    setEditExercises((prev) => prev.filter((e) => e.id !== exerciseId));
-  };
-
-  const handleAddExercise = (template: ExerciseTemplate) => {
-    const newExercise: Exercise = {
-      id: `${template.name.toLowerCase().replace(/\s+/g, '-')}_${Date.now()}`,
-      name: template.name,
-      sets: template.sets,
-      reps: template.reps,
-      restTime: template.restTime,
-      muscleGroup: template.muscleGroup,
-      setDetails: Array.from({ length: template.sets }, () => ({
-        weight: 0,
-        reps: template.reps,
-        completed: false,
-      })),
-    };
-    setEditExercises((prev) => [...prev, newExercise]);
-  };
-
-  const handleSaveRoutine = () => {
-    if (!editingRoutine) return;
-    updateRoutine(editingRoutine.id, {
-      name: editName.trim() || editingRoutine.name,
-      exercises: editExercises,
-    });
-    setSavedRoutines(getSavedRoutines());
-    setEditingRoutine(null);
-  };
-
-  const muscleGroupKeys = Object.keys(exerciseLibrary) as MuscleGroup[];
-
-  const filteredLibraryExercises =
-    addFilter === 'all'
-      ? muscleGroupKeys.flatMap((g) => exerciseLibrary[g])
-      : (exerciseLibrary[addFilter] ?? []);
 
   const allSessions = getAllSessions();
   const now = new Date();
@@ -245,11 +201,22 @@ export function Home({
 
         {/* My Routines */}
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-2xl p-6 shadow-xl border border-neutral-800/50">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Bookmark className="w-5 h-5 text-blue-400" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Bookmark className="w-5 h-5 text-blue-400" />
+              </div>
+              <h2 className="text-lg font-semibold">My Routines</h2>
             </div>
-            <h2 className="text-lg font-semibold">My Routines</h2>
+            {savedRoutines.length > 0 && (
+              <button
+                onClick={onViewRoutines}
+                className="flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200"
+              >
+                <Edit2 className="w-4 h-4" />
+                View all ({savedRoutines.length})
+              </button>
+            )}
           </div>
           {savedRoutines.length === 0 ? (
             <div className="text-center py-6 text-neutral-500 text-sm">
@@ -257,35 +224,17 @@ export function Home({
             </div>
           ) : (
             <div className="space-y-3">
-              {savedRoutines.map((routine) => (
+              {savedRoutines.slice(0, 3).map((routine) => (
                 <div key={routine.id} className="glass-dark rounded-xl p-4 shadow-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="font-medium">{routine.name}</div>
-                      <div className="text-sm text-neutral-400 mt-0.5">
-                        {routine.exercises.length} exercises
-                        {' · '}
-                        {routine.exercises
-                          .map((e) => e.muscleGroup)
-                          .filter((v, i, a) => a.indexOf(v) === i)
-                          .join(', ')}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openEditRoutine(routine)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-500/20 text-neutral-500 hover:text-blue-400 transition-colors"
-                        aria-label="Edit routine"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setRoutineToDelete({ id: routine.id, name: routine.name })}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors"
-                        aria-label="Delete routine"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  <div className="mb-2">
+                    <div className="font-medium">{routine.name}</div>
+                    <div className="text-sm text-neutral-400 mt-0.5">
+                      {routine.exercises.length} exercises
+                      {' · '}
+                      {routine.exercises
+                        .map((e) => e.muscleGroup)
+                        .filter((v, i, a) => a.indexOf(v) === i)
+                        .join(', ')}
                     </div>
                   </div>
                   <button
@@ -379,30 +328,33 @@ export function Home({
                             Saved to My Routines!
                           </div>
                         ) : savingRoutineId === session.id ? (
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={routineSaveName}
-                              onChange={(e) => setRoutineSaveName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveAsRoutine(session);
-                                if (e.key === 'Escape') { setSavingRoutineId(null); setRoutineSaveName(''); }
-                              }}
-                              placeholder={getSessionLabel(session)}
-                              autoFocus
-                              className="flex-1 bg-neutral-800 border border-neutral-600 rounded-xl px-3 py-2 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
-                            />
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={routineSaveName}
+                                onChange={(e) => setRoutineSaveName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveAsRoutine(session);
+                                  if (e.key === 'Escape') { setSavingRoutineId(null); setRoutineSaveName(''); }
+                                }}
+                                placeholder={getSessionLabel(session)}
+                                autoFocus
+                                className="w-full bg-neutral-800 border border-neutral-600 rounded-xl px-3 pr-9 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
+                              />
+                              <button
+                                onClick={() => { setSavingRoutineId(null); setRoutineSaveName(''); }}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
                             <button
                               onClick={() => handleSaveAsRoutine(session)}
-                              className="px-4 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-400 rounded-xl text-sm font-medium transition-all"
+                              className="w-full flex items-center justify-center gap-2 bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-400 rounded-xl py-2.5 text-sm font-medium transition-all"
                             >
+                              <Bookmark className="w-4 h-4" />
                               Save
-                            </button>
-                            <button
-                              onClick={() => { setSavingRoutineId(null); setRoutineSaveName(''); }}
-                              className="px-3 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-400 rounded-xl text-sm transition-all"
-                            >
-                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
@@ -503,215 +455,6 @@ export function Home({
         </div>
       </div>
 
-    {/* ── Edit Routine Bottom Sheet ── */}
-    {editingRoutine && (
-      <div className="absolute inset-0 z-50 flex flex-col justify-end">
-        {/* Backdrop */}
-        <div
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          onClick={() => setEditingRoutine(null)}
-        />
-
-        {/* Sheet */}
-        <div className="relative bg-neutral-900 rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
-          {/* Drag handle */}
-          <div className="w-10 h-1 rounded-full bg-neutral-700 mx-auto mt-4 mb-1 flex-shrink-0" />
-
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-3 flex-shrink-0 border-b border-neutral-800">
-            {showAddExercise ? (
-              <button
-                onClick={() => setShowAddExercise(false)}
-                className="flex items-center gap-2 text-blue-400 text-sm font-medium"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Back
-              </button>
-            ) : (
-              <h2 className="text-lg font-semibold">Edit Routine</h2>
-            )}
-            <button
-              onClick={() => setEditingRoutine(null)}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Scrollable content */}
-          <div className="overflow-y-auto flex-1 px-6 py-4">
-            {!showAddExercise ? (
-              /* ─── EDIT MODE ─── */
-              <div className="space-y-4">
-                {/* Name input */}
-                <div>
-                  <label className="text-sm text-neutral-400 block mb-2">Routine Name</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    maxLength={40}
-                    className="w-full bg-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-                  />
-                </div>
-
-                {/* Exercise list */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-neutral-400">
-                      Exercises ({editExercises.length})
-                    </span>
-                  </div>
-                  {editExercises.length === 0 ? (
-                    <div className="text-center py-6 text-neutral-500 text-sm rounded-xl border border-dashed border-neutral-700">
-                      No exercises. Add some below.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {editExercises.map((exercise) => (
-                        <div
-                          key={exercise.id}
-                          className="flex items-center gap-3 bg-neutral-800/60 rounded-xl px-4 py-3"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">{exercise.name}</div>
-                            <div className="text-xs text-neutral-400">
-                              {exercise.muscleGroup} · {exercise.sets}×{exercise.reps}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveExercise(exercise.id)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Add exercise button */}
-                <button
-                  onClick={() => setShowAddExercise(true)}
-                  className="w-full flex items-center justify-center gap-2 border border-dashed border-blue-500/40 hover:border-blue-500/70 text-blue-400 hover:text-blue-300 rounded-xl py-3 text-sm font-medium transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Exercise
-                </button>
-              </div>
-            ) : (
-              /* ─── ADD EXERCISE MODE ─── */
-              <div className="space-y-4">
-                {/* Muscle group filter pills */}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setAddFilter('all')}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      addFilter === 'all'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-                    }`}
-                  >
-                    All
-                  </button>
-                  {muscleGroupKeys.map((g) => (
-                    <button
-                      key={g}
-                      onClick={() => setAddFilter(g)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
-                        addFilter === g
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-                      }`}
-                    >
-                      {g.replace('-', ' ')}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Exercise list */}
-                <div className="space-y-2">
-                  {filteredLibraryExercises.map((template) => {
-                    const alreadyAdded = editExercises.some((e) => e.name === template.name);
-                    return (
-                      <div
-                        key={template.name}
-                        className="flex items-center gap-3 bg-neutral-800/60 rounded-xl px-4 py-3"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{template.name}</div>
-                          <div className="text-xs text-neutral-400">
-                            {template.muscleGroup} · {template.sets}×{template.reps}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (!alreadyAdded) handleAddExercise(template);
-                          }}
-                          disabled={alreadyAdded}
-                          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${
-                            alreadyAdded
-                              ? 'text-neutral-600 cursor-not-allowed'
-                              : 'hover:bg-blue-500/20 text-neutral-400 hover:text-blue-400'
-                          }`}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer buttons — only shown in edit mode */}
-          {!showAddExercise && (
-            <div className="flex gap-3 px-6 py-4 flex-shrink-0 border-t border-neutral-800">
-              <button
-                onClick={() => setEditingRoutine(null)}
-                className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors font-medium text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveRoutine}
-                disabled={editExercises.length === 0}
-                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium text-sm"
-              >
-                Save Changes
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
-      {/* ── Delete routine confirmation dialog ───────────────── */}
-      {routineToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
-          <div className="w-full max-w-sm bg-neutral-900 rounded-2xl p-6 border border-neutral-700 shadow-2xl">
-            <h2 className="text-lg font-semibold mb-2">Delete routine?</h2>
-            <p className="text-sm text-neutral-400 mb-6">
-              "{routineToDelete.name}" will be permanently deleted and cannot be recovered.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setRoutineToDelete(null)}
-                className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteRoutine(routineToDelete.id)}
-                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { WorkoutComplete } from './components/WorkoutComplete';
 import { Profile } from './components/Profile';
 import { WorkoutHistory } from './components/WorkoutHistory';
 import { ProgressReport } from './components/ProgressReport';
+import { RoutineLibrary } from './components/RoutineLibrary';
 import { getUserSettings, applyDarkMode } from './utils/userSettings';
 import { Capacitor } from '@capacitor/core';
 
@@ -21,7 +22,8 @@ type Screen =
   | 'complete'
   | 'profile'
   | 'history'
-  | 'progress';
+  | 'progress'
+  | 'routines';
 
 const getInitialScreen = (): Screen => {
   try {
@@ -62,7 +64,7 @@ export default function App() {
             return previewSource === 'home' ? 'home' : 'setup';
           }
           if (screen === 'session') return 'preview';
-          // complete, profile, history, progress → home
+          // complete, profile, history, progress, routines → home
           setWorkoutPlan(null);
           setHomeKey((k) => k + 1);
           return 'home';
@@ -137,6 +139,10 @@ export default function App() {
     setCurrentScreen('progress');
   };
 
+  const handleViewRoutines = () => {
+    setCurrentScreen('routines');
+  };
+
   const handleBackFromSetup = () => {
     setCurrentScreen('home');
   };
@@ -161,6 +167,7 @@ export default function App() {
             onLoadPlan={handleLoadPlan}
             onViewHistory={handleViewHistory}
             onViewProgressReport={handleViewProgressReport}
+            onViewRoutines={handleViewRoutines}
           />
         )}
         {currentScreen === 'setup' && (
@@ -194,6 +201,9 @@ export default function App() {
           <WorkoutHistory onBack={handleBackToHome} onLoadPlan={handleLoadPlan} />
         )}
         {currentScreen === 'progress' && <ProgressReport onBack={handleBackToHome} />}
+        {currentScreen === 'routines' && (
+          <RoutineLibrary onBack={handleBackToHome} onLoadPlan={handleLoadPlan} />
+        )}
       </div>
     </div>
   );
