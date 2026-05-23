@@ -4,8 +4,7 @@ import {
   Bookmark,
   RotateCcw,
   Trash2,
-  ChevronUp,
-  ChevronDown,
+  GripVertical,
 } from 'lucide-react';
 import {
   getSavedRoutines,
@@ -15,6 +14,25 @@ import {
 import type { SavedRoutine } from '../utils/workoutHistory';
 import type { MuscleGroup, WorkoutPlan, WorkoutIntensity } from '../domain/workout';
 import { INTENSITY_MULTIPLIER } from '../domain/workout';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface RoutineLibraryProps {
   onBack: () => void;
@@ -46,19 +64,115 @@ const applyIntensity = (routine: SavedRoutine, intensity: WorkoutIntensity): Wor
   };
 };
 
+// ── Sortable routine card ─────────────────────────────────────────────────
+interface SortableCardProps {
+  routine: SavedRoutine;
+  onDelete: (id: string, name: string) => void;
+  onLoad: (routine: SavedRoutine) => void;
+  overlay?: boolean;
+}
+
+const SortableCard = ({ routine, onDelete, onLoad, overlay = false }: SortableCardProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: routine.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`bg-neutral-900 rounded-2xl border transition-all ${
+        isDragging && !overlay ? 'opacity-30 border-neutral-700' : 'border-neutral-800'
+      } ${overlay ? 'shadow-2xl border-blue-500/30' : ''}`}
+    >
+      {/* Header row */}
+      <div className="flex items-center gap-2 px-4 pt-4 pb-2">
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold truncate">{routine.name}</div>
+          <div className="text-sm text-neutral-400 mt-0.5">
+            {routine.exercises.length} exercises ·{' '}
+            {[...new Set(routine.exercises.map((e) => e.muscleGroup))].join(', ')}
+          </div>
+        </div>
+        {!overlay && (
+          <button
+            onClick={() => onDelete(routine.id, routine.name)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0"
+            aria-label="Delete routine"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+        <div
+          {...listeners}
+          className="w-8 h-8 flex items-center justify-center text-neutral-500 cursor-grab active:cursor-grabbing touch-none flex-shrink-0"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="w-4 h-4" />
+        </div>
+      </div>
+
+      {/* Exercise preview */}
+      <div className="px-4 pb-3 space-y-1">
+        {routine.exercises.slice(0, 4).map((ex, i) => (
+          <div key={i} className="flex items-center justify-between text-sm">
+            <span className="text-neutral-300 truncate">{ex.name}</span>
+            <span className="text-neutral-500 ml-2 flex-shrink-0">{ex.sets}×{ex.reps}</span>
+          </div>
+        ))}
+        {routine.exercises.length > 4 && (
+          <div className="text-xs text-neutral-600">+{routine.exercises.length - 4} more</div>
+        )}
+      </div>
+
+      {!overlay && (
+        <div className="px-4 pb-4">
+          <button
+            onClick={() => onLoad(routine)}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl py-2.5 text-sm font-medium transition-all"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Load Routine
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────────
 export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
   const [routines, setRoutines] = useState<SavedRoutine[]>(() => getSavedRoutines());
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [routineToDelete, setRoutineToDelete] = useState<{ id: string; name: string } | null>(null);
   const [loadingRoutine, setLoadingRoutine] = useState<SavedRoutine | null>(null);
   const [selectedIntensity, setSelectedIntensity] = useState<WorkoutIntensity>('normal');
 
-  const move = (index: number, direction: 'up' | 'down') => {
-    const next = [...routines];
-    const target = direction === 'up' ? index - 1 : index + 1;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    reorderRoutines(next);
-    setRoutines(next);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (over && active.id !== over.id) {
+      const oldIndex = routines.findIndex((r) => r.id === active.id);
+      const newIndex = routines.findIndex((r) => r.id === over.id);
+      const reordered = arrayMove(routines, oldIndex, newIndex);
+      reorderRoutines(reordered);
+      setRoutines(reordered);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -66,6 +180,8 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
     setRoutines(getSavedRoutines());
     setRoutineToDelete(null);
   };
+
+  const activeRoutine = activeId ? routines.find((r) => r.id === activeId) : null;
 
   return (
     <div className="flex flex-col h-full bg-neutral-950 text-white relative">
@@ -93,68 +209,36 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
             <p className="text-xs text-neutral-600">Complete a workout and save it from the home screen.</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {routines.map((routine, index) => (
-              <div key={routine.id} className="bg-neutral-900 rounded-2xl p-4 border border-neutral-800">
-                {/* Header row */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0 pr-2">
-                    <div className="font-semibold truncate">{routine.name}</div>
-                    <div className="text-sm text-neutral-400 mt-0.5">
-                      {routine.exercises.length} exercises · {[...new Set(routine.exercises.map((e) => e.muscleGroup))].join(', ')}
-                    </div>
-                  </div>
-                  {/* Up / Down / Delete */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => move(index, 'up')}
-                      disabled={index === 0}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                      aria-label="Move up"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => move(index, 'down')}
-                      disabled={index === routines.length - 1}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                      aria-label="Move down"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setRoutineToDelete({ id: routine.id, name: routine.name })}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors"
-                      aria-label="Delete routine"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Exercise preview */}
-                <div className="space-y-1 mb-3">
-                  {routine.exercises.slice(0, 4).map((ex, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <span className="text-neutral-300 truncate">{ex.name}</span>
-                      <span className="text-neutral-500 ml-2 flex-shrink-0">{ex.sets}×{ex.reps}</span>
-                    </div>
-                  ))}
-                  {routine.exercises.length > 4 && (
-                    <div className="text-xs text-neutral-600">+{routine.exercises.length - 4} more</div>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => { setLoadingRoutine(routine); setSelectedIntensity('normal'); }}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl py-2.5 text-sm font-medium transition-all"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Load Routine
-                </button>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <SortableContext items={routines.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {routines.map((routine) => (
+                  <SortableCard
+                    key={routine.id}
+                    routine={routine}
+                    onDelete={(id, name) => setRoutineToDelete({ id, name })}
+                    onLoad={(r) => { setLoadingRoutine(r); setSelectedIntensity('normal'); }}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+            <DragOverlay>
+              {activeRoutine && (
+                <SortableCard
+                  routine={activeRoutine}
+                  onDelete={() => {}}
+                  onLoad={() => {}}
+                  overlay
+                />
+              )}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
 
