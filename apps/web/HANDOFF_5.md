@@ -76,3 +76,23 @@
 - `npm run typecheck` ✅
 - `npm run lint` ✅
 - `npm run build` ✅
+
+## 4. Workout Session — kg 표시 카드 제거/축소
+
+**사용자 의도:** 운동 중 화면에서 목표 kg가 버튼/카드처럼 크게 보여 UI가 무거워짐. 오디오에서 이미 kg를 안내하므로 화면 표시는 작게만 남기거나 제거해도 됨.
+
+**업데이트 내용:**
+- 일반 운동 화면의 큰 `Weight` 카드를 제거하고 `Sets / Reps / Rest` 3개 카드 구조로 복구.
+- 슈퍼세트 진행 화면의 큰 `Weight` 카드를 제거하고 `Sets / Reps` 중심으로 단순화.
+- 목표 kg/반복수는 운동명 아래의 작은 `Target:` 보조 텍스트로만 표시.
+- 휴식 화면의 다음 세트 목표도 큰 강조 텍스트에서 작은 보조 텍스트로 축소.
+- 오디오의 kg 안내 로직은 그대로 유지.
+
+**수정 파일:**
+- `src/app/components/WorkoutSession.tsx`
+
+**검증:**
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 7 files / 50 tests passed
+- `npm run build` ✅

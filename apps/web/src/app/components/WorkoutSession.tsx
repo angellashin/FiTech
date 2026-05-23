@@ -49,13 +49,6 @@ const getSetTarget = (exercise: Exercise | undefined, setNumber: number) => {
   };
 };
 
-const getWeightDisplay = (exercise: Exercise | undefined, setNumber: number) => {
-  const target = getSetTarget(exercise, setNumber);
-  if (target.weight > 0) return `${formatKg(target.weight)}kg`;
-  if (!exercise) return '—';
-  return getExerciseType(exercise.name) === 'Hold / Time' ? 'Hold' : 'Body';
-};
-
 const getRepDisplay = (exercise: Exercise | undefined, setNumber: number) => {
   const target = getSetTarget(exercise, setNumber);
   if (!exercise) return '—';
@@ -715,8 +708,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                 <div className="text-6xl font-bold">{restTimeLeft}</div>
               </div>
               <div className="text-base text-neutral-300 mb-1">Next: {currentExercise?.name}</div>
-              <div className="text-xl font-bold text-blue-300 mb-2">
-                {getSetTargetDisplay(currentExercise, currentSet)}
+              <div className="text-sm text-neutral-500 mb-2">
+                Target: {getSetTargetDisplay(currentExercise, currentSet)}
               </div>
               <div className="text-sm text-neutral-500 mb-4">Single tap to skip rest</div>
               <button
@@ -807,9 +800,12 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                             <div className="text-xs text-neutral-400 mt-0.5">
                               {currentExercise!.muscleGroup}
                             </div>
+                            <div className="text-xs text-neutral-500 mt-1">
+                              Target: {getSetTargetDisplay(currentExercise, currentSet)}
+                            </div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <div className="glass-dark rounded-xl p-3 text-center">
                             <AnimatePresence mode="popLayout">
                               <motion.div
@@ -824,12 +820,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                               </motion.div>
                             </AnimatePresence>
                             <div className="text-xs text-neutral-400">Sets</div>
-                          </div>
-                          <div className="glass-dark rounded-xl p-3 text-center">
-                            <div className="text-2xl font-bold text-orange-300">
-                              {getWeightDisplay(currentExercise, currentSet)}
-                            </div>
-                            <div className="text-xs text-neutral-400">Weight</div>
                           </div>
                           <div className="glass-dark rounded-xl p-3 text-center">
                             <div className="text-2xl font-bold text-white">
@@ -906,6 +896,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                       <p className="text-base text-neutral-400 mb-3">
                         {currentExercise?.muscleGroup}
                       </p>
+                      {currentExercise && (
+                        <div className="mb-4 text-xs text-neutral-500">
+                          Target: {getSetTargetDisplay(currentExercise, currentSet)}
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => setShowReplacementPicker(true)}
@@ -914,7 +909,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                         <RefreshCw className="w-4 h-4" />
                         Machine busy? Change exercise
                       </button>
-                      <div className="grid grid-cols-4 gap-2 max-w-sm mx-auto">
+                      <div className="grid grid-cols-3 gap-2 max-w-sm mx-auto">
                         <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
                           <AnimatePresence mode="popLayout">
                             <motion.div
@@ -929,12 +924,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                             </motion.div>
                           </AnimatePresence>
                           <div className="text-sm text-neutral-400">Sets</div>
-                        </div>
-                        <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
-                          <div className="text-3xl font-bold text-orange-300 mb-1 leading-tight">
-                            {getWeightDisplay(currentExercise, currentSet)}
-                          </div>
-                          <div className="text-sm text-neutral-400">Weight</div>
                         </div>
                         <div className="glass-dark rounded-2xl p-4 shadow-lg text-center">
                           <div className="text-4xl font-bold text-white mb-1">

@@ -141,3 +141,24 @@
 - `cd apps/web && npm run typecheck` ✅
 - `cd apps/web && npm run lint` ✅
 - `cd apps/web && npm run build` ✅
+
+---
+
+## 2026-05-24 — Codex follow-up 2 (branch: `main`, local)
+
+**한 줄 요약**: Workout Session의 큰 kg/Weight 카드를 제거하고, 목표 무게는 작은 보조 텍스트와 오디오 안내로만 남겼다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — 큰 `Weight` 카드 제거, 작은 `Target:` 텍스트로 축소, 오디오 kg 안내 유지
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 50 tests)
+- `cd apps/web && npm run build` ✅
+
+**참고**:
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
