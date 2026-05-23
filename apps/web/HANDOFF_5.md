@@ -19,14 +19,17 @@
 **사용자 의도:** 생성된 운동 플랜에서는 추천 이유보다 “어떤 운동이 들어갔는지”가 더 중요함.
 
 **업데이트 내용:**
+
 - `Why this recommendation?` 카드를 `Exercise List` 위에서 화면 콘텐츠 하단으로 이동.
 - 일반 모드 표시 순서를 `Plan Summary → Exercise List → Hands-Free Workout → Why this recommendation?`로 정리.
 - 추천 이유 카드의 기존 스타일, 문구, 조건부 표시 로직은 그대로 유지.
 
 **수정 파일:**
+
 - `src/app/components/PlanPreview.tsx`
 
 **검증:**
+
 - `npm run typecheck` ✅
 - `npm run build` ✅
 
@@ -37,6 +40,7 @@
 **사용자 의도:** 운동 중 실제 헬스장 상황에 맞게 기구가 막히면 바로 다른 운동으로 바꾸고, 오디오가 목표 무게를 말해줘야 함.
 
 **업데이트 내용:**
+
 - 운동 진행 화면에 현재 세트의 목표 무게를 표시하는 `Weight` 카드 추가.
 - 휴식 화면에도 다음 세트의 운동명과 목표 무게/반복수를 표시.
 - 오디오 안내 문구에 “몇 kg × 몇 reps”를 포함하도록 변경. 시작/휴식 종료/다음 운동 전환/스킵/슈퍼세트 전환 모두 현재 세트 목표를 읽어줌.
@@ -49,11 +53,13 @@
 - GIF/JPG/WebP 운동 가이드 에셋을 허용하도록 stale 테스트 기대값 수정.
 
 **수정 파일:**
+
 - `src/app/components/WorkoutSession.tsx`
 - `src/app/components/Home.tsx`
 - `src/app/services/exerciseGuide.test.ts`
 
 **검증:**
+
 - `npm run typecheck` ✅
 - `npm run lint` ✅
 - `npm run test` ✅ — 7 files / 50 tests passed
@@ -66,13 +72,16 @@
 **사용자 의도:** `My Gym Equipment` 선택 안내 문구에 남아 있던 한국어를 영어 UI 문구로 통일.
 
 **업데이트 내용:**
+
 - 기존 문구 `체크한 기구만 사용하는 운동으로 AI가 구성해줘요. 미선택 시 전체 대상.`를 영어로 변경.
 - 새 문구: `AI will build workouts using only the equipment you select. If none are selected, all exercises are available.`
 
 **수정 파일:**
+
 - `src/app/components/WorkoutSetup.tsx`
 
 **검증:**
+
 - `npm run typecheck` ✅
 - `npm run lint` ✅
 - `npm run build` ✅
@@ -82,6 +91,7 @@
 **사용자 의도:** 운동 중 화면에서 목표 kg가 버튼/카드처럼 크게 보여 UI가 무거워짐. 오디오에서 이미 kg를 안내하므로 화면 표시는 작게만 남기거나 제거해도 됨.
 
 **업데이트 내용:**
+
 - 일반 운동 화면의 큰 `Weight` 카드를 제거하고 `Sets / Reps / Rest` 3개 카드 구조로 복구.
 - 슈퍼세트 진행 화면의 큰 `Weight` 카드를 제거하고 `Sets / Reps` 중심으로 단순화.
 - 목표 kg/반복수는 운동명 아래의 작은 `Target:` 보조 텍스트로만 표시.
@@ -89,10 +99,45 @@
 - 오디오의 kg 안내 로직은 그대로 유지.
 
 **수정 파일:**
+
 - `src/app/components/WorkoutSession.tsx`
 
 **검증:**
+
 - `npm run typecheck` ✅
 - `npm run lint` ✅
 - `npm run test` ✅ — 7 files / 50 tests passed
+- `npm run build` ✅
+
+## 5. CI — npm lockfile 동기화
+
+**사용자 의도:** 배포 후 GitHub에서 바로 확인 가능해야 하므로 main push 이후 설치 단계 CI 실패도 같이 정리.
+
+**업데이트 내용:**
+
+- `package.json`과 불일치하던 `package-lock.json`을 동기화.
+- lockfile에 누락되어 CI `npm ci`를 막던 `@capacitor/app`, `@dnd-kit/*` 의존성 항목을 반영.
+- 현재 `package.json`에 없는 stale `@capacitor-community/text-to-speech` root lock entry 제거.
+- CI `format:check`에서 경고가 나던 파일만 Prettier로 정리해 다음 main 체크가 설치 이후 단계도 통과하도록 맞춤.
+
+**수정 파일:**
+
+- `package-lock.json`
+- `HANDOFF_4.md`, `HANDOFF_5.md`
+- `src/app/components/ExerciseGuideSheet.tsx`
+- `src/app/components/Home.tsx`
+- `src/app/components/PlanPreview.tsx`
+- `src/app/components/RoutineLibrary.tsx`
+- `src/app/components/WorkoutHistory.tsx`
+- `src/app/components/WorkoutSetup.tsx`
+- `src/app/services/exerciseGuide.ts`
+
+**검증:**
+
+- `npm ci --cache .npm-cache` ✅
+- `npm audit --audit-level=critical` ✅ — critical 기준 통과
+- `npm run format:check` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 7 files / 50 tests passed
+- `npm run typecheck` ✅
 - `npm run build` ✅

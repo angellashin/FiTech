@@ -1,16 +1,6 @@
 import { useState } from 'react';
-import {
-  ArrowLeft,
-  Bookmark,
-  RotateCcw,
-  Trash2,
-  GripVertical,
-} from 'lucide-react';
-import {
-  getSavedRoutines,
-  deleteRoutine,
-  reorderRoutines,
-} from '../utils/workoutHistory';
+import { ArrowLeft, Bookmark, RotateCcw, Trash2, GripVertical } from 'lucide-react';
+import { getSavedRoutines, deleteRoutine, reorderRoutines } from '../utils/workoutHistory';
 import type { SavedRoutine } from '../utils/workoutHistory';
 import type { MuscleGroup, WorkoutPlan, WorkoutIntensity } from '../domain/workout';
 import { INTENSITY_MULTIPLIER } from '../domain/workout';
@@ -39,13 +29,39 @@ interface RoutineLibraryProps {
   onLoadPlan: (plan: WorkoutPlan) => void;
 }
 
-const INTENSITY_OPTIONS: { value: WorkoutIntensity; label: string; sub: string; color: string }[] = [
-  { value: 'very-light', label: 'Very Light', sub: '×0.80', color: 'from-sky-700 to-sky-800 border-sky-600' },
-  { value: 'light',      label: 'Light',      sub: '×0.90', color: 'from-blue-700 to-blue-800 border-blue-600' },
-  { value: 'normal',     label: 'Normal',     sub: '×1.00', color: 'from-green-700 to-green-800 border-green-600' },
-  { value: 'hard',       label: 'Hard',       sub: '×1.10', color: 'from-orange-700 to-orange-800 border-orange-600' },
-  { value: 'very-hard',  label: 'Very Hard',  sub: '×1.20', color: 'from-red-700 to-red-800 border-red-600' },
-];
+const INTENSITY_OPTIONS: { value: WorkoutIntensity; label: string; sub: string; color: string }[] =
+  [
+    {
+      value: 'very-light',
+      label: 'Very Light',
+      sub: '×0.80',
+      color: 'from-sky-700 to-sky-800 border-sky-600',
+    },
+    {
+      value: 'light',
+      label: 'Light',
+      sub: '×0.90',
+      color: 'from-blue-700 to-blue-800 border-blue-600',
+    },
+    {
+      value: 'normal',
+      label: 'Normal',
+      sub: '×1.00',
+      color: 'from-green-700 to-green-800 border-green-600',
+    },
+    {
+      value: 'hard',
+      label: 'Hard',
+      sub: '×1.10',
+      color: 'from-orange-700 to-orange-800 border-orange-600',
+    },
+    {
+      value: 'very-hard',
+      label: 'Very Hard',
+      sub: '×1.20',
+      color: 'from-red-700 to-red-800 border-red-600',
+    },
+  ];
 
 const applyIntensity = (routine: SavedRoutine, intensity: WorkoutIntensity): WorkoutPlan => {
   const multiplier = INTENSITY_MULTIPLIER[intensity];
@@ -123,7 +139,9 @@ const SortableCard = ({ routine, onDelete, onLoad, overlay = false }: SortableCa
         {routine.exercises.slice(0, 4).map((ex, i) => (
           <div key={i} className="flex items-center justify-between text-sm">
             <span className="text-neutral-300 truncate">{ex.name}</span>
-            <span className="text-neutral-500 ml-2 flex-shrink-0">{ex.sets}×{ex.reps}</span>
+            <span className="text-neutral-500 ml-2 flex-shrink-0">
+              {ex.sets}×{ex.reps}
+            </span>
           </div>
         ))}
         {routine.exercises.length > 4 && (
@@ -206,7 +224,9 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
           <div className="flex flex-col items-center justify-center h-48 text-neutral-500 text-sm gap-2">
             <Bookmark className="w-10 h-10 text-neutral-700" />
             <p>No routines saved yet.</p>
-            <p className="text-xs text-neutral-600">Complete a workout and save it from the home screen.</p>
+            <p className="text-xs text-neutral-600">
+              Complete a workout and save it from the home screen.
+            </p>
           </div>
         ) : (
           <DndContext
@@ -216,14 +236,20 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
             onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveId(null)}
           >
-            <SortableContext items={routines.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext
+              items={routines.map((r) => r.id)}
+              strategy={verticalListSortingStrategy}
+            >
               <div className="space-y-3">
                 {routines.map((routine) => (
                   <SortableCard
                     key={routine.id}
                     routine={routine}
                     onDelete={(id, name) => setRoutineToDelete({ id, name })}
-                    onLoad={(r) => { setLoadingRoutine(r); setSelectedIntensity('normal'); }}
+                    onLoad={(r) => {
+                      setLoadingRoutine(r);
+                      setSelectedIntensity('normal');
+                    }}
                   />
                 ))}
               </div>
@@ -272,7 +298,9 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
                     <span className="text-[11px] font-semibold leading-tight text-center px-0.5">
                       {item.label}
                     </span>
-                    <span className={`text-[10px] ${selectedIntensity === item.value ? 'text-white/70' : 'text-neutral-600'}`}>
+                    <span
+                      className={`text-[10px] ${selectedIntensity === item.value ? 'text-white/70' : 'text-neutral-600'}`}
+                    >
                       {item.sub}
                     </span>
                   </button>

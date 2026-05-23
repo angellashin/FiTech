@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, RotateCcw, Search, Star, Trash2, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Search,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react';
 import type { WorkoutPlan } from '../domain/workout';
 import {
   calculateExerciseVolume,
@@ -186,11 +196,12 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
                   type="button"
                   onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                   className={`relative mx-auto w-8 h-8 flex items-center justify-center rounded-full text-sm transition-colors
-                    ${isSelected
-                      ? 'bg-blue-500 text-white font-semibold'
-                      : count > 0
-                      ? 'text-white hover:bg-neutral-700'
-                      : 'text-neutral-500 hover:bg-neutral-800'
+                    ${
+                      isSelected
+                        ? 'bg-blue-500 text-white font-semibold'
+                        : count > 0
+                          ? 'text-white hover:bg-neutral-700'
+                          : 'text-neutral-500 hover:bg-neutral-800'
                     }`}
                 >
                   {isToday && !isSelected && (
@@ -228,7 +239,10 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
           <div className="flex items-center gap-2 mb-3">
             <div className="flex items-center gap-1.5 bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-full px-3 py-1 text-xs font-medium">
               <CalendarDays className="w-3 h-3" />
-              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en', {
+                month: 'short',
+                day: 'numeric',
+              })}
               &nbsp;·&nbsp;
               {displayedSessions.length} session{displayedSessions.length !== 1 ? 's' : ''}
             </div>

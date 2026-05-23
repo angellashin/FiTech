@@ -143,8 +143,7 @@ export function WorkoutSetup({ onPlanGenerated, onBack }: WorkoutSetupProps) {
           {/* Duration */}
           <div>
             <label className="text-sm font-medium text-neutral-300 mb-3 block">
-              Duration —{' '}
-              <span className="text-blue-400 font-bold">{duration} min</span>
+              Duration — <span className="text-blue-400 font-bold">{duration} min</span>
             </label>
             <div className="glass-dark rounded-2xl px-4 py-5 border border-neutral-700/50 shadow-lg">
               <input

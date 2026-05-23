@@ -90,7 +90,6 @@ export function Home({
   const [routineSaveName, setRoutineSaveName] = useState('');
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
-
   const resolveRoutineName = (base: string): string => {
     const existing = new Set(savedRoutines.map((r) => r.name));
     if (!existing.has(base)) return base;
@@ -109,8 +108,6 @@ export function Home({
     setJustSavedId(session.id);
     setTimeout(() => setJustSavedId(null), 2000);
   };
-
-
 
   const allSessions = getAllSessions();
   const now = new Date();
@@ -329,14 +326,20 @@ export function Home({
                                 onChange={(e) => setRoutineSaveName(e.target.value)}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleSaveAsRoutine(session);
-                                  if (e.key === 'Escape') { setSavingRoutineId(null); setRoutineSaveName(''); }
+                                  if (e.key === 'Escape') {
+                                    setSavingRoutineId(null);
+                                    setRoutineSaveName('');
+                                  }
                                 }}
                                 placeholder={getSessionLabel(session)}
                                 autoFocus
                                 className="w-full bg-neutral-800 border border-neutral-600 rounded-xl px-3 pr-9 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
                               />
                               <button
-                                onClick={() => { setSavingRoutineId(null); setRoutineSaveName(''); }}
+                                onClick={() => {
+                                  setSavingRoutineId(null);
+                                  setRoutineSaveName('');
+                                }}
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors"
                               >
                                 <X className="w-4 h-4" />
@@ -352,7 +355,10 @@ export function Home({
                           </div>
                         ) : (
                           <button
-                            onClick={() => { setSavingRoutineId(session.id); setRoutineSaveName(''); }}
+                            onClick={() => {
+                              setSavingRoutineId(session.id);
+                              setRoutineSaveName('');
+                            }}
                             className="w-full flex items-center justify-center gap-2 bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700/50 text-neutral-400 hover:text-neutral-200 rounded-xl py-3 text-sm font-medium transition-all"
                           >
                             <Bookmark className="w-4 h-4" />
@@ -447,7 +453,6 @@ export function Home({
           </div>
         </div>
       </div>
-
     </div>
   );
 }

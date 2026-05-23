@@ -71,9 +71,19 @@ const SET_TYPE_STYLE: Record<SetType, string> = {
 };
 
 const SET_TYPE_OPTIONS: { type: SetType; label: string; desc: string; color: string }[] = [
-  { type: 'normal',  label: '일반',    desc: '기본 세트',              color: 'bg-neutral-700 text-neutral-200' },
-  { type: 'failure', label: 'F  실패', desc: '더 못할 때까지 최대한',   color: 'bg-red-600 text-white' },
-  { type: 'dropset', label: 'D  드롭', desc: '무게 낮추고 바로 이어서', color: 'bg-purple-600 text-white' },
+  { type: 'normal', label: '일반', desc: '기본 세트', color: 'bg-neutral-700 text-neutral-200' },
+  {
+    type: 'failure',
+    label: 'F  실패',
+    desc: '더 못할 때까지 최대한',
+    color: 'bg-red-600 text-white',
+  },
+  {
+    type: 'dropset',
+    label: 'D  드롭',
+    desc: '무게 낮추고 바로 이어서',
+    color: 'bg-purple-600 text-white',
+  },
 ];
 
 const ExerciseCard = ({
@@ -144,7 +154,9 @@ const ExerciseCard = ({
       </div>
 
       <div className="space-y-2">
-        <div className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 text-xs text-neutral-500 px-1`}>
+        <div
+          className={`grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 text-xs text-neutral-500 px-1`}
+        >
           <div>Set</div>
           {!isBodyweight && <div>kg</div>}
           <div>Reps</div>
@@ -154,68 +166,82 @@ const ExerciseCard = ({
           {sets.map((set, idx) => {
             const setType: SetType = set.setType ?? 'normal';
             return (
-            <div key={idx} className={`relative grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 items-center`}>
-              <button
-                type="button"
-                onClick={() => setTypePickerIdx(typePickerIdx === idx ? null : idx)}
-                className={`rounded-lg py-1.5 text-center text-sm font-bold transition-colors ${SET_TYPE_STYLE[setType]}`}
+              <div
+                key={idx}
+                className={`relative grid ${isBodyweight ? 'grid-cols-[40px_1fr_36px]' : 'grid-cols-[40px_1fr_1fr_36px]'} gap-1.5 items-center`}
               >
-                {SET_TYPE_LABEL[setType] || idx + 1}
-              </button>
-              {typePickerIdx === idx && (
-                <div className="absolute left-0 top-10 z-30 w-56 bg-neutral-800 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden">
-                  <div className="px-3 pt-3 pb-1 text-[11px] text-neutral-500 font-semibold uppercase tracking-wide">세트 타입</div>
-                  {SET_TYPE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.type}
-                      type="button"
-                      onClick={() => { onUpdateSetType(exercise.id, idx, opt.type); setTypePickerIdx(null); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-neutral-700 transition-colors ${setType === opt.type ? 'bg-neutral-700/60' : ''}`}
-                    >
-                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${opt.color}`}>
-                        {opt.label.split('  ')[0]}
-                      </span>
-                      <div className="text-left">
-                        <div className="text-sm font-medium text-white">{opt.label.split('  ')[1] ?? '일반'}</div>
-                        <div className="text-[11px] text-neutral-500">{opt.desc}</div>
-                      </div>
-                      {setType === opt.type && <span className="ml-auto text-blue-400 text-xs">✓</span>}
-                    </button>
-                  ))}
-                  <div className="h-1" />
-                </div>
-              )}
-              {!isBodyweight && (
+                <button
+                  type="button"
+                  onClick={() => setTypePickerIdx(typePickerIdx === idx ? null : idx)}
+                  className={`rounded-lg py-1.5 text-center text-sm font-bold transition-colors ${SET_TYPE_STYLE[setType]}`}
+                >
+                  {SET_TYPE_LABEL[setType] || idx + 1}
+                </button>
+                {typePickerIdx === idx && (
+                  <div className="absolute left-0 top-10 z-30 w-56 bg-neutral-800 border border-neutral-700 rounded-2xl shadow-2xl overflow-hidden">
+                    <div className="px-3 pt-3 pb-1 text-[11px] text-neutral-500 font-semibold uppercase tracking-wide">
+                      세트 타입
+                    </div>
+                    {SET_TYPE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.type}
+                        type="button"
+                        onClick={() => {
+                          onUpdateSetType(exercise.id, idx, opt.type);
+                          setTypePickerIdx(null);
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-neutral-700 transition-colors ${setType === opt.type ? 'bg-neutral-700/60' : ''}`}
+                      >
+                        <span
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${opt.color}`}
+                        >
+                          {opt.label.split('  ')[0]}
+                        </span>
+                        <div className="text-left">
+                          <div className="text-sm font-medium text-white">
+                            {opt.label.split('  ')[1] ?? '일반'}
+                          </div>
+                          <div className="text-[11px] text-neutral-500">{opt.desc}</div>
+                        </div>
+                        {setType === opt.type && (
+                          <span className="ml-auto text-blue-400 text-xs">✓</span>
+                        )}
+                      </button>
+                    ))}
+                    <div className="h-1" />
+                  </div>
+                )}
+                {!isBodyweight && (
+                  <input
+                    type="number"
+                    value={set.weight || ''}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      onUpdateSet(exercise.id, idx, 'weight', val);
+                      if (sets.length > 1 && val > 0) setPendingWeight(val);
+                      else setPendingWeight(null);
+                    }}
+                    className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    placeholder="-"
+                  />
+                )}
                 <input
                   type="number"
-                  value={set.weight || ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 0;
-                    onUpdateSet(exercise.id, idx, 'weight', val);
-                    if (sets.length > 1 && val > 0) setPendingWeight(val);
-                    else setPendingWeight(null);
-                  }}
+                  value={set.reps || ''}
+                  onChange={(e) =>
+                    onUpdateSet(exercise.id, idx, 'reps', parseInt(e.target.value) || 0)
+                  }
                   className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  placeholder="-"
+                  placeholder="0"
                 />
-              )}
-              <input
-                type="number"
-                value={set.reps || ''}
-                onChange={(e) =>
-                  onUpdateSet(exercise.id, idx, 'reps', parseInt(e.target.value) || 0)
-                }
-                className="min-w-0 w-full px-2 py-1.5 bg-neutral-800 rounded-lg text-white text-center text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                placeholder="0"
-              />
-              <button
-                onClick={() => onRemoveSet(exercise.id, idx)}
-                disabled={sets.length <= 1}
-                className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-red-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-              >
-                <Minus className="w-4 h-4" />
-              </button>
-            </div>
+                <button
+                  onClick={() => onRemoveSet(exercise.id, idx)}
+                  disabled={sets.length <= 1}
+                  className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-red-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+              </div>
             );
           })}
         </div>
@@ -223,7 +249,10 @@ const ExerciseCard = ({
           <div className="flex items-center gap-2 mt-1">
             <button
               type="button"
-              onClick={() => { onApplyWeightToAll(exercise.id, pendingWeight); setPendingWeight(null); }}
+              onClick={() => {
+                onApplyWeightToAll(exercise.id, pendingWeight);
+                setPendingWeight(null);
+              }}
               className="flex-1 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
             >
               ↓ {pendingWeight}kg 모든 세트에 적용
@@ -436,7 +465,9 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
                   alt={ex.name}
                   className="w-full h-full object-contain p-0.5"
                   loading="lazy"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               </div>
               <div className="flex-1 min-w-0">
@@ -446,7 +477,9 @@ const ExercisePicker = ({ existingNames, onAdd, onClose }: ExercisePickerProps) 
                     <span className="text-yellow-400 text-xs">★</span>
                   )}
                   {isAlready && (
-                    <span className="text-[10px] text-neutral-500 bg-neutral-800 rounded px-1 py-0.5">추가됨</span>
+                    <span className="text-[10px] text-neutral-500 bg-neutral-800 rounded px-1 py-0.5">
+                      추가됨
+                    </span>
                   )}
                 </div>
                 <div className="text-xs text-neutral-500 mt-0.5">
@@ -610,9 +643,9 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
   };
 
   const handleToggleSuperset = (exerciseId: string) => {
-    setExercises(exercises.map((ex) =>
-      ex.id === exerciseId ? { ...ex, isSuperset: !ex.isSuperset } : ex,
-    ));
+    setExercises(
+      exercises.map((ex) => (ex.id === exerciseId ? { ...ex, isSuperset: !ex.isSuperset } : ex)),
+    );
   };
 
   const handlePickerAdd = (picked: Exercise[]) => {
@@ -624,197 +657,197 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
     onStartSession({ ...plan, exercises });
   };
 
-  const activeExercise = activeId ? exercises.find((ex) => ex.id === activeId) ?? null : null;
+  const activeExercise = activeId ? (exercises.find((ex) => ex.id === activeId) ?? null) : null;
 
   return (
-      <div className="size-full flex flex-col bg-neutral-950">
-        <header className="px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                if (isEditing) {
-                  setShowDiscardConfirm(true);
-                } else {
-                  onBack();
-                }
-              }}
-              className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold">Your Workout Plan</h1>
-              <p className="text-sm text-neutral-400">
-                {isEditing ? 'Edit exercise list' : 'Review before starting'}
-              </p>
-            </div>
+    <div className="size-full flex flex-col bg-neutral-950">
+      <header className="px-6 py-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              if (isEditing) {
+                setShowDiscardConfirm(true);
+              } else {
+                onBack();
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold">Your Workout Plan</h1>
+            <p className="text-sm text-neutral-400">
+              {isEditing ? 'Edit exercise list' : 'Review before starting'}
+            </p>
           </div>
-          {!isEditing && (
+        </div>
+        {!isEditing && (
+          <button
+            onClick={() => {
+              setEditSnapshot([...exercises]);
+              setIsEditing(true);
+              setShowPicker(false);
+            }}
+            className="px-4 py-2 rounded-xl flex items-center gap-2 transition-colors bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span className="text-sm font-medium">Edit</span>
+          </button>
+        )}
+      </header>
+
+      {isEditing ? (
+        /* ── EDIT MODE: sortable list ───────────────────────────── */
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            <div className="mx-6 mb-3 bg-neutral-900 rounded-2xl overflow-hidden">
+              {exercises.length === 0 ? (
+                <div className="px-4 py-8 text-center text-neutral-500 text-sm">
+                  No exercises yet. Add one below.
+                </div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={() => setActiveId(null)}
+                >
+                  <SortableContext
+                    items={exercises.map((ex) => ex.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {exercises.map((exercise, index) => (
+                      <SortableRow
+                        key={exercise.id}
+                        exercise={exercise}
+                        index={index}
+                        onDelete={handleDeleteExercise}
+                      />
+                    ))}
+                  </SortableContext>
+                  <DragOverlay>
+                    {activeExercise && (
+                      <SortableRow
+                        exercise={activeExercise}
+                        index={exercises.findIndex((ex) => ex.id === activeExercise.id)}
+                        onDelete={handleDeleteExercise}
+                        overlay
+                      />
+                    )}
+                  </DragOverlay>
+                </DndContext>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowPicker(true)}
+              className="mx-6 w-[calc(100%-3rem)] py-3 border-2 border-dashed border-neutral-700 hover:border-neutral-600 rounded-2xl text-sm text-neutral-500 hover:text-neutral-400 flex items-center justify-center gap-2 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Exercise
+            </button>
+          </div>
+
+          <div className="px-6 pt-4 pb-6 flex gap-3">
             <button
               onClick={() => {
-                setEditSnapshot([...exercises]);
-                setIsEditing(true);
+                setExercises(editSnapshot);
+                setIsEditing(false);
                 setShowPicker(false);
               }}
-              className="px-4 py-2 rounded-xl flex items-center gap-2 transition-colors bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+              className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-2xl py-4 font-semibold transition-all"
             >
-              <Edit3 className="w-4 h-4" />
-              <span className="text-sm font-medium">Edit</span>
+              Undo
             </button>
-          )}
-        </header>
+            <button
+              onClick={() => {
+                setIsEditing(false);
+                setShowPicker(false);
+              }}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-semibold transition-all"
+            >
+              Confirm
+            </button>
+          </div>
 
-        {isEditing ? (
-          /* ── EDIT MODE: sortable list ───────────────────────────── */
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-auto">
-              <div className="mx-6 mb-3 bg-neutral-900 rounded-2xl overflow-hidden">
+          {showPicker && (
+            <ExercisePicker
+              existingNames={new Set(exercises.map((e) => e.name))}
+              onAdd={handlePickerAdd}
+              onClose={() => setShowPicker(false)}
+            />
+          )}
+        </div>
+      ) : (
+        /* ── NORMAL MODE: full cards ────────────────────────────── */
+        <>
+          <div className="flex-1 px-6 overflow-auto pb-32">
+            <div className="relative bg-gradient-to-br from-blue-950/50 via-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 border border-blue-500/20 shadow-2xl overflow-hidden card-glow">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center backdrop-blur-sm">
+                    <TrendingUp className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h2 className="text-lg font-semibold">Plan Summary</h2>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center glass-dark rounded-xl p-4 shadow-lg">
+                    <div className="text-3xl font-bold text-blue-400 mb-1">{totalExercises}</div>
+                    <div className="text-xs text-neutral-400">Exercises</div>
+                  </div>
+                  <div className="text-center glass-dark rounded-xl p-4 shadow-lg">
+                    <div className="text-3xl font-bold text-white mb-1">{totalSets}</div>
+                    <div className="text-xs text-neutral-400">Total Sets</div>
+                  </div>
+                  <div className="text-center glass-dark rounded-xl p-4 shadow-lg">
+                    <div className="text-3xl font-bold text-green-400 mb-1">{estimatedTime}</div>
+                    <div className="text-xs text-neutral-400">Minutes</div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-center gap-4 text-sm">
+                  <div className="flex items-center gap-2 glass-dark px-3 py-1.5 rounded-lg">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
+                    <span className="text-neutral-300">{goalLabels[plan.goal]}</span>
+                  </div>
+                  <div className="flex items-center gap-2 glass-dark px-3 py-1.5 rounded-lg">
+                    <div className="w-2 h-2 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50" />
+                    <span className="text-neutral-300">
+                      {plan.muscleGroup.map((g) => muscleGroupLabels[g] ?? g).join(' · ')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-neutral-900 rounded-3xl p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Dumbbell className="w-5 h-5 text-neutral-400" />
+                <h3 className="text-lg font-semibold">Exercise List</h3>
+              </div>
+              <div className="space-y-3">
                 {exercises.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-neutral-500 text-sm">
-                    No exercises yet. Add one below.
+                  <div className="bg-neutral-800 rounded-2xl p-8 text-center">
+                    <Dumbbell className="w-12 h-12 text-neutral-600 mx-auto mb-3" />
+                    <p className="text-neutral-400 mb-4">No exercises in your plan yet</p>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg inline-flex items-center gap-2 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Exercises</span>
+                    </button>
                   </div>
                 ) : (
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragCancel={() => setActiveId(null)}
-                  >
-                    <SortableContext
-                      items={exercises.map((ex) => ex.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {exercises.map((exercise, index) => (
-                        <SortableRow
-                          key={exercise.id}
-                          exercise={exercise}
-                          index={index}
-                          onDelete={handleDeleteExercise}
-                        />
-                      ))}
-                    </SortableContext>
-                    <DragOverlay>
-                      {activeExercise && (
-                        <SortableRow
-                          exercise={activeExercise}
-                          index={exercises.findIndex((ex) => ex.id === activeExercise.id)}
-                          onDelete={handleDeleteExercise}
-                          overlay
-                        />
-                      )}
-                    </DragOverlay>
-                  </DndContext>
-                )}
-              </div>
-
-              <button
-                onClick={() => setShowPicker(true)}
-                className="mx-6 w-[calc(100%-3rem)] py-3 border-2 border-dashed border-neutral-700 hover:border-neutral-600 rounded-2xl text-sm text-neutral-500 hover:text-neutral-400 flex items-center justify-center gap-2 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Exercise
-              </button>
-            </div>
-
-            <div className="px-6 pt-4 pb-6 flex gap-3">
-              <button
-                onClick={() => {
-                  setExercises(editSnapshot);
-                  setIsEditing(false);
-                  setShowPicker(false);
-                }}
-                className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-2xl py-4 font-semibold transition-all"
-              >
-                Undo
-              </button>
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setShowPicker(false);
-                }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl py-4 font-semibold transition-all"
-              >
-                Confirm
-              </button>
-            </div>
-
-            {showPicker && (
-              <ExercisePicker
-                existingNames={new Set(exercises.map((e) => e.name))}
-                onAdd={handlePickerAdd}
-                onClose={() => setShowPicker(false)}
-              />
-            )}
-          </div>
-        ) : (
-          /* ── NORMAL MODE: full cards ────────────────────────────── */
-          <>
-            <div className="flex-1 px-6 overflow-auto pb-32">
-              <div className="relative bg-gradient-to-br from-blue-950/50 via-neutral-900 to-neutral-950 rounded-3xl p-6 mb-6 border border-blue-500/20 shadow-2xl overflow-hidden card-glow">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
-                <div className="relative">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center backdrop-blur-sm">
-                      <TrendingUp className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <h2 className="text-lg font-semibold">Plan Summary</h2>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center glass-dark rounded-xl p-4 shadow-lg">
-                      <div className="text-3xl font-bold text-blue-400 mb-1">{totalExercises}</div>
-                      <div className="text-xs text-neutral-400">Exercises</div>
-                    </div>
-                    <div className="text-center glass-dark rounded-xl p-4 shadow-lg">
-                      <div className="text-3xl font-bold text-white mb-1">{totalSets}</div>
-                      <div className="text-xs text-neutral-400">Total Sets</div>
-                    </div>
-                    <div className="text-center glass-dark rounded-xl p-4 shadow-lg">
-                      <div className="text-3xl font-bold text-green-400 mb-1">{estimatedTime}</div>
-                      <div className="text-xs text-neutral-400">Minutes</div>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-center gap-4 text-sm">
-                    <div className="flex items-center gap-2 glass-dark px-3 py-1.5 rounded-lg">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
-                      <span className="text-neutral-300">{goalLabels[plan.goal]}</span>
-                    </div>
-                    <div className="flex items-center gap-2 glass-dark px-3 py-1.5 rounded-lg">
-                      <div className="w-2 h-2 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50" />
-                      <span className="text-neutral-300">
-                        {plan.muscleGroup.map((g) => muscleGroupLabels[g] ?? g).join(' · ')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-neutral-900 rounded-3xl p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Dumbbell className="w-5 h-5 text-neutral-400" />
-                  <h3 className="text-lg font-semibold">Exercise List</h3>
-                </div>
-                <div className="space-y-3">
-                  {exercises.length === 0 ? (
-                    <div className="bg-neutral-800 rounded-2xl p-8 text-center">
-                      <Dumbbell className="w-12 h-12 text-neutral-600 mx-auto mb-3" />
-                      <p className="text-neutral-400 mb-4">No exercises in your plan yet</p>
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg inline-flex items-center gap-2 transition-colors"
+                  exercises.map((exercise, index) => (
+                    <Fragment key={exercise.id}>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.055, duration: 0.28, ease: 'easeOut' }}
                       >
-                        <Plus className="w-4 h-4" />
-                        <span>Add Exercises</span>
-                      </button>
-                    </div>
-                  ) : (
-                    exercises.map((exercise, index) => (
-                      <Fragment key={exercise.id}>
-                        <motion.div
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.055, duration: 0.28, ease: 'easeOut' }}
-                        >
                         <ExerciseCard
                           exercise={exercise}
                           index={index}
@@ -827,98 +860,98 @@ export function PlanPreview({ plan, onStartSession, onBack }: PlanPreviewProps) 
                           onRemoveSet={handleRemoveSet}
                           onOpenGuide={setGuideExercise}
                         />
-                        </motion.div>
-                        {exercise.isSuperset && index < exercises.length - 1 && (
-                          <div className="flex items-center justify-center py-2 z-10">
-                            <div className="flex items-center gap-1.5 bg-emerald-900/30 border border-emerald-600/40 rounded-full px-3 py-1.5">
-                              <Link2 className="w-3 h-3 text-emerald-500" />
-                              <span className="text-xs font-bold text-emerald-400">Superset</span>
-                            </div>
+                      </motion.div>
+                      {exercise.isSuperset && index < exercises.length - 1 && (
+                        <div className="flex items-center justify-center py-2 z-10">
+                          <div className="flex items-center gap-1.5 bg-emerald-900/30 border border-emerald-600/40 rounded-full px-3 py-1.5">
+                            <Link2 className="w-3 h-3 text-emerald-500" />
+                            <span className="text-xs font-bold text-emerald-400">Superset</span>
                           </div>
-                        )}
-                      </Fragment>
-                    ))
-                  )}
-                </div>
+                        </div>
+                      )}
+                    </Fragment>
+                  ))
+                )}
               </div>
-
-              <div className="bg-blue-950/30 border border-blue-900/30 rounded-2xl p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="text-blue-100 mb-1 font-medium">Hands-Free Workout</p>
-                    <p className="text-blue-300/70">
-                      Audio guidance will guide you through each exercise. Use earbud taps to
-                      control your workout.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {rationaleItems.length > 0 && (
-                <div className="bg-gradient-to-br from-emerald-950/40 to-neutral-950 border border-emerald-500/20 rounded-3xl p-5 mb-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5 text-emerald-300" />
-                    <h3 className="text-lg font-semibold">Why this recommendation?</h3>
-                  </div>
-                  <div className="space-y-2">
-                    {rationaleItems.map((item) => (
-                      <div key={item} className="flex gap-2 text-sm text-emerald-50/85">
-                        <span className="text-emerald-300">•</span>
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-neutral-950 via-neutral-950 to-transparent px-6 pt-8 pb-6">
-              <button
-                onClick={handleStartWorkout}
-                disabled={exercises.length === 0}
-                className="w-full bg-gradient-to-br from-blue-600 via-blue-600 to-blue-700 hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 disabled:from-neutral-800 disabled:to-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed text-white rounded-2xl py-5 px-8 flex items-center justify-center gap-3 transition-all shadow-lg shadow-blue-900/50 hover:shadow-xl hover:shadow-blue-900/60 hover:scale-[1.02] active:scale-[0.98] disabled:shadow-none"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-                  <Play className="w-6 h-6" />
+            <div className="bg-blue-950/30 border border-blue-900/30 rounded-2xl p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="text-blue-100 mb-1 font-medium">Hands-Free Workout</p>
+                  <p className="text-blue-300/70">
+                    Audio guidance will guide you through each exercise. Use earbud taps to control
+                    your workout.
+                  </p>
                 </div>
-                <span className="text-lg font-semibold">
-                  {exercises.length === 0 ? 'Add exercises to start' : 'Start Workout'}
-                </span>
+              </div>
+            </div>
+
+            {rationaleItems.length > 0 && (
+              <div className="bg-gradient-to-br from-emerald-950/40 to-neutral-950 border border-emerald-500/20 rounded-3xl p-5 mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-emerald-300" />
+                  <h3 className="text-lg font-semibold">Why this recommendation?</h3>
+                </div>
+                <div className="space-y-2">
+                  {rationaleItems.map((item) => (
+                    <div key={item} className="flex gap-2 text-sm text-emerald-50/85">
+                      <span className="text-emerald-300">•</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-neutral-950 via-neutral-950 to-transparent px-6 pt-8 pb-6">
+            <button
+              onClick={handleStartWorkout}
+              disabled={exercises.length === 0}
+              className="w-full bg-gradient-to-br from-blue-600 via-blue-600 to-blue-700 hover:from-blue-500 hover:via-blue-600 hover:to-blue-700 disabled:from-neutral-800 disabled:to-neutral-900 disabled:text-neutral-500 disabled:cursor-not-allowed text-white rounded-2xl py-5 px-8 flex items-center justify-center gap-3 transition-all shadow-lg shadow-blue-900/50 hover:shadow-xl hover:shadow-blue-900/60 hover:scale-[1.02] active:scale-[0.98] disabled:shadow-none"
+            >
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+                <Play className="w-6 h-6" />
+              </div>
+              <span className="text-lg font-semibold">
+                {exercises.length === 0 ? 'Add exercises to start' : 'Start Workout'}
+              </span>
+            </button>
+          </div>
+        </>
+      )}
+      <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
+
+      {/* ── Discard changes confirmation dialog ───────────────── */}
+      {showDiscardConfirm && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
+          <div className="w-full max-w-sm bg-neutral-900 rounded-2xl p-6 border border-neutral-700 shadow-2xl">
+            <h2 className="text-lg font-semibold mb-2">Discard changes?</h2>
+            <p className="text-sm text-neutral-400 mb-6">
+              You have unsaved edits to your workout plan. Going back will discard them.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDiscardConfirm(false)}
+                className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium transition-colors"
+              >
+                Keep Editing
+              </button>
+              <button
+                onClick={() => {
+                  setShowDiscardConfirm(false);
+                  onBack();
+                }}
+                className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
+              >
+                Discard
               </button>
             </div>
-          </>
-        )}
-        <ExerciseGuideSheet exercise={guideExercise} onClose={() => setGuideExercise(null)} />
-
-        {/* ── Discard changes confirmation dialog ───────────────── */}
-        {showDiscardConfirm && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
-            <div className="w-full max-w-sm bg-neutral-900 rounded-2xl p-6 border border-neutral-700 shadow-2xl">
-              <h2 className="text-lg font-semibold mb-2">Discard changes?</h2>
-              <p className="text-sm text-neutral-400 mb-6">
-                You have unsaved edits to your workout plan. Going back will discard them.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDiscardConfirm(false)}
-                  className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium transition-colors"
-                >
-                  Keep Editing
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDiscardConfirm(false);
-                    onBack();
-                  }}
-                  className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
-                >
-                  Discard
-                </button>
-              </div>
-            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
   );
 }

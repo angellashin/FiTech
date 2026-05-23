@@ -96,7 +96,9 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
-                <span className={`relative z-10 transition-colors ${activeTab === tab ? 'text-white' : 'text-neutral-500'}`}>
+                <span
+                  className={`relative z-10 transition-colors ${activeTab === tab ? 'text-white' : 'text-neutral-500'}`}
+                >
                   {tabLabels[tab]}
                 </span>
               </button>
@@ -182,7 +184,10 @@ export function ExerciseGuideSheet({ exercise, onClose }: ExerciseGuideSheetProp
                 className="space-y-3"
               >
                 {guide.safetyCues.map((cue) => (
-                  <div key={cue} className="flex items-center gap-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4">
+                  <div
+                    key={cue}
+                    className="flex items-center gap-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4"
+                  >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
                       <ShieldCheck className="h-4 w-4" />
                     </div>

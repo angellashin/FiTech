@@ -162,3 +162,28 @@
 
 **참고**:
 - 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+---
+
+## 2026-05-24 — Codex follow-up 3 (branch: `main`, local)
+
+**한 줄 요약**: GitHub CI가 `npm ci`/`format:check` 단계에서 깨지던 lockfile·format 상태를 동기화했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/package-lock.json` — `package.json` 기준으로 누락 의존성 lock entry 반영 및 stale entry 정리
+- `apps/web/HANDOFF_4.md`, `apps/web/src/app/components/*`, `apps/web/src/app/services/exerciseGuide.ts` — CI `format:check` 경고 파일만 Prettier 정리
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm ci --cache .npm-cache` ✅
+- `cd apps/web && npm audit --audit-level=critical` ✅
+- `cd apps/web && npm run format:check` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 50 tests)
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run build` ✅
+
+**참고**:
+- npm 전역 캐시에 권한 문제가 있어 CI 동작 검증은 프로젝트 로컬 임시 캐시로 수행했고, 검증 후 `.npm-cache`는 삭제함.
