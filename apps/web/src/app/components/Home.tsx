@@ -13,7 +13,7 @@ import {
   Edit2,
   X,
 } from 'lucide-react';
-import { getAllSessions, getSavedRoutines, deleteRoutine, saveRoutine } from '../utils/workoutHistory';
+import { getAllSessions, getSavedRoutines, saveRoutine } from '../utils/workoutHistory';
 import type { WorkoutSessionRecord, SavedRoutine } from '../utils/workoutHistory';
 import type { MuscleGroup, WorkoutPlan } from '../domain/workout';
 import { exerciseLibrary } from '../services/workoutPlanner';
@@ -91,7 +91,6 @@ export function Home({
   const [routineSaveName, setRoutineSaveName] = useState('');
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
-  const [routineToDelete, setRoutineToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const resolveRoutineName = (base: string): string => {
     const existing = new Set(savedRoutines.map((r) => r.name));
@@ -112,11 +111,6 @@ export function Home({
     setTimeout(() => setJustSavedId(null), 2000);
   };
 
-  const handleDeleteRoutine = (id: string) => {
-    deleteRoutine(id);
-    setSavedRoutines(getSavedRoutines());
-    setRoutineToDelete(null);
-  };
 
 
   const allSessions = getAllSessions();

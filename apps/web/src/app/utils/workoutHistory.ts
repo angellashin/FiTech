@@ -195,6 +195,10 @@ export const deleteRoutine = (id: string): void => {
   localStorage.setItem(SAVED_ROUTINES_KEY, JSON.stringify(updated));
 };
 
+export const reorderRoutines = (routines: SavedRoutine[]): void => {
+  localStorage.setItem(SAVED_ROUTINES_KEY, JSON.stringify(routines));
+};
+
 export const updateRoutine = (
   id: string,
   patch: Partial<Omit<SavedRoutine, 'id'>>,

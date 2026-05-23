@@ -3,94 +3,65 @@ import {
   ArrowLeft,
   Bookmark,
   RotateCcw,
-  Edit2,
   Trash2,
-  Plus,
-  X,
-  ChevronLeft,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import {
   getSavedRoutines,
   deleteRoutine,
-  updateRoutine,
+  reorderRoutines,
 } from '../utils/workoutHistory';
 import type { SavedRoutine } from '../utils/workoutHistory';
-import type { MuscleGroup, WorkoutPlan, Exercise } from '../domain/workout';
-import { exerciseLibrary } from '../services/workoutPlanner';
-import type { ExerciseTemplate } from '../services/workoutPlanner';
+import type { MuscleGroup, WorkoutPlan, WorkoutIntensity } from '../domain/workout';
+import { INTENSITY_MULTIPLIER } from '../domain/workout';
 
 interface RoutineLibraryProps {
   onBack: () => void;
   onLoadPlan: (plan: WorkoutPlan) => void;
 }
 
-const routineToPlan = (routine: SavedRoutine): WorkoutPlan => ({
-  goal: 'strength',
-  muscleGroup: ['chest'],
-  duration: 45,
-  exercises: routine.exercises,
-});
+const INTENSITY_OPTIONS: { value: WorkoutIntensity; label: string; sub: string; color: string }[] = [
+  { value: 'very-light', label: 'Very Light', sub: '×0.80', color: 'from-sky-700 to-sky-800 border-sky-600' },
+  { value: 'light',      label: 'Light',      sub: '×0.90', color: 'from-blue-700 to-blue-800 border-blue-600' },
+  { value: 'normal',     label: 'Normal',     sub: '×1.00', color: 'from-green-700 to-green-800 border-green-600' },
+  { value: 'hard',       label: 'Hard',       sub: '×1.10', color: 'from-orange-700 to-orange-800 border-orange-600' },
+  { value: 'very-hard',  label: 'Very Hard',  sub: '×1.20', color: 'from-red-700 to-red-800 border-red-600' },
+];
+
+const applyIntensity = (routine: SavedRoutine, intensity: WorkoutIntensity): WorkoutPlan => {
+  const multiplier = INTENSITY_MULTIPLIER[intensity];
+  const muscleGroups = [...new Set(routine.exercises.map((e) => e.muscleGroup as MuscleGroup))];
+  return {
+    goal: 'strength',
+    muscleGroup: muscleGroups.length > 0 ? muscleGroups : ['chest'],
+    duration: 45,
+    exercises: routine.exercises.map((ex) => ({
+      ...ex,
+      setDetails: ex.setDetails?.map((s) => ({
+        ...s,
+        weight: s.weight === 0 ? 0 : Math.round((s.weight * multiplier) / 2.5) * 2.5,
+      })),
+    })),
+  };
+};
 
 export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
   const [routines, setRoutines] = useState<SavedRoutine[]>(() => getSavedRoutines());
-
-  // Edit bottom sheet state
-  const [editingRoutine, setEditingRoutine] = useState<SavedRoutine | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editExercises, setEditExercises] = useState<Exercise[]>([]);
-  const [showAddExercise, setShowAddExercise] = useState(false);
-  const [addFilter, setAddFilter] = useState<MuscleGroup | 'all'>('all');
-
-  // Delete confirmation state
   const [routineToDelete, setRoutineToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [loadingRoutine, setLoadingRoutine] = useState<SavedRoutine | null>(null);
+  const [selectedIntensity, setSelectedIntensity] = useState<WorkoutIntensity>('normal');
 
-  const muscleGroupKeys = Object.keys(exerciseLibrary) as MuscleGroup[];
-
-  const filteredLibraryExercises =
-    addFilter === 'all'
-      ? muscleGroupKeys.flatMap((g) => exerciseLibrary[g])
-      : (exerciseLibrary[addFilter] ?? []);
-
-  const openEditRoutine = (routine: SavedRoutine) => {
-    setEditingRoutine(routine);
-    setEditName(routine.name);
-    setEditExercises([...routine.exercises]);
-    setShowAddExercise(false);
-    setAddFilter('all');
+  const move = (index: number, direction: 'up' | 'down') => {
+    const next = [...routines];
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    reorderRoutines(next);
+    setRoutines(next);
   };
 
-  const handleRemoveExercise = (exerciseId: string) => {
-    setEditExercises((prev) => prev.filter((e) => e.id !== exerciseId));
-  };
-
-  const handleAddExercise = (template: ExerciseTemplate) => {
-    const newExercise: Exercise = {
-      id: `${template.name.toLowerCase().replace(/\s+/g, '-')}_${Date.now()}`,
-      name: template.name,
-      sets: template.sets,
-      reps: template.reps,
-      restTime: template.restTime,
-      muscleGroup: template.muscleGroup,
-      setDetails: Array.from({ length: template.sets }, () => ({
-        weight: 0,
-        reps: template.reps,
-        completed: false,
-      })),
-    };
-    setEditExercises((prev) => [...prev, newExercise]);
-  };
-
-  const handleSaveRoutine = () => {
-    if (!editingRoutine) return;
-    updateRoutine(editingRoutine.id, {
-      name: editName.trim() || editingRoutine.name,
-      exercises: editExercises,
-    });
-    setRoutines(getSavedRoutines());
-    setEditingRoutine(null);
-  };
-
-  const handleDeleteRoutine = (id: string) => {
+  const handleDelete = (id: string) => {
     deleteRoutine(id);
     setRoutines(getSavedRoutines());
     setRoutineToDelete(null);
@@ -123,27 +94,33 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {routines.map((routine) => (
+            {routines.map((routine, index) => (
               <div key={routine.id} className="bg-neutral-900 rounded-2xl p-4 border border-neutral-800">
+                {/* Header row */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="font-semibold truncate">{routine.name}</div>
                     <div className="text-sm text-neutral-400 mt-0.5">
-                      {routine.exercises.length} exercises
-                      {' · '}
-                      {routine.exercises
-                        .map((e) => e.muscleGroup)
-                        .filter((v, i, a) => a.indexOf(v) === i)
-                        .join(', ')}
+                      {routine.exercises.length} exercises · {[...new Set(routine.exercises.map((e) => e.muscleGroup))].join(', ')}
                     </div>
                   </div>
+                  {/* Up / Down / Delete */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
-                      onClick={() => openEditRoutine(routine)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-500/20 text-neutral-500 hover:text-blue-400 transition-colors"
-                      aria-label="Edit routine"
+                      onClick={() => move(index, 'up')}
+                      disabled={index === 0}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move up"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => move(index, 'down')}
+                      disabled={index === routines.length - 1}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-700 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                      aria-label="Move down"
+                    >
+                      <ChevronDown className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setRoutineToDelete({ id: routine.id, name: routine.name })}
@@ -160,20 +137,16 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
                   {routine.exercises.slice(0, 4).map((ex, i) => (
                     <div key={i} className="flex items-center justify-between text-sm">
                       <span className="text-neutral-300 truncate">{ex.name}</span>
-                      <span className="text-neutral-500 ml-2 flex-shrink-0">
-                        {ex.sets}×{ex.reps}
-                      </span>
+                      <span className="text-neutral-500 ml-2 flex-shrink-0">{ex.sets}×{ex.reps}</span>
                     </div>
                   ))}
                   {routine.exercises.length > 4 && (
-                    <div className="text-xs text-neutral-600">
-                      +{routine.exercises.length - 4} more
-                    </div>
+                    <div className="text-xs text-neutral-600">+{routine.exercises.length - 4} more</div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => onLoadPlan(routineToPlan(routine))}
+                  onClick={() => { setLoadingRoutine(routine); setSelectedIntensity('normal'); }}
                   className="w-full flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 rounded-xl py-2.5 text-sm font-medium transition-all"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -185,170 +158,65 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
         )}
       </div>
 
-      {/* ── Edit Routine Bottom Sheet ── */}
-      {editingRoutine && (
+      {/* ── Load Routine — Intensity Picker ── */}
+      {loadingRoutine && (
         <div className="absolute inset-0 z-50 flex flex-col justify-end">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setEditingRoutine(null)}
+            onClick={() => setLoadingRoutine(null)}
           />
-          <div className="relative bg-neutral-900 rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="w-10 h-1 rounded-full bg-neutral-700 mx-auto mt-4 mb-1 flex-shrink-0" />
-            <div className="flex items-center justify-between px-6 py-3 flex-shrink-0 border-b border-neutral-800">
-              {showAddExercise ? (
-                <button
-                  onClick={() => setShowAddExercise(false)}
-                  className="flex items-center gap-2 text-blue-400 text-sm font-medium"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
-                </button>
-              ) : (
-                <h2 className="text-lg font-semibold">Edit Routine</h2>
-              )}
+          <div className="relative bg-neutral-900 rounded-t-3xl shadow-2xl pb-8">
+            <div className="w-10 h-1 rounded-full bg-neutral-700 mx-auto mt-4 mb-4" />
+            <div className="px-6 mb-5">
+              <h2 className="text-lg font-semibold">{loadingRoutine.name}</h2>
+              <p className="text-sm text-neutral-400 mt-0.5">
+                {loadingRoutine.exercises.length} exercises · Set today's intensity
+              </p>
+            </div>
+            <div className="px-6 mb-6">
+              <div className="grid grid-cols-5 gap-2">
+                {INTENSITY_OPTIONS.map((item) => (
+                  <button
+                    key={item.value}
+                    onClick={() => setSelectedIntensity(item.value)}
+                    className={`py-3 rounded-xl border-2 flex flex-col items-center justify-center gap-0.5 transition-all ${
+                      selectedIntensity === item.value
+                        ? `bg-gradient-to-br ${item.color} text-white shadow-lg scale-[1.04]`
+                        : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700'
+                    }`}
+                  >
+                    <span className="text-[11px] font-semibold leading-tight text-center px-0.5">
+                      {item.label}
+                    </span>
+                    <span className={`text-[10px] ${selectedIntensity === item.value ? 'text-white/70' : 'text-neutral-600'}`}>
+                      {item.sub}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3 px-6">
               <button
-                onClick={() => setEditingRoutine(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-800 hover:bg-neutral-700 transition-colors"
+                onClick={() => setLoadingRoutine(null)}
+                className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-medium text-sm transition-colors"
               >
-                <X className="w-4 h-4" />
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onLoadPlan(applyIntensity(loadingRoutine, selectedIntensity));
+                  setLoadingRoutine(null);
+                }}
+                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-colors"
+              >
+                Start Workout
               </button>
             </div>
-
-            <div className="overflow-y-auto flex-1 px-6 py-4">
-              {!showAddExercise ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-neutral-400 block mb-2">Routine Name</label>
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      maxLength={40}
-                      className="w-full bg-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
-                    />
-                  </div>
-                  <div>
-                    <span className="text-sm text-neutral-400 block mb-2">
-                      Exercises ({editExercises.length})
-                    </span>
-                    {editExercises.length === 0 ? (
-                      <div className="text-center py-6 text-neutral-500 text-sm rounded-xl border border-dashed border-neutral-700">
-                        No exercises. Add some below.
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {editExercises.map((exercise) => (
-                          <div
-                            key={exercise.id}
-                            className="flex items-center gap-3 bg-neutral-800/60 rounded-xl px-4 py-3"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">{exercise.name}</div>
-                              <div className="text-xs text-neutral-400">
-                                {exercise.muscleGroup} · {exercise.sets}×{exercise.reps}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveExercise(exercise.id)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-red-500/20 text-neutral-500 hover:text-red-400 transition-colors flex-shrink-0"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => setShowAddExercise(true)}
-                    className="w-full flex items-center justify-center gap-2 border border-dashed border-blue-500/40 hover:border-blue-500/70 text-blue-400 hover:text-blue-300 rounded-xl py-3 text-sm font-medium transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Exercise
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setAddFilter('all')}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        addFilter === 'all'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-                      }`}
-                    >
-                      All
-                    </button>
-                    {muscleGroupKeys.map((g) => (
-                      <button
-                        key={g}
-                        onClick={() => setAddFilter(g)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
-                          addFilter === g
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-                        }`}
-                      >
-                        {g.replace('-', ' ')}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="space-y-2">
-                    {filteredLibraryExercises.map((template) => {
-                      const alreadyAdded = editExercises.some((e) => e.name === template.name);
-                      return (
-                        <div
-                          key={template.name}
-                          className="flex items-center gap-3 bg-neutral-800/60 rounded-xl px-4 py-3"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">{template.name}</div>
-                            <div className="text-xs text-neutral-400">
-                              {template.muscleGroup} · {template.sets}×{template.reps}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => { if (!alreadyAdded) handleAddExercise(template); }}
-                            disabled={alreadyAdded}
-                            className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${
-                              alreadyAdded
-                                ? 'text-neutral-600 cursor-not-allowed'
-                                : 'hover:bg-blue-500/20 text-neutral-400 hover:text-blue-400'
-                            }`}
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {!showAddExercise && (
-              <div className="flex gap-3 px-6 py-4 flex-shrink-0 border-t border-neutral-800">
-                <button
-                  onClick={() => setEditingRoutine(null)}
-                  className="flex-1 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors font-medium text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveRoutine}
-                  disabled={editExercises.length === 0}
-                  className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium text-sm"
-                >
-                  Save Changes
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* ── Delete confirmation dialog ── */}
+      {/* ── Delete confirmation ── */}
       {routineToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-6">
           <div className="w-full max-w-sm bg-neutral-900 rounded-2xl p-6 border border-neutral-700 shadow-2xl">
@@ -364,7 +232,7 @@ export function RoutineLibrary({ onBack, onLoadPlan }: RoutineLibraryProps) {
                 Cancel
               </button>
               <button
-                onClick={() => handleDeleteRoutine(routineToDelete.id)}
+                onClick={() => handleDelete(routineToDelete.id)}
                 className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
               >
                 Delete
