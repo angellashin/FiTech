@@ -103,6 +103,12 @@ const canAdjustWeight = (exercise: Exercise | undefined) => {
   return exerciseType === 'Weight / Reps' || exerciseType === 'Machine / Reps';
 };
 
+const sanitizeWeightInput = (value: string) => {
+  const normalized = value.replace(',', '.').replace(/[^\d.]/g, '');
+  const [whole, ...decimalParts] = normalized.split('.');
+  return decimalParts.length > 0 ? `${whole}.${decimalParts.join('')}` : whole;
+};
+
 const allExerciseTemplates = Object.values(exerciseLibrary).flat();
 
 interface WeightAdjusterProps {
@@ -112,11 +118,25 @@ interface WeightAdjusterProps {
 }
 
 const WeightAdjuster = ({ exercise, setNumber, onChange }: WeightAdjusterProps) => {
-  if (!canAdjustWeight(exercise)) return null;
-
-  const currentWeight = getSetTarget(exercise, setNumber).weight;
+  const adjustable = canAdjustWeight(exercise);
+  const currentWeight = adjustable ? getSetTarget(exercise, setNumber).weight : 0;
   const currentValue = currentWeight > 0 ? formatKg(currentWeight) : '';
+  const [draftValue, setDraftValue] = useState(currentValue);
+  const [isEditing, setIsEditing] = useState(false);
   const updateBy = (delta: number) => onChange(normalizeWeight(currentWeight + delta));
+
+  useEffect(() => {
+    if (!isEditing) setDraftValue(currentValue);
+  }, [currentValue, isEditing]);
+
+  if (!adjustable) return null;
+
+  const commitDraftValue = () => {
+    const nextWeight = normalizeWeight(parseFloat(draftValue) || 0);
+    onChange(nextWeight);
+    setDraftValue(nextWeight > 0 ? formatKg(nextWeight) : '');
+    setIsEditing(false);
+  };
 
   return (
     <div className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 bg-neutral-900/80 px-2 py-1 text-xs text-neutral-500">
@@ -131,15 +151,27 @@ const WeightAdjuster = ({ exercise, setNumber, onChange }: WeightAdjusterProps) 
         <Minus className="h-3.5 w-3.5" />
       </button>
       <input
-        type="number"
+        type="text"
         inputMode="decimal"
-        min="0"
-        step="0.5"
-        value={currentValue}
-        onChange={(event) => onChange(normalizeWeight(parseFloat(event.target.value) || 0))}
+        pattern="[0-9]*[.,]?[0-9]*"
+        value={isEditing ? draftValue : currentValue}
+        onFocus={(event) => {
+          setIsEditing(true);
+          event.currentTarget.select();
+        }}
+        onChange={(event) => setDraftValue(sanitizeWeightInput(event.target.value))}
+        onBlur={commitDraftValue}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur();
+          if (event.key === 'Escape') {
+            setDraftValue(currentValue);
+            setIsEditing(false);
+            event.currentTarget.blur();
+          }
+        }}
         aria-label="Current set weight in kilograms"
         placeholder="0"
-        className="h-7 w-14 rounded-full bg-neutral-950/70 px-2 text-center text-sm font-semibold text-white outline-none focus:ring-1 focus:ring-blue-500"
+        className="h-7 w-20 rounded-full bg-neutral-950/70 px-2.5 text-center text-sm font-semibold tabular-nums text-white outline-none focus:ring-1 focus:ring-blue-500"
       />
       <button
         type="button"

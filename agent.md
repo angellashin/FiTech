@@ -210,3 +210,25 @@
 **참고**:
 - kg 변경은 현재 세트에만 적용된다. 다음 세트부터는 각 세트의 기존 계획값을 유지한다.
 - 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+---
+
+## 2026-05-24 — Codex follow-up 5 (branch: `main`, local)
+
+**한 줄 요약**: Workout Session의 kg 입력칸에서 `.5` 단위가 잘려 보이지 않도록 decimal 입력 UX를 정리했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — kg 입력칸 폭 확대, decimal text input, 입력 draft/정규화 처리
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 50 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- 다음 UX 개선 후보: kg 변경 시 현재 세트만이 아니라 같은 운동의 남은 세트까지 기본 반영하되, 사용자에게 명확한 undo/적용 범위 표시 제공.

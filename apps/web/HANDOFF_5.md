@@ -165,3 +165,26 @@
 - `npm run test` ✅ — 7 files / 50 tests passed
 - `npm run build` ✅
 - `npm run format:check` ✅
+
+## 7. Workout Session — .5kg 입력칸 잘림 수정
+
+**사용자 의도:** 운동 중 kg 조정 시 `37.5`처럼 `.5` 단위가 입력칸 안에서 잘려 보이면 안 됨.
+
+**업데이트 내용:**
+
+- kg 입력칸을 브라우저 기본 number input에서 decimal text input으로 변경해 숫자 스피너/잘림 영향을 제거.
+- 입력폭을 `w-14`에서 `w-20`으로 넓혀 `100.5` 같은 값도 안정적으로 보이게 함.
+- `,` 입력은 `.`로 정규화하고, 숫자/소수점만 입력되도록 정리.
+- 포커스 중에는 사용자가 입력 중인 draft 값을 유지하고, blur/Enter 시 정규화된 kg로 저장.
+
+**수정 파일:**
+
+- `src/app/components/WorkoutSession.tsx`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 7 files / 50 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅
