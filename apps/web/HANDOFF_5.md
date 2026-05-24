@@ -236,3 +236,25 @@
 - `npm run test` ✅ — 7 files / 51 tests passed
 - `npm run build` ✅
 - `npm run format:check` ✅
+
+## 10. Workout Session — kg 변경 피드백 문구 명확화
+
+**사용자 의도:** 운동 중 kg 변경 후 뜨는 안내 박스의 `Set 1+` 표현이 무엇을 뜻하는지 이해하기 어려움.
+
+**업데이트 내용:**
+
+- `Set 1+` 축약 문구를 제거.
+- 안내 제목을 `Updated current + 2 remaining sets to 37.5kg`처럼 현재 세트와 남은 적용 세트 수가 바로 보이도록 변경.
+- 보조 문구는 `Sets 1–3`처럼 실제 적용되는 세트 범위를 표시하도록 변경.
+
+**수정 파일:**
+
+- `src/app/components/WorkoutSession.tsx`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 7 files / 51 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅

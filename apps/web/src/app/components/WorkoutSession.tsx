@@ -140,6 +140,44 @@ interface WeightAdjustmentNotice {
   previousSetDetails: ExerciseSet[];
 }
 
+const formatAffectedSets = (setIndexes: number[]) => {
+  const setNumbers = Array.from(new Set(setIndexes.map((setIndex) => setIndex + 1))).sort(
+    (a, b) => a - b,
+  );
+
+  if (setNumbers.length === 0) return 'Current set';
+
+  const ranges: string[] = [];
+  let rangeStart = setNumbers[0];
+  let previous = setNumbers[0];
+
+  for (let index = 1; index < setNumbers.length; index += 1) {
+    const setNumber = setNumbers[index];
+    if (setNumber === previous + 1) {
+      previous = setNumber;
+      continue;
+    }
+
+    ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}–${previous}`);
+    rangeStart = setNumber;
+    previous = setNumber;
+  }
+
+  ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}–${previous}`);
+
+  return `Sets ${ranges.join(', ')}`;
+};
+
+const getWeightAdjustmentTitle = (notice: WeightAdjustmentNotice) => {
+  const remainingSetCount = notice.affectedSetIndexes.filter(
+    (setIndex) => setIndex > notice.targetSetIndex,
+  ).length;
+  const remainingLabel =
+    remainingSetCount === 1 ? '1 remaining set' : `${remainingSetCount} remaining sets`;
+
+  return `Updated current + ${remainingLabel} to ${formatKg(notice.weight)}kg`;
+};
+
 interface WeightAdjusterProps {
   exercise: Exercise | undefined;
   setNumber: number;
@@ -1326,11 +1364,11 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         {weightAdjustmentNotice && (
           <div className="mb-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 px-3 py-2.5 text-xs shadow-lg shadow-blue-950/20">
             <div className="font-semibold text-blue-100">
-              Remaining sets updated to {formatKg(weightAdjustmentNotice.weight)}kg
+              {getWeightAdjustmentTitle(weightAdjustmentNotice)}
             </div>
             <div className="mt-0.5 truncate text-neutral-400">
-              {weightAdjustmentNotice.exerciseName} · Set{' '}
-              {weightAdjustmentNotice.targetSetIndex + 1}+
+              {weightAdjustmentNotice.exerciseName} ·{' '}
+              {formatAffectedSets(weightAdjustmentNotice.affectedSetIndexes)}
             </div>
             <div className="mt-2 flex gap-2">
               <button

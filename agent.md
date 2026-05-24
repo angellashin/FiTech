@@ -279,3 +279,25 @@
 
 **참고**:
 - 원인은 `gifExercises → webpExercises → jpg` 확장자 선택 로직에서 해당 slug가 webp 목록에 빠져 있었기 때문.
+
+---
+
+## 2026-05-24 — Codex follow-up 8 (branch: `main`, local)
+
+**한 줄 요약**: 운동 중 kg 변경 안내 박스의 `Set 1+` 축약 표현을 명확한 적용 범위 문구로 바꿨다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — kg 변경 피드백 제목/세트 범위 표시 개선
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 51 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- 새 문구 예시: `Updated current + 2 remaining sets to 37.5kg` / `Sets 1–3`.
