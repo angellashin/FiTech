@@ -9,6 +9,8 @@ import {
   Dumbbell,
   RefreshCw,
   Check,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { WorkoutPlan, Exercise } from '../domain/workout';
@@ -39,6 +41,8 @@ interface WorkoutSessionProps {
 
 const formatKg = (weight: number) =>
   Number.isInteger(weight) ? `${weight}` : weight.toFixed(1).replace(/\.0$/, '');
+
+const normalizeWeight = (weight: number) => Math.max(0, Math.round(weight * 10) / 10);
 
 const getSetTarget = (exercise: Exercise | undefined, setNumber: number) => {
   const plannedSet = exercise?.setDetails?.[Math.max(0, setNumber - 1)];
@@ -93,7 +97,61 @@ const getExerciseStartSpeech = (exercise: Exercise | undefined, setNumber: numbe
   return `Set ${setNumber} of ${exercise.name}: ${getSetTargetSpeech(exercise, setNumber)}.`;
 };
 
+const canAdjustWeight = (exercise: Exercise | undefined) => {
+  if (!exercise) return false;
+  const exerciseType = getExerciseType(exercise.name);
+  return exerciseType === 'Weight / Reps' || exerciseType === 'Machine / Reps';
+};
+
 const allExerciseTemplates = Object.values(exerciseLibrary).flat();
+
+interface WeightAdjusterProps {
+  exercise: Exercise | undefined;
+  setNumber: number;
+  onChange: (weight: number) => void;
+}
+
+const WeightAdjuster = ({ exercise, setNumber, onChange }: WeightAdjusterProps) => {
+  if (!canAdjustWeight(exercise)) return null;
+
+  const currentWeight = getSetTarget(exercise, setNumber).weight;
+  const currentValue = currentWeight > 0 ? formatKg(currentWeight) : '';
+  const updateBy = (delta: number) => onChange(normalizeWeight(currentWeight + delta));
+
+  return (
+    <div className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 bg-neutral-900/80 px-2 py-1 text-xs text-neutral-500">
+      <span className="pl-1 font-medium">kg</span>
+      <button
+        type="button"
+        onClick={() => updateBy(-2.5)}
+        disabled={currentWeight <= 0}
+        aria-label="Decrease current set weight by 2.5 kilograms"
+        className="h-7 w-7 rounded-full bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-35 disabled:hover:bg-neutral-800 flex items-center justify-center transition-colors"
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <input
+        type="number"
+        inputMode="decimal"
+        min="0"
+        step="0.5"
+        value={currentValue}
+        onChange={(event) => onChange(normalizeWeight(parseFloat(event.target.value) || 0))}
+        aria-label="Current set weight in kilograms"
+        placeholder="0"
+        className="h-7 w-14 rounded-full bg-neutral-950/70 px-2 text-center text-sm font-semibold text-white outline-none focus:ring-1 focus:ring-blue-500"
+      />
+      <button
+        type="button"
+        onClick={() => updateBy(2.5)}
+        aria-label="Increase current set weight by 2.5 kilograms"
+        className="h-7 w-7 rounded-full bg-neutral-800 text-neutral-300 hover:bg-neutral-700 flex items-center justify-center transition-colors"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+};
 
 interface ReplacementPickerProps {
   currentExercise: Exercise;
@@ -336,6 +394,40 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         ),
       };
     });
+  };
+
+  const updateCurrentSetWeight = (weight: number) => {
+    if (!currentExercise || !canAdjustWeight(currentExercise)) return;
+
+    const nextWeight = normalizeWeight(weight);
+    setExercises((previousExercises) =>
+      previousExercises.map((exercise, index) => {
+        if (index !== currentExerciseIndex) return exercise;
+
+        const setDetails =
+          exercise.setDetails?.map((set) => ({ ...set })) ??
+          Array.from({ length: exercise.sets }, () => ({
+            weight: 0,
+            reps: exercise.reps,
+            completed: false,
+          }));
+
+        while (setDetails.length < exercise.sets) {
+          setDetails.push({
+            weight: 0,
+            reps: exercise.reps,
+            completed: false,
+          });
+        }
+
+        return {
+          ...exercise,
+          setDetails: setDetails.map((set, setIndex) =>
+            setIndex === currentSet - 1 ? { ...set, weight: nextWeight } : set,
+          ),
+        };
+      }),
+    );
   };
 
   const completeSession = (finalExercises: Exercise[], finalEvents: WorkoutSessionEvent[]) => {
@@ -711,6 +803,15 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
               <div className="text-sm text-neutral-500 mb-2">
                 Target: {getSetTargetDisplay(currentExercise, currentSet)}
               </div>
+              {canAdjustWeight(currentExercise) && (
+                <div className="mb-3">
+                  <WeightAdjuster
+                    exercise={currentExercise}
+                    setNumber={currentSet}
+                    onChange={updateCurrentSetWeight}
+                  />
+                </div>
+              )}
               <div className="text-sm text-neutral-500 mb-4">Single tap to skip rest</div>
               <button
                 type="button"
@@ -803,6 +904,15 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                             <div className="text-xs text-neutral-500 mt-1">
                               Target: {getSetTargetDisplay(currentExercise, currentSet)}
                             </div>
+                            {canAdjustWeight(currentExercise) && (
+                              <div className="mt-2">
+                                <WeightAdjuster
+                                  exercise={currentExercise}
+                                  setNumber={currentSet}
+                                  onChange={updateCurrentSetWeight}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -897,8 +1007,13 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                         {currentExercise?.muscleGroup}
                       </p>
                       {currentExercise && (
-                        <div className="mb-4 text-xs text-neutral-500">
-                          Target: {getSetTargetDisplay(currentExercise, currentSet)}
+                        <div className="mb-4 flex flex-col items-center gap-2 text-xs text-neutral-500">
+                          <div>Target: {getSetTargetDisplay(currentExercise, currentSet)}</div>
+                          <WeightAdjuster
+                            exercise={currentExercise}
+                            setNumber={currentSet}
+                            onChange={updateCurrentSetWeight}
+                          />
                         </div>
                       )}
                       <button

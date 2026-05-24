@@ -141,3 +141,27 @@
 - `npm run test` ✅ — 7 files / 50 tests passed
 - `npm run typecheck` ✅
 - `npm run build` ✅
+
+## 6. Workout Session — 운동 중 kg 조정
+
+**사용자 의도:** 운동 진행 중에도 실제로 들 무게를 바꿀 수 있어야 하지만, kg 표시가 큰 카드처럼 보여 UI를 깨면 안 됨.
+
+**업데이트 내용:**
+
+- 운동 중 현재 세트의 kg를 바로 조정할 수 있는 작은 pill 형태의 `kg` 컨트롤 추가.
+- `- / 직접 입력 / +` 방식으로 2.5kg 단위 빠른 조정과 직접 입력을 모두 지원.
+- 일반 운동, 슈퍼세트 현재 운동, 휴식 중 다음 세트 화면에서 같은 작은 컨트롤 사용.
+- 조정값은 현재 세트의 `setDetails.weight`에 저장되어 작은 `Target:` 표시, 다음 오디오 안내, 완료 기록이 같은 값으로 이어짐.
+- `Weight / Reps`, `Machine / Reps` 운동에만 노출하고 bodyweight/hold 운동은 숨겨 불필요한 화면 요소를 만들지 않음.
+
+**수정 파일:**
+
+- `src/app/components/WorkoutSession.tsx`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 7 files / 50 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅

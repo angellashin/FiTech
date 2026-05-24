@@ -187,3 +187,26 @@
 
 **참고**:
 - npm 전역 캐시에 권한 문제가 있어 CI 동작 검증은 프로젝트 로컬 임시 캐시로 수행했고, 검증 후 `.npm-cache`는 삭제함.
+
+---
+
+## 2026-05-24 — Codex follow-up 4 (branch: `main`, local)
+
+**한 줄 요약**: Workout Session에서 UI를 깨지 않는 작은 컨트롤로 현재 세트 kg를 운동 중 조정할 수 있게 했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — 현재 세트 kg pill 조정 UI, `setDetails.weight` 반영 로직
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 50 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- kg 변경은 현재 세트에만 적용된다. 다음 세트부터는 각 세트의 기존 계획값을 유지한다.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
