@@ -38,4 +38,10 @@ describe('getExerciseGuide', () => {
       variant: 'plank',
     });
   });
+
+  it('uses the square webp asset for Dumbbell Shoulder Press', () => {
+    expect(
+      getExerciseGuide({ name: 'Dumbbell Shoulder Press', muscleGroup: 'Shoulder' }).imageSrc,
+    ).toBe('/exercise-guides/dumbbell-shoulder-press.webp');
+  });
 });

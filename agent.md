@@ -256,3 +256,26 @@
 - 기본 동작은 “현재 세트 + 아직 완료하지 않은 남은 세트” 반영이다.
 - 완료된 세트의 기록은 kg 자동 반영에서 제외한다.
 - 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+---
+
+## 2026-05-24 — Codex follow-up 7 (branch: `main`, local)
+
+**한 줄 요약**: Dumbbell Shoulder Press가 `.jpg` fallback 대신 기존 512×512 `.webp` 가이드 이미지를 사용하도록 매핑을 정리했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/services/exerciseGuide.ts` — `dumbbell-shoulder-press`를 webp 이미지 매핑에 추가
+- `apps/web/src/app/services/exerciseGuide.test.ts` — Dumbbell Shoulder Press 이미지 경로 회귀 테스트 추가
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 51 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- 원인은 `gifExercises → webpExercises → jpg` 확장자 선택 로직에서 해당 slug가 webp 목록에 빠져 있었기 때문.

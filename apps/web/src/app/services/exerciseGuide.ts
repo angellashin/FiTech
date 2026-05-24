@@ -115,7 +115,7 @@ const gifExercises = new Set([
   'close-grip-bench-press',
 ]);
 
-const webpExercises = new Set(['pec-deck-machine', 'landmine-press']);
+const webpExercises = new Set(['pec-deck-machine', 'landmine-press', 'dumbbell-shoulder-press']);
 
 export const getExerciseImageSrc = (exerciseName: string): string => {
   const slug = slugExerciseName(exerciseName);

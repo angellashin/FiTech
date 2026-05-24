@@ -213,3 +213,26 @@
 - `npm run test` ✅ — 7 files / 50 tests passed
 - `npm run build` ✅
 - `npm run format:check` ✅
+
+## 9. Exercise Guide — Dumbbell Shoulder Press 이미지 매핑 정리
+
+**사용자 의도:** `Dumbbell Shoulder Press` 가이드 이미지가 다른 운동들과 혼자 다른 스타일/비율로 보이는 원인을 확인하고 정리.
+
+**업데이트 내용:**
+
+- 원인: `getExerciseImageSrc()`가 slug를 만들고 `gifExercises → webpExercises → jpg fallback` 순서로 확장자를 고르는데, `dumbbell-shoulder-press`가 webp 목록에 없어 850×567 `.jpg` fallback을 사용하고 있었음.
+- 이미 존재하던 512×512 `.webp` 에셋을 사용하도록 `webpExercises`에 `dumbbell-shoulder-press`를 추가.
+- 해당 매핑이 다시 `.jpg`로 돌아가지 않도록 테스트를 추가.
+
+**수정 파일:**
+
+- `src/app/services/exerciseGuide.ts`
+- `src/app/services/exerciseGuide.test.ts`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 7 files / 51 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅
