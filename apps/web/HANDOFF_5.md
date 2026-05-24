@@ -188,3 +188,28 @@
 - `npm run test` ✅ — 7 files / 50 tests passed
 - `npm run build` ✅
 - `npm run format:check` ✅
+
+## 8. Workout Session — 남은 세트 kg 자동 반영 + 탭 UI 중복 제거
+
+**사용자 의도:** 운동 중 한 세트에서 kg를 바꿨다면 같은 운동의 남은 세트에도 자연스럽게 반영되어야 함. 매 세트마다 폰을 다시 수정하게 만들면 핸즈프리 운동 앱 취지와 맞지 않음. 하단 탭 안내도 `Single Tap` 같은 문구가 중복되어 산만함.
+
+**업데이트 내용:**
+
+- kg 변경 시 현재 세트와 아직 완료하지 않은 같은 운동의 남은 세트에 기본 반영되도록 변경.
+- 남은 세트 자동 반영 후 작은 피드백을 표시: `Remaining sets updated...` + `This set only` + `Undo`.
+- `This set only`를 누르면 현재 세트 kg만 유지하고 이후 세트는 이전 계획값으로 복구.
+- `Undo`를 누르면 해당 kg 변경 전체를 이전 계획값으로 복구.
+- `Target ... Plan`을 누르면 현재 운동의 전체 세트 계획 bottom sheet를 열어 완료/현재/예정 세트와 kg·reps를 확인할 수 있음.
+- 하단 이어폰 탭 UI는 버튼과 설명 카드가 따로 반복되지 않도록, 각 버튼 안에 액션명과 gesture를 한 번만 표시하는 구조로 통합.
+
+**수정 파일:**
+
+- `src/app/components/WorkoutSession.tsx`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 7 files / 50 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅

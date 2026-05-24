@@ -232,3 +232,27 @@
 
 **참고**:
 - 다음 UX 개선 후보: kg 변경 시 현재 세트만이 아니라 같은 운동의 남은 세트까지 기본 반영하되, 사용자에게 명확한 undo/적용 범위 표시 제공.
+
+---
+
+## 2026-05-24 — Codex follow-up 6 (branch: `main`, local)
+
+**한 줄 요약**: Workout Session에서 kg 변경을 같은 운동의 남은 세트에 자동 반영하고, 전체 세트 계획 확인 및 하단 탭 UI 중복 제거를 적용했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — kg 변경 범위 확대, Undo/This set only 피드백, 세트 계획 bottom sheet, 하단 탭 UI 통합
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (7 files / 50 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- 기본 동작은 “현재 세트 + 아직 완료하지 않은 남은 세트” 반영이다.
+- 완료된 세트의 기록은 kg 자동 반영에서 제외한다.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
