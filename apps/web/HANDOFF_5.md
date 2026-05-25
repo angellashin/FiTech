@@ -258,3 +258,30 @@
 - `npm run test` ✅ — 7 files / 51 tests passed
 - `npm run build` ✅
 - `npm run format:check` ✅
+
+## 11. Android App — 하드웨어 뒤로가기 네비게이션 스택화
+
+**사용자 의도:** 안드로이드 앱에서 폰의 시스템 뒤로가기 버튼을 눌렀을 때 무조건 Home으로 가지 않고, 실제 직전 화면으로 돌아가야 함.
+
+**업데이트 내용:**
+
+- 원인: `App.tsx`의 Capacitor `backButton` 핸들러가 `previewSource`와 화면별 고정 규칙만 사용해 `History/Routines/Progress → Plan Preview` 같은 실제 진입 경로를 잃고 있었음.
+- `currentScreen` 단일 상태를 `appNavigationReducer` 기반의 `{ current, stack }` 네비게이션 상태로 변경.
+- Home 위젯/카드에서 들어간 `History`, `Progress`, `Routines`, `Profile` 및 그 안에서 연 `PlanPreview`가 하드웨어 뒤로가기/앱 UI 뒤로가기 모두 실제 이전 화면으로 돌아가도록 정리.
+- Home/Login에서는 기존처럼 Android 앱 종료 동작 유지.
+- Workout Complete는 완료된 세션으로 되돌아가지 않도록 하드웨어 뒤로가기 시 Home으로 보내는 예외를 유지.
+- 네비게이션 스택 회귀 테스트 추가: `History → Preview → Back`이 Home이 아니라 History로 돌아가는지 검증.
+
+**수정 파일:**
+
+- `src/app/App.tsx`
+- `src/app/utils/appNavigation.ts`
+- `src/app/utils/appNavigation.test.ts`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 8 files / 55 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅

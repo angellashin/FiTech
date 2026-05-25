@@ -301,3 +301,28 @@
 
 **참고**:
 - 새 문구 예시: `Updated current + 2 remaining sets to 37.5kg` / `Sets 1–3`.
+
+---
+
+## 2026-05-25 — Codex follow-up 9 (branch: `main`, local)
+
+**한 줄 요약**: Android 하드웨어 뒤로가기가 Home으로 고정되지 않고 실제 앱 화면 스택을 따라가도록 네비게이션을 정리했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/App.tsx` — `currentScreen` 단일 상태를 네비게이션 스택/reducer 기반으로 전환, Capacitor `backButton`을 실제 이전 화면 기준으로 처리
+- `apps/web/src/app/utils/appNavigation.ts` — 앱 화면 스택 reducer 추가
+- `apps/web/src/app/utils/appNavigation.test.ts` — Home 위젯/History 진입 후 Preview에서 뒤로가기 회귀 테스트 추가
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (8 files / 55 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- Home/Login에서 Android 하드웨어 뒤로가기는 기존처럼 앱 종료.
+- Workout Complete는 완료된 세션으로 되돌아가지 않도록 하드웨어 뒤로가기 시 Home으로 복귀하는 예외 유지.

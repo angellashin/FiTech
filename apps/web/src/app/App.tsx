@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useReducer, useCallback, useRef } from 'react';
 import type { Exercise, WorkoutPlan } from './domain/workout';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
@@ -12,20 +12,14 @@ import { ProgressReport } from './components/ProgressReport';
 import { RoutineLibrary } from './components/RoutineLibrary';
 import { getUserSettings, applyDarkMode } from './utils/userSettings';
 import { Capacitor } from '@capacitor/core';
+import {
+  appNavigationReducer,
+  createNavigationState,
+  getBackTarget,
+  type AppScreen,
+} from './utils/appNavigation';
 
-type Screen =
-  | 'login'
-  | 'home'
-  | 'setup'
-  | 'preview'
-  | 'session'
-  | 'complete'
-  | 'profile'
-  | 'history'
-  | 'progress'
-  | 'routines';
-
-const getInitialScreen = (): Screen => {
+const getInitialScreen = (): AppScreen => {
   try {
     return localStorage.getItem('fitech_user_name') ? 'home' : 'login';
   } catch {
@@ -34,83 +28,150 @@ const getInitialScreen = (): Screen => {
 };
 
 export default function App() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>(getInitialScreen);
+  const [navigation, dispatchNavigation] = useReducer(
+    appNavigationReducer,
+    getInitialScreen(),
+    createNavigationState,
+  );
+  const currentScreen = navigation.current;
+  const navigationRef = useRef(navigation);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [completedWorkout, setCompletedWorkout] = useState<{
     sessionId: string;
     exercises: Exercise[];
   } | null>(null);
-  const [previewSource, setPreviewSource] = useState<'setup' | 'home'>('setup');
   const [homeKey, setHomeKey] = useState(0);
 
   useEffect(() => {
     applyDarkMode(getUserSettings().darkMode);
   }, []);
 
-  // Android hardware back button — navigate to previous screen instead of exiting
+  useEffect(() => {
+    navigationRef.current = navigation;
+  }, [navigation]);
+
+  const refreshHome = useCallback(() => {
+    setHomeKey((k) => k + 1);
+  }, []);
+
+  const pushScreen = useCallback((screen: AppScreen) => {
+    dispatchNavigation({ type: 'push', screen });
+  }, []);
+
+  const replaceScreen = useCallback((screen: AppScreen) => {
+    dispatchNavigation({ type: 'replace', screen });
+  }, []);
+
+  const resetToScreen = useCallback(
+    (screen: AppScreen) => {
+      if (screen === 'home') refreshHome();
+      dispatchNavigation({ type: 'reset', screen });
+    },
+    [refreshHome],
+  );
+
+  const goBack = useCallback(() => {
+    const target = getBackTarget(navigationRef.current);
+    if (!target) return false;
+    if (target === 'home') {
+      refreshHome();
+      setWorkoutPlan(null);
+    }
+    dispatchNavigation({ type: 'back' });
+    return true;
+  }, [refreshHome]);
+
+  const handleBackToHome = useCallback(() => {
+    resetToScreen('home');
+    setWorkoutPlan(null);
+    setCompletedWorkout(null);
+  }, [resetToScreen]);
+
+  const goBackOrHome = useCallback(() => {
+    if (!goBack()) {
+      handleBackToHome();
+    }
+  }, [goBack, handleBackToHome]);
+
+  const handleHardwareBackRef = useRef<() => boolean>(() => false);
+
+  const handleHardwareBack = useCallback(() => {
+    const screen = navigationRef.current.current;
+
+    if (screen === 'home' || screen === 'login') {
+      return false;
+    }
+
+    if (screen === 'complete') {
+      handleBackToHome();
+      return true;
+    }
+
+    if (goBack()) return true;
+
+    handleBackToHome();
+    return true;
+  }, [goBack, handleBackToHome]);
+
+  useEffect(() => {
+    handleHardwareBackRef.current = handleHardwareBack;
+  }, [handleHardwareBack]);
+
+  // Android hardware back button — follow the app's actual screen stack before exiting
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    let listenerPromise:
+      | ReturnType<Awaited<typeof import('@capacitor/app')>['App']['addListener']>
+      | undefined;
 
     void import('@capacitor/app').then(({ App: CapApp }) => {
-      const sub = CapApp.addListener('backButton', () => {
-        setCurrentScreen((screen) => {
-          if (screen === 'home' || screen === 'login') {
-            void CapApp.exitApp();
-            return screen;
-          }
-          if (screen === 'preview') {
-            return previewSource === 'home' ? 'home' : 'setup';
-          }
-          if (screen === 'session') return 'preview';
-          // complete, profile, history, progress, routines → home
-          setWorkoutPlan(null);
-          setHomeKey((k) => k + 1);
-          return 'home';
-        });
+      listenerPromise = CapApp.addListener('backButton', () => {
+        const handled = handleHardwareBackRef.current();
+        if (!handled) {
+          void CapApp.exitApp();
+        }
       });
-      cleanup = () => void sub.then((s) => s.remove());
+
+      if (cancelled) {
+        void listenerPromise.then((listener) => listener.remove());
+      }
     });
 
-    return () => cleanup?.();
-  }, [previewSource]);
+    return () => {
+      cancelled = true;
+      void listenerPromise?.then((listener) => listener.remove());
+    };
+  }, []);
   const handleLogin = () => {
-    setCurrentScreen('home');
+    resetToScreen('home');
   };
 
   const handleStartWorkout = () => {
-    setCurrentScreen('setup');
+    pushScreen('setup');
   };
 
   const handlePlanGenerated = (plan: WorkoutPlan) => {
     setWorkoutPlan(plan);
-    setPreviewSource('setup');
-    setCurrentScreen('preview');
+    pushScreen('preview');
   };
 
   const handleStartSession = (updatedPlan?: WorkoutPlan) => {
     if (updatedPlan) {
       setWorkoutPlan(updatedPlan);
     }
-    setCurrentScreen('session');
+    pushScreen('session');
   };
 
   const handleWorkoutComplete = (sessionId: string, exercises: Exercise[]) => {
     setCompletedWorkout({ sessionId, exercises });
-    setCurrentScreen('complete');
+    replaceScreen('complete');
   };
 
   const handleLoadPlan = (plan: WorkoutPlan) => {
     setWorkoutPlan(plan);
-    setPreviewSource('home');
-    setCurrentScreen('preview');
-  };
-
-  const handleBackToHome = () => {
-    setHomeKey((k) => k + 1); // force Home to remount so savedRoutines are re-read
-    setCurrentScreen('home');
-    setWorkoutPlan(null);
+    pushScreen('preview');
   };
 
   const handleLogout = () => {
@@ -124,35 +185,35 @@ export default function App() {
     localStorage.removeItem('fitech_user_name');
     setWorkoutPlan(null);
     setCompletedWorkout(null);
-    setCurrentScreen('login');
+    resetToScreen('login');
   };
 
   const handleGoToProfile = () => {
-    setCurrentScreen('profile');
+    pushScreen('profile');
   };
 
   const handleViewHistory = () => {
-    setCurrentScreen('history');
+    pushScreen('history');
   };
 
   const handleViewProgressReport = () => {
-    setCurrentScreen('progress');
+    pushScreen('progress');
   };
 
   const handleViewRoutines = () => {
-    setCurrentScreen('routines');
+    pushScreen('routines');
   };
 
   const handleBackFromSetup = () => {
-    setCurrentScreen('home');
+    goBackOrHome();
   };
 
   const handleBackFromPreview = () => {
-    setCurrentScreen(previewSource === 'home' ? 'home' : 'setup');
+    goBackOrHome();
   };
 
   const handleBackFromSession = () => {
-    setCurrentScreen('preview');
+    goBackOrHome();
   };
 
   return (
@@ -195,14 +256,14 @@ export default function App() {
           />
         )}
         {currentScreen === 'profile' && (
-          <Profile onBackToHome={handleBackToHome} onLogout={handleLogout} />
+          <Profile onBackToHome={goBackOrHome} onLogout={handleLogout} />
         )}
         {currentScreen === 'history' && (
-          <WorkoutHistory onBack={handleBackToHome} onLoadPlan={handleLoadPlan} />
+          <WorkoutHistory onBack={goBackOrHome} onLoadPlan={handleLoadPlan} />
         )}
-        {currentScreen === 'progress' && <ProgressReport onBack={handleBackToHome} />}
+        {currentScreen === 'progress' && <ProgressReport onBack={goBackOrHome} />}
         {currentScreen === 'routines' && (
-          <RoutineLibrary onBack={handleBackToHome} onLoadPlan={handleLoadPlan} />
+          <RoutineLibrary onBack={goBackOrHome} onLoadPlan={handleLoadPlan} />
         )}
       </div>
     </div>
