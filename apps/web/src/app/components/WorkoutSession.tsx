@@ -9,8 +9,6 @@ import {
   Dumbbell,
   RefreshCw,
   Check,
-  Minus,
-  Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { WorkoutPlan, Exercise, ExerciseSet } from '../domain/workout';
@@ -41,8 +39,6 @@ interface WorkoutSessionProps {
 
 const formatKg = (weight: number) =>
   Number.isInteger(weight) ? `${weight}` : weight.toFixed(1).replace(/\.0$/, '');
-
-const normalizeWeight = (weight: number) => Math.max(0, Math.round(weight * 10) / 10);
 
 const getSetTarget = (exercise: Exercise | undefined, setNumber: number) => {
   const plannedSet = exercise?.setDetails?.[Math.max(0, setNumber - 1)];
@@ -103,12 +99,6 @@ const canAdjustWeight = (exercise: Exercise | undefined) => {
   return exerciseType === 'Weight / Reps' || exerciseType === 'Machine / Reps';
 };
 
-const sanitizeWeightInput = (value: string) => {
-  const normalized = value.replace(',', '.').replace(/[^\d.]/g, '');
-  const [whole, ...decimalParts] = normalized.split('.');
-  return decimalParts.length > 0 ? `${whole}.${decimalParts.join('')}` : whole;
-};
-
 const getMutableSetDetails = (exercise: Exercise): ExerciseSet[] => {
   const setDetails =
     exercise.setDetails?.map((set) => ({ ...set })) ??
@@ -131,125 +121,24 @@ const getMutableSetDetails = (exercise: Exercise): ExerciseSet[] => {
 
 const allExerciseTemplates = Object.values(exerciseLibrary).flat();
 
-interface WeightAdjustmentNotice {
-  exerciseId: string;
-  exerciseName: string;
-  targetSetIndex: number;
-  affectedSetIndexes: number[];
-  weight: number;
-  previousSetDetails: ExerciseSet[];
-}
-
-const formatAffectedSets = (setIndexes: number[]) => {
-  const setNumbers = Array.from(new Set(setIndexes.map((setIndex) => setIndex + 1))).sort(
-    (a, b) => a - b,
-  );
-
-  if (setNumbers.length === 0) return 'Current set';
-
-  const ranges: string[] = [];
-  let rangeStart = setNumbers[0];
-  let previous = setNumbers[0];
-
-  for (let index = 1; index < setNumbers.length; index += 1) {
-    const setNumber = setNumbers[index];
-    if (setNumber === previous + 1) {
-      previous = setNumber;
-      continue;
-    }
-
-    ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}–${previous}`);
-    rangeStart = setNumber;
-    previous = setNumber;
-  }
-
-  ranges.push(rangeStart === previous ? `${rangeStart}` : `${rangeStart}–${previous}`);
-
-  return `Sets ${ranges.join(', ')}`;
+const sanitizeDecimalInput = (value: string) => {
+  const normalized = value.replace(',', '.').replace(/[^\d.]/g, '');
+  const [whole = '', ...fractionParts] = normalized.split('.');
+  if (fractionParts.length === 0) return whole;
+  return `${whole}.${fractionParts.join('').slice(0, 1)}`;
 };
 
-const getWeightAdjustmentTitle = (notice: WeightAdjustmentNotice) => {
-  const remainingSetCount = notice.affectedSetIndexes.filter(
-    (setIndex) => setIndex > notice.targetSetIndex,
-  ).length;
-  const remainingLabel =
-    remainingSetCount === 1 ? '1 remaining set' : `${remainingSetCount} remaining sets`;
+const sanitizeWholeNumberInput = (value: string) => value.replace(/\D/g, '');
 
-  return `Updated current + ${remainingLabel} to ${formatKg(notice.weight)}kg`;
+const parseSetNumberInput = (value: string, fallback = 0) => {
+  const normalized = sanitizeDecimalInput(value);
+  const parsed = parseFloat(normalized);
+  return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed * 10) / 10) : fallback;
 };
 
-interface WeightAdjusterProps {
-  exercise: Exercise | undefined;
-  setNumber: number;
-  onChange: (weight: number) => void;
-}
-
-const WeightAdjuster = ({ exercise, setNumber, onChange }: WeightAdjusterProps) => {
-  const adjustable = canAdjustWeight(exercise);
-  const currentWeight = adjustable ? getSetTarget(exercise, setNumber).weight : 0;
-  const currentValue = currentWeight > 0 ? formatKg(currentWeight) : '';
-  const [draftValue, setDraftValue] = useState(currentValue);
-  const [isEditing, setIsEditing] = useState(false);
-  const updateBy = (delta: number) => onChange(normalizeWeight(currentWeight + delta));
-
-  useEffect(() => {
-    if (!isEditing) setDraftValue(currentValue);
-  }, [currentValue, isEditing]);
-
-  if (!adjustable) return null;
-
-  const commitDraftValue = () => {
-    const nextWeight = normalizeWeight(parseFloat(draftValue) || 0);
-    onChange(nextWeight);
-    setDraftValue(nextWeight > 0 ? formatKg(nextWeight) : '');
-    setIsEditing(false);
-  };
-
-  return (
-    <div className="inline-flex items-center gap-1.5 rounded-full border border-neutral-800 bg-neutral-900/80 px-2 py-1 text-xs text-neutral-500">
-      <span className="pl-1 font-medium">kg</span>
-      <button
-        type="button"
-        onClick={() => updateBy(-2.5)}
-        disabled={currentWeight <= 0}
-        aria-label="Decrease current set weight by 2.5 kilograms"
-        className="h-7 w-7 rounded-full bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-35 disabled:hover:bg-neutral-800 flex items-center justify-center transition-colors"
-      >
-        <Minus className="h-3.5 w-3.5" />
-      </button>
-      <input
-        type="text"
-        inputMode="decimal"
-        pattern="[0-9]*[.,]?[0-9]*"
-        value={isEditing ? draftValue : currentValue}
-        onFocus={(event) => {
-          setIsEditing(true);
-          event.currentTarget.select();
-        }}
-        onChange={(event) => setDraftValue(sanitizeWeightInput(event.target.value))}
-        onBlur={commitDraftValue}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') event.currentTarget.blur();
-          if (event.key === 'Escape') {
-            setDraftValue(currentValue);
-            setIsEditing(false);
-            event.currentTarget.blur();
-          }
-        }}
-        aria-label="Current set weight in kilograms"
-        placeholder="0"
-        className="h-7 w-20 rounded-full bg-neutral-950/70 px-2.5 text-center text-sm font-semibold tabular-nums text-white outline-none focus:ring-1 focus:ring-blue-500"
-      />
-      <button
-        type="button"
-        onClick={() => updateBy(2.5)}
-        aria-label="Increase current set weight by 2.5 kilograms"
-        className="h-7 w-7 rounded-full bg-neutral-800 text-neutral-300 hover:bg-neutral-700 flex items-center justify-center transition-colors"
-      >
-        <Plus className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
+const parseWholeNumberInput = (value: string, fallback = 0) => {
+  const parsed = parseInt(sanitizeWholeNumberInput(value), 10);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback;
 };
 
 interface TargetSummaryButtonProps {
@@ -272,77 +161,209 @@ const TargetSummaryButton = ({
     className={`inline-flex items-center justify-center gap-1 rounded-full text-xs text-neutral-500 hover:text-blue-300 disabled:hover:text-neutral-500 transition-colors ${className}`}
   >
     <span>Target: {getSetTargetDisplay(exercise, setNumber)}</span>
-    <span className="text-blue-400/80">Plan</span>
+    <span className="text-blue-400/80">Edit sets</span>
   </button>
 );
 
 interface SetPlanSheetProps {
   exercise: Exercise;
   currentSet: number;
+  onSave: (setDetails: ExerciseSet[]) => void;
   onClose: () => void;
 }
 
-const SetPlanSheet = ({ exercise, currentSet, onClose }: SetPlanSheetProps) => {
-  const setDetails = getMutableSetDetails(exercise);
+const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetProps) => {
+  const [draftSets, setDraftSets] = useState<ExerciseSet[]>(() => getMutableSetDetails(exercise));
+  const [weightInputs, setWeightInputs] = useState<string[]>(() =>
+    getMutableSetDetails(exercise).map((set) => (set.weight > 0 ? formatKg(set.weight) : '')),
+  );
+  const [repInputs, setRepInputs] = useState<string[]>(() =>
+    getMutableSetDetails(exercise).map((set) => (set.reps > 0 ? `${set.reps}` : '')),
+  );
+  const [bulkWeight, setBulkWeight] = useState('');
+  const [bulkReps, setBulkReps] = useState('');
+  const isWeightBased = canAdjustWeight(exercise);
+  const isHold = getExerciseType(exercise.name) === 'Hold / Time';
+
+  const updateDraftSet = (setIndex: number, field: 'weight' | 'reps', value: number) => {
+    setDraftSets((sets) =>
+      sets.map((set, index) => (index === setIndex ? { ...set, [field]: value } : set)),
+    );
+  };
+
+  const updateDraftWeight = (setIndex: number, value: string) => {
+    const nextValue = sanitizeDecimalInput(value);
+    setWeightInputs((inputs) =>
+      inputs.map((input, index) => (index === setIndex ? nextValue : input)),
+    );
+    if (nextValue === '') {
+      updateDraftSet(setIndex, 'weight', 0);
+      return;
+    }
+    const parsed = parseSetNumberInput(nextValue, NaN);
+    if (Number.isFinite(parsed)) {
+      updateDraftSet(setIndex, 'weight', parsed);
+    }
+  };
+
+  const updateDraftReps = (setIndex: number, value: string) => {
+    const nextValue = sanitizeWholeNumberInput(value);
+    setRepInputs((inputs) =>
+      inputs.map((input, index) => (index === setIndex ? nextValue : input)),
+    );
+    updateDraftSet(setIndex, 'reps', parseWholeNumberInput(nextValue, 0));
+  };
+
+  const applyWeightToAll = () => {
+    const weight = parseSetNumberInput(bulkWeight, NaN);
+    if (!Number.isFinite(weight)) return;
+    const displayWeight = formatKg(weight);
+    setDraftSets((sets) => sets.map((set) => ({ ...set, weight })));
+    setWeightInputs((inputs) => inputs.map(() => displayWeight));
+    setBulkWeight(displayWeight);
+  };
+
+  const applyRepsToAll = () => {
+    const reps = parseWholeNumberInput(bulkReps, NaN);
+    if (!Number.isFinite(reps)) return;
+    setDraftSets((sets) => sets.map((set) => ({ ...set, reps })));
+    setRepInputs((inputs) => inputs.map(() => `${reps}`));
+    setBulkReps(`${reps}`);
+  };
 
   return (
     <div className="absolute inset-0 z-30 bg-black/70 backdrop-blur-sm flex items-end">
       <button
         type="button"
-        aria-label="Close set plan"
+        aria-label="Close set editor"
         onClick={onClose}
         className="absolute inset-0 cursor-default"
       />
-      <div className="relative w-full max-h-[72%] rounded-t-3xl bg-neutral-950 border-t border-neutral-800 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-h-[82%] rounded-t-3xl bg-neutral-950 border-t border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
           <div className="min-w-0">
             <div className="text-xs font-bold text-blue-300 uppercase tracking-widest">
-              Set plan
+              Edit current exercise
             </div>
             <h2 className="text-lg font-semibold truncate">{exercise.name}</h2>
             <p className="text-xs text-neutral-500 mt-0.5">
-              {canAdjustWeight(exercise)
-                ? 'kg changes update this set and the remaining sets by default.'
-                : 'Review the planned sets for this exercise.'}
+              Review and save kg/reps for every set in this exercise.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close set plan"
+            aria-label="Close set editor"
             className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="overflow-y-auto p-4 space-y-2">
-          {setDetails.map((set, index) => {
-            const setNumber = index + 1;
-            const isCurrent = setNumber === currentSet;
-            const status = set.completed ? 'Done' : isCurrent ? 'Now' : 'Upcoming';
-            const target =
-              getExerciseType(exercise.name) === 'Hold / Time'
-                ? `${set.reps}s hold`
-                : set.weight > 0
-                  ? `${formatKg(set.weight)}kg · ${set.reps} reps`
-                  : `Bodyweight · ${set.reps} reps`;
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3">
+            <div className="text-xs font-semibold text-blue-200 mb-2">Apply to all sets</div>
+            <div className={`grid ${isWeightBased ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
+              {isWeightBased && (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={bulkWeight}
+                    onChange={(event) => setBulkWeight(sanitizeDecimalInput(event.target.value))}
+                    placeholder="kg"
+                    className="min-w-0 flex-1 rounded-xl bg-neutral-950/70 px-3 py-2 text-center text-sm font-semibold text-white outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyWeightToAll}
+                    className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
+                  >
+                    Apply kg
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={bulkReps}
+                  onChange={(event) => setBulkReps(sanitizeWholeNumberInput(event.target.value))}
+                  placeholder={isHold ? 'sec' : 'reps'}
+                  className="min-w-0 flex-1 rounded-xl bg-neutral-950/70 px-3 py-2 text-center text-sm font-semibold text-white outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={applyRepsToAll}
+                  className="rounded-xl bg-neutral-800 px-3 py-2 text-xs font-semibold text-neutral-100 hover:bg-neutral-700 transition-colors"
+                >
+                  Apply {isHold ? 'sec' : 'reps'}
+                </button>
+              </div>
+            </div>
+          </div>
 
-            return (
-              <div
-                key={setNumber}
-                className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
-                  isCurrent
-                    ? 'border-blue-500/50 bg-blue-500/10'
-                    : set.completed
-                      ? 'border-emerald-500/20 bg-emerald-500/5'
-                      : 'border-neutral-800 bg-neutral-900/70'
-                }`}
-              >
-                <div>
-                  <div className="font-semibold text-white">Set {setNumber}</div>
+          <div className="space-y-2">
+            <div
+              className={`grid ${isWeightBased ? 'grid-cols-[44px_1fr_1fr_64px]' : 'grid-cols-[44px_1fr_64px]'} gap-1.5 px-1 text-xs text-neutral-500`}
+            >
+              <div>Set</div>
+              {isWeightBased && <div>kg</div>}
+              <div>{isHold ? 'Sec' : 'Reps'}</div>
+              <div className="text-right">Status</div>
+            </div>
+            {draftSets.map((set, index) => {
+              const setNumber = index + 1;
+              const isCurrent = setNumber === currentSet;
+              const status = set.completed ? 'Done' : isCurrent ? 'Now' : 'Next';
+              const setType = set.setType ?? 'normal';
+              return (
+                <div
+                  key={setNumber}
+                  className={`grid ${isWeightBased ? 'grid-cols-[44px_1fr_1fr_64px]' : 'grid-cols-[44px_1fr_64px]'} gap-1.5 items-center rounded-2xl border p-2 ${
+                    isCurrent
+                      ? 'border-blue-500/50 bg-blue-500/10'
+                      : set.completed
+                        ? 'border-emerald-500/20 bg-emerald-500/5'
+                        : 'border-neutral-800 bg-neutral-900/70'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <div
+                      className={`w-9 rounded-lg py-1 text-center text-sm font-bold ${
+                        setType === 'failure'
+                          ? 'bg-red-600 text-white'
+                          : setType === 'dropset'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-neutral-700 text-neutral-200'
+                      }`}
+                    >
+                      {setNumber}
+                    </div>
+                    {setType !== 'normal' && (
+                      <div className="text-[9px] uppercase text-orange-300">{setType}</div>
+                    )}
+                  </div>
+                  {isWeightBased && (
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={weightInputs[index] ?? ''}
+                      onChange={(event) => updateDraftWeight(index, event.target.value)}
+                      className="min-w-0 w-full rounded-xl bg-neutral-950/70 px-2.5 py-2 text-center text-sm font-semibold tabular-nums text-white outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="0"
+                    />
+                  )}
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={repInputs[index] ?? ''}
+                    onChange={(event) => updateDraftReps(index, event.target.value)}
+                    className="min-w-0 w-full rounded-xl bg-neutral-950/70 px-2.5 py-2 text-center text-sm font-semibold tabular-nums text-white outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="0"
+                  />
                   <div
-                    className={`mt-0.5 text-[11px] font-medium ${
+                    className={`text-right text-[11px] font-semibold ${
                       set.completed
                         ? 'text-emerald-300'
                         : isCurrent
@@ -353,15 +374,26 @@ const SetPlanSheet = ({ exercise, currentSet, onClose }: SetPlanSheetProps) => {
                     {status}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-semibold text-neutral-100">{target}</div>
-                  {set.setType && set.setType !== 'normal' && (
-                    <div className="mt-0.5 text-[11px] text-orange-300">{set.setType}</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 border-t border-neutral-800 p-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-2xl bg-neutral-800 px-4 py-3 text-sm font-semibold text-neutral-200 hover:bg-neutral-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(draftSets.map((set) => ({ ...set })))}
+            className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
+          >
+            Save changes
+          </button>
         </div>
       </div>
     </div>
@@ -502,8 +534,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   );
   const [showReplacementPicker, setShowReplacementPicker] = useState(false);
   const [showSetPlan, setShowSetPlan] = useState(false);
-  const [weightAdjustmentNotice, setWeightAdjustmentNotice] =
-    useState<WeightAdjustmentNotice | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const { isSupported: _isAudioSupported, speak, stop } = useAudioCoach(audioEnabled);
 
@@ -540,9 +570,8 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
   const progress = (completedExercises.length / totalExercises) * 100;
 
   useEffect(() => {
-    setWeightAdjustmentNotice(null);
     setShowSetPlan(false);
-  }, [currentExerciseIndex, currentSet]);
+  }, [currentExerciseIndex]);
 
   useEffect(() => {
     if (audioMessage) {
@@ -619,100 +648,22 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     });
   };
 
-  const updateCurrentSetWeight = (weight: number) => {
-    if (!currentExercise || !canAdjustWeight(currentExercise)) return;
-
-    const nextWeight = normalizeWeight(weight);
-    const targetSetIndex = Math.max(0, currentSet - 1);
-    let nextNotice: WeightAdjustmentNotice | null = null;
-
-    const nextExercises = exercises.map((exercise, index) => {
-      if (index !== currentExerciseIndex) return exercise;
-
-      const setDetails = getMutableSetDetails(exercise);
-      const affectedSetIndexes = setDetails
-        .map((set, setIndex) =>
-          setIndex === targetSetIndex || (setIndex > targetSetIndex && !set.completed)
-            ? setIndex
-            : -1,
-        )
-        .filter((setIndex) => setIndex >= 0);
-      const existingNotice =
-        weightAdjustmentNotice?.exerciseId === exercise.id &&
-        weightAdjustmentNotice.targetSetIndex === targetSetIndex
-          ? weightAdjustmentNotice
-          : null;
-      const baselineSetDetails = existingNotice?.previousSetDetails ?? setDetails;
-      const noticedSetIndexes = Array.from(
-        new Set([...(existingNotice?.affectedSetIndexes ?? []), ...affectedSetIndexes]),
-      );
-
-      const nextSetDetails = setDetails.map((set, setIndex) =>
-        affectedSetIndexes.includes(setIndex) ? { ...set, weight: nextWeight } : set,
-      );
-
-      if (affectedSetIndexes.length > 1) {
-        nextNotice = {
-          exerciseId: exercise.id,
-          exerciseName: exercise.name,
-          targetSetIndex,
-          affectedSetIndexes: noticedSetIndexes,
-          weight: nextWeight,
-          previousSetDetails: baselineSetDetails,
-        };
-      }
-
-      return {
-        ...exercise,
-        setDetails: nextSetDetails,
-      };
-    });
-
-    setExercises(nextExercises);
-    setWeightAdjustmentNotice(nextNotice);
-  };
-
-  const undoWeightAdjustment = () => {
-    if (!weightAdjustmentNotice) return;
+  const saveCurrentExerciseSetPlan = (setDetails: ExerciseSet[]) => {
+    if (!currentExercise) return;
 
     setExercises((previousExercises) =>
-      previousExercises.map((exercise) =>
-        exercise.id === weightAdjustmentNotice.exerciseId
-          ? {
-              ...exercise,
-              setDetails: weightAdjustmentNotice.previousSetDetails.map((set) => ({ ...set })),
-            }
-          : exercise,
-      ),
-    );
-    setWeightAdjustmentNotice(null);
-  };
-
-  const keepWeightChangeOnCurrentSetOnly = () => {
-    if (!weightAdjustmentNotice) return;
-
-    setExercises((previousExercises) =>
-      previousExercises.map((exercise) => {
-        if (exercise.id !== weightAdjustmentNotice.exerciseId) return exercise;
-
-        const currentSetDetails = getMutableSetDetails(exercise);
+      previousExercises.map((exercise, index) => {
+        if (index !== currentExerciseIndex) return exercise;
+        const nextSetDetails = setDetails.map((set) => ({ ...set }));
         return {
           ...exercise,
-          setDetails: currentSetDetails.map((set, setIndex) => {
-            if (setIndex === weightAdjustmentNotice.targetSetIndex) {
-              return { ...set, weight: weightAdjustmentNotice.weight };
-            }
-            if (weightAdjustmentNotice.affectedSetIndexes.includes(setIndex)) {
-              return weightAdjustmentNotice.previousSetDetails[setIndex]
-                ? { ...weightAdjustmentNotice.previousSetDetails[setIndex] }
-                : set;
-            }
-            return set;
-          }),
+          sets: nextSetDetails.length,
+          reps: nextSetDetails[0]?.reps ?? exercise.reps,
+          setDetails: nextSetDetails,
         };
       }),
     );
-    setWeightAdjustmentNotice(null);
+    setShowSetPlan(false);
   };
 
   const completeSession = (finalExercises: Exercise[], finalEvents: WorkoutSessionEvent[]) => {
@@ -1091,15 +1042,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                 onOpenPlan={() => setShowSetPlan(true)}
                 className="mb-2"
               />
-              {canAdjustWeight(currentExercise) && (
-                <div className="mb-3">
-                  <WeightAdjuster
-                    exercise={currentExercise}
-                    setNumber={currentSet}
-                    onChange={updateCurrentSetWeight}
-                  />
-                </div>
-              )}
               <div className="text-sm text-neutral-500 mb-4">Single tap to skip rest</div>
               <button
                 type="button"
@@ -1195,15 +1137,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                               onOpenPlan={() => setShowSetPlan(true)}
                               className="mt-1 justify-start"
                             />
-                            {canAdjustWeight(currentExercise) && (
-                              <div className="mt-2">
-                                <WeightAdjuster
-                                  exercise={currentExercise}
-                                  setNumber={currentSet}
-                                  onChange={updateCurrentSetWeight}
-                                />
-                              </div>
-                            )}
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
@@ -1304,11 +1237,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
                             setNumber={currentSet}
                             onOpenPlan={() => setShowSetPlan(true)}
                           />
-                          <WeightAdjuster
-                            exercise={currentExercise}
-                            setNumber={currentSet}
-                            onChange={updateCurrentSetWeight}
-                          />
                         </div>
                       )}
                       <button
@@ -1361,34 +1289,6 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
 
       {/* Tap controls */}
       <div className="px-5 pb-6">
-        {weightAdjustmentNotice && (
-          <div className="mb-3 rounded-2xl border border-blue-500/30 bg-blue-500/10 px-3 py-2.5 text-xs shadow-lg shadow-blue-950/20">
-            <div className="font-semibold text-blue-100">
-              {getWeightAdjustmentTitle(weightAdjustmentNotice)}
-            </div>
-            <div className="mt-0.5 truncate text-neutral-400">
-              {weightAdjustmentNotice.exerciseName} ·{' '}
-              {formatAffectedSets(weightAdjustmentNotice.affectedSetIndexes)}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={keepWeightChangeOnCurrentSetOnly}
-                className="flex-1 rounded-full bg-neutral-900/80 px-3 py-1.5 font-medium text-neutral-200 hover:bg-neutral-800 transition-colors"
-              >
-                This set only
-              </button>
-              <button
-                type="button"
-                onClick={undoWeightAdjustment}
-                className="flex-1 rounded-full bg-blue-500 px-3 py-1.5 font-semibold text-white hover:bg-blue-400 transition-colors"
-              >
-                Undo
-              </button>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-3 gap-2 text-center">
           <button
             onClick={handleSingleTap}
@@ -1440,6 +1340,7 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         <SetPlanSheet
           exercise={currentExercise}
           currentSet={currentSet}
+          onSave={saveCurrentExerciseSetPlan}
           onClose={() => setShowSetPlan(false)}
         />
       )}

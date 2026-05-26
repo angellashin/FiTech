@@ -117,6 +117,20 @@ describe('generateWorkoutPlan', () => {
     });
   });
 
+  it('keeps every in-session target aligned with the initially generated set plan', () => {
+    const plan = generateWorkoutPlan('strength', ['chest', 'back', 'lower-body'], 60);
+
+    plan.exercises.forEach((exercise) => {
+      expect(exercise.setDetails).toHaveLength(exercise.sets);
+      exercise.setDetails?.forEach((set) => {
+        expect(Number.isFinite(set.weight)).toBe(true);
+        expect(set.weight).toBeGreaterThanOrEqual(0);
+        expect(set.reps).toBeGreaterThan(0);
+        expect(set.completed).toBe(false);
+      });
+    });
+  });
+
   it('reduces recommended weights when training context marks the muscle group as fatigued', () => {
     const normalPlan = generateWorkoutPlan('strength', ['lower-body'], 15, 'normal');
     const adjustedPlan = generateWorkoutPlan('strength', ['lower-body'], 15, 'normal', {

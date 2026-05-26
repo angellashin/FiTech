@@ -285,3 +285,35 @@
 - `npm run test` ✅ — 8 files / 55 tests passed
 - `npm run build` ✅
 - `npm run format:check` ✅
+
+## 12. Workout Session — 현재 운동 전체 세트 편집 팝업 재구성
+
+**사용자 의도:** 운동 중 kg/reps 수정은 해당 세트 하나만 바꾸는 방식이나 자동 저장 방식이 아니라, 현재 진행 중인 운동의 전체 세트를 팝업에서 보고 세트별/일괄로 수정한 뒤 명시적으로 저장하는 흐름이어야 함.
+
+**업데이트 내용:**
+
+- 이전에 추가했던 운동 중 inline kg 조절 버튼, 남은 세트 자동 반영, `Undo`/`This set only` 피드백 박스를 제거.
+- `Target ... Edit sets` 버튼을 누르면 현재 운동의 전체 세트가 bottom sheet로 열리도록 재구성.
+- 팝업 안에서 세트별 kg와 reps/sec를 각각 수정할 수 있게 함.
+- 상단 `Apply to all sets` 영역에서 kg 또는 reps/sec를 현재 운동의 모든 세트에 일괄 적용할 수 있게 함.
+- 변경값은 팝업 내부 draft 상태로만 유지하고, `Save changes`를 눌렀을 때만 실제 세션 플랜에 반영되도록 변경.
+- `.5` kg 입력이 중간에 사라지거나 잘리지 않도록 decimal text 입력값을 문자열 draft로 관리.
+- 생성된 운동 플랜의 각 운동이 `sets`와 동일한 개수의 `setDetails`를 갖고, 세션 중 표시할 kg/reps 타깃이 유효한지 회귀 테스트 추가.
+
+**수정 파일:**
+
+- `src/app/components/WorkoutSession.tsx`
+- `src/app/services/workoutPlanner.test.ts`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 8 files / 56 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅
+
+**참고:**
+
+- 이제 kg/reps는 운동 중 화면에서 자동 저장되지 않으며, 팝업의 `Save changes`가 명시적 저장 기준이다.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.

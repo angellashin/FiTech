@@ -326,3 +326,28 @@
 **참고**:
 - Home/Login에서 Android 하드웨어 뒤로가기는 기존처럼 앱 종료.
 - Workout Complete는 완료된 세션으로 되돌아가지 않도록 하드웨어 뒤로가기 시 Home으로 복귀하는 예외 유지.
+
+---
+
+## 2026-05-26 — Codex follow-up 10 (branch: `main`, local)
+
+**한 줄 요약**: 운동 중 kg/reps 수정을 현재 운동 전체 세트 편집 팝업으로 다시 만들고, 이전 자동 저장/남은 세트 자동 반영 UX를 제거했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — inline kg 조절/자동 반영/피드백 제거, 전체 세트 편집 bottom sheet, 세트별 및 전체 적용 kg/reps 편집, 명시적 Save 저장 흐름
+- `apps/web/src/app/services/workoutPlanner.test.ts` — 생성 플랜의 세션 타깃 setDetails 일관성 회귀 테스트 추가
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (8 files / 56 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- 팝업에서 `Cancel`/닫기를 누르면 변경 draft는 폐기되고, `Save changes`만 현재 세션 플랜에 반영한다.
+- `.5` kg 입력은 문자열 draft로 유지해 모바일 입력 중 값이 잘리지 않도록 처리했다.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
