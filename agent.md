@@ -351,3 +351,27 @@
 - 팝업에서 `Cancel`/닫기를 누르면 변경 draft는 폐기되고, `Save changes`만 현재 세션 플랜에 반영한다.
 - `.5` kg 입력은 문자열 draft로 유지해 모바일 입력 중 값이 잘리지 않도록 처리했다.
 - 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+---
+
+## 2026-05-26 — Codex follow-up 11 (branch: `main`, local)
+
+**한 줄 요약**: 운동 중 세트 편집을 저장/취소 없는 즉시 반영 UX로 단순화하고, 세트 추가/삭제 및 커스텀 숫자패드를 추가했다.
+
+**상세 핸드오프**: [`apps/web/HANDOFF_5.md`](apps/web/HANDOFF_5.md)
+
+**수정 파일**:
+- `apps/web/src/app/components/WorkoutSession.tsx` — `Apply to all sets`/저장 footer 제거, 즉시 반영 세트 편집, `+ Add set`/`− Remove last`, kg/reps용 커스텀 숫자패드
+- `apps/web/HANDOFF_5.md` / `agent.md` — 온보딩 기록 업데이트
+
+**검증**:
+- `cd apps/web && npm run typecheck` ✅
+- `cd apps/web && npm run lint` ✅
+- `cd apps/web && npm run test` ✅ (8 files / 56 tests)
+- `cd apps/web && npm run build` ✅
+- `cd apps/web && npm run format:check` ✅
+
+**참고**:
+- 값은 숫자패드 입력/`+5`/`−5`/`Clear` 순간 바로 현재 세션 플랜에 반영된다.
+- 체크 버튼은 숫자패드를 닫는 확인 버튼이며, 별도 저장 단계는 없다.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.

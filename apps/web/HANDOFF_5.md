@@ -317,3 +317,34 @@
 
 - 이제 kg/reps는 운동 중 화면에서 자동 저장되지 않으며, 팝업의 `Save changes`가 명시적 저장 기준이다.
 - 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+## 13. Workout Session — 즉시 반영 세트 편집 + 커스텀 숫자패드
+
+**사용자 의도:** 운동 중 세트 편집 팝업은 `Apply to all sets`, `Cancel`, `Save changes` 없이 더 단순해야 함. 세트 추가/삭제는 리스트 아래에 두고, kg/reps 입력은 앱에 맞는 숫자패드로 빠르게 조작해야 함.
+
+**업데이트 내용:**
+
+- `Apply to all sets` 영역 제거.
+- `Cancel` / `Save changes` footer 제거.
+- kg/reps 값은 팝업에서 누르는 즉시 현재 세션 플랜에 반영되도록 변경.
+- 각 kg/reps 셀을 native input 대신 버튼형 셀로 바꾸고, 누르면 하단 커스텀 숫자패드가 열리도록 구성.
+- 커스텀 숫자패드 구성: 숫자 0-9, kg 전용 `.`, `Del`, 오른쪽 컬럼 `+5`, `−5`, `Clear`, 체크 확인 버튼.
+- 세트 추가/삭제 버튼을 세트 리스트 아래로 이동: `+ Add set`, `− Remove last`.
+- 세트 추가 시 직전 세트의 kg/reps를 기본값으로 복사하고, 삭제 시 마지막 세트를 제거하며 현재 세트 번호가 범위를 넘지 않도록 보정.
+
+**수정 파일:**
+
+- `src/app/components/WorkoutSession.tsx`
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 8 files / 56 tests passed
+- `npm run build` ✅
+- `npm run format:check` ✅
+
+**참고:**
+
+- 12번 기록의 명시적 `Save changes` 흐름은 이번 변경으로 대체됨. 현재는 값 변경/세트 추가/세트 삭제가 모두 즉시 반영된다.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.

@@ -165,70 +165,109 @@ const TargetSummaryButton = ({
   </button>
 );
 
+type EditableSetField = 'weight' | 'reps';
+
+interface EditingSetTarget {
+  setIndex: number;
+  field: EditableSetField;
+}
+
 interface SetPlanSheetProps {
   exercise: Exercise;
   currentSet: number;
-  onSave: (setDetails: ExerciseSet[]) => void;
+  onUpdateSet: (setIndex: number, field: EditableSetField, value: number) => void;
+  onAddSet: () => void;
+  onRemoveLastSet: () => void;
   onClose: () => void;
 }
 
-const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetProps) => {
-  const [draftSets, setDraftSets] = useState<ExerciseSet[]>(() => getMutableSetDetails(exercise));
-  const [weightInputs, setWeightInputs] = useState<string[]>(() =>
-    getMutableSetDetails(exercise).map((set) => (set.weight > 0 ? formatKg(set.weight) : '')),
-  );
-  const [repInputs, setRepInputs] = useState<string[]>(() =>
-    getMutableSetDetails(exercise).map((set) => (set.reps > 0 ? `${set.reps}` : '')),
-  );
-  const [bulkWeight, setBulkWeight] = useState('');
-  const [bulkReps, setBulkReps] = useState('');
+const SetPlanSheet = ({
+  exercise,
+  currentSet,
+  onUpdateSet,
+  onAddSet,
+  onRemoveLastSet,
+  onClose,
+}: SetPlanSheetProps) => {
+  const setDetails = getMutableSetDetails(exercise);
+  const [editingTarget, setEditingTarget] = useState<EditingSetTarget | null>(null);
+  const [keypadValue, setKeypadValue] = useState('');
   const isWeightBased = canAdjustWeight(exercise);
   const isHold = getExerciseType(exercise.name) === 'Hold / Time';
+  const activeSet = editingTarget ? setDetails[editingTarget.setIndex] : null;
+  const activeLabel = editingTarget
+    ? `${editingTarget.field === 'weight' ? 'kg' : isHold ? 'sec' : 'reps'} · Set ${
+        editingTarget.setIndex + 1
+      }`
+    : '';
 
-  const updateDraftSet = (setIndex: number, field: 'weight' | 'reps', value: number) => {
-    setDraftSets((sets) =>
-      sets.map((set, index) => (index === setIndex ? { ...set, [field]: value } : set)),
-    );
-  };
-
-  const updateDraftWeight = (setIndex: number, value: string) => {
-    const nextValue = sanitizeDecimalInput(value);
-    setWeightInputs((inputs) =>
-      inputs.map((input, index) => (index === setIndex ? nextValue : input)),
-    );
-    if (nextValue === '') {
-      updateDraftSet(setIndex, 'weight', 0);
-      return;
+  useEffect(() => {
+    if (!editingTarget) return;
+    if (
+      editingTarget.setIndex >= setDetails.length ||
+      (editingTarget.field === 'weight' && !isWeightBased)
+    ) {
+      setEditingTarget(null);
+      setKeypadValue('');
     }
-    const parsed = parseSetNumberInput(nextValue, NaN);
-    if (Number.isFinite(parsed)) {
-      updateDraftSet(setIndex, 'weight', parsed);
-    }
+  }, [editingTarget, isWeightBased, setDetails.length]);
+
+  const applyActiveValue = (value: string) => {
+    if (!editingTarget) return;
+
+    const parsed =
+      editingTarget.field === 'weight'
+        ? parseSetNumberInput(value, 0)
+        : parseWholeNumberInput(value, 0);
+    onUpdateSet(editingTarget.setIndex, editingTarget.field, parsed);
   };
 
-  const updateDraftReps = (setIndex: number, value: string) => {
-    const nextValue = sanitizeWholeNumberInput(value);
-    setRepInputs((inputs) =>
-      inputs.map((input, index) => (index === setIndex ? nextValue : input)),
+  const setKeypadValueAndApply = (value: string) => {
+    const sanitized =
+      editingTarget?.field === 'weight'
+        ? sanitizeDecimalInput(value)
+        : sanitizeWholeNumberInput(value);
+    setKeypadValue(sanitized);
+    applyActiveValue(sanitized);
+  };
+
+  const startEditing = (setIndex: number, field: EditableSetField) => {
+    const set = setDetails[setIndex];
+    const value = field === 'weight' ? (set?.weight ?? 0) : (set?.reps ?? 0);
+    setEditingTarget({ setIndex, field });
+    setKeypadValue(value > 0 ? (field === 'weight' ? formatKg(value) : `${value}`) : '');
+  };
+
+  const pressKeypadDigit = (key: string) => {
+    if (!editingTarget) return;
+    if (key === '.' && editingTarget.field !== 'weight') return;
+    setKeypadValueAndApply(`${keypadValue}${key}`);
+  };
+
+  const backspaceKeypad = () => setKeypadValueAndApply(keypadValue.slice(0, -1));
+
+  const adjustKeypadValue = (delta: number) => {
+    if (!editingTarget) return;
+    const fallback =
+      editingTarget.field === 'weight' ? (activeSet?.weight ?? 0) : (activeSet?.reps ?? 0);
+    const current =
+      editingTarget.field === 'weight'
+        ? parseSetNumberInput(keypadValue, fallback)
+        : parseWholeNumberInput(keypadValue, fallback);
+    const nextValue = Math.max(0, current + delta);
+    const display =
+      editingTarget.field === 'weight' ? formatKg(nextValue) : `${Math.round(nextValue)}`;
+    setKeypadValue(display);
+    onUpdateSet(
+      editingTarget.setIndex,
+      editingTarget.field,
+      editingTarget.field === 'weight' ? nextValue : Math.round(nextValue),
     );
-    updateDraftSet(setIndex, 'reps', parseWholeNumberInput(nextValue, 0));
   };
 
-  const applyWeightToAll = () => {
-    const weight = parseSetNumberInput(bulkWeight, NaN);
-    if (!Number.isFinite(weight)) return;
-    const displayWeight = formatKg(weight);
-    setDraftSets((sets) => sets.map((set) => ({ ...set, weight })));
-    setWeightInputs((inputs) => inputs.map(() => displayWeight));
-    setBulkWeight(displayWeight);
-  };
-
-  const applyRepsToAll = () => {
-    const reps = parseWholeNumberInput(bulkReps, NaN);
-    if (!Number.isFinite(reps)) return;
-    setDraftSets((sets) => sets.map((set) => ({ ...set, reps })));
-    setRepInputs((inputs) => inputs.map(() => `${reps}`));
-    setBulkReps(`${reps}`);
+  const closeKeypad = () => {
+    setEditingTarget(null);
+    setKeypadValue('');
   };
 
   return (
@@ -239,7 +278,7 @@ const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetPro
         onClick={onClose}
         className="absolute inset-0 cursor-default"
       />
-      <div className="relative w-full max-h-[82%] rounded-t-3xl bg-neutral-950 border-t border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-h-[92%] rounded-t-3xl bg-neutral-950 border-t border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
           <div className="min-w-0">
             <div className="text-xs font-bold text-blue-300 uppercase tracking-widest">
@@ -247,7 +286,7 @@ const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetPro
             </div>
             <h2 className="text-lg font-semibold truncate">{exercise.name}</h2>
             <p className="text-xs text-neutral-500 mt-0.5">
-              Review and save kg/reps for every set in this exercise.
+              Tap a value to edit. Changes apply immediately.
             </p>
           </div>
           <button
@@ -261,48 +300,6 @@ const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetPro
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3">
-            <div className="text-xs font-semibold text-blue-200 mb-2">Apply to all sets</div>
-            <div className={`grid ${isWeightBased ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
-              {isWeightBased && (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={bulkWeight}
-                    onChange={(event) => setBulkWeight(sanitizeDecimalInput(event.target.value))}
-                    placeholder="kg"
-                    className="min-w-0 flex-1 rounded-xl bg-neutral-950/70 px-3 py-2 text-center text-sm font-semibold text-white outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={applyWeightToAll}
-                    className="rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
-                  >
-                    Apply kg
-                  </button>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={bulkReps}
-                  onChange={(event) => setBulkReps(sanitizeWholeNumberInput(event.target.value))}
-                  placeholder={isHold ? 'sec' : 'reps'}
-                  className="min-w-0 flex-1 rounded-xl bg-neutral-950/70 px-3 py-2 text-center text-sm font-semibold text-white outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={applyRepsToAll}
-                  className="rounded-xl bg-neutral-800 px-3 py-2 text-xs font-semibold text-neutral-100 hover:bg-neutral-700 transition-colors"
-                >
-                  Apply {isHold ? 'sec' : 'reps'}
-                </button>
-              </div>
-            </div>
-          </div>
-
           <div className="space-y-2">
             <div
               className={`grid ${isWeightBased ? 'grid-cols-[44px_1fr_1fr_64px]' : 'grid-cols-[44px_1fr_64px]'} gap-1.5 px-1 text-xs text-neutral-500`}
@@ -312,11 +309,15 @@ const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetPro
               <div>{isHold ? 'Sec' : 'Reps'}</div>
               <div className="text-right">Status</div>
             </div>
-            {draftSets.map((set, index) => {
+            {setDetails.map((set, index) => {
               const setNumber = index + 1;
               const isCurrent = setNumber === currentSet;
               const status = set.completed ? 'Done' : isCurrent ? 'Now' : 'Next';
               const setType = set.setType ?? 'normal';
+              const isEditingWeight =
+                editingTarget?.setIndex === index && editingTarget.field === 'weight';
+              const isEditingReps =
+                editingTarget?.setIndex === index && editingTarget.field === 'reps';
               return (
                 <div
                   key={setNumber}
@@ -345,23 +346,29 @@ const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetPro
                     )}
                   </div>
                   {isWeightBased && (
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={weightInputs[index] ?? ''}
-                      onChange={(event) => updateDraftWeight(index, event.target.value)}
-                      className="min-w-0 w-full rounded-xl bg-neutral-950/70 px-2.5 py-2 text-center text-sm font-semibold tabular-nums text-white outline-none focus:ring-1 focus:ring-blue-500"
-                      placeholder="0"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => startEditing(index, 'weight')}
+                      className={`min-w-0 w-full rounded-xl px-2.5 py-2 text-center text-sm font-semibold tabular-nums outline-none transition-all ${
+                        isEditingWeight
+                          ? 'bg-blue-600 text-white ring-2 ring-blue-300'
+                          : 'bg-neutral-950/70 text-white hover:bg-neutral-800 focus:ring-1 focus:ring-blue-500'
+                      }`}
+                    >
+                      {set.weight > 0 ? `${formatKg(set.weight)} kg` : '0 kg'}
+                    </button>
                   )}
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={repInputs[index] ?? ''}
-                    onChange={(event) => updateDraftReps(index, event.target.value)}
-                    className="min-w-0 w-full rounded-xl bg-neutral-950/70 px-2.5 py-2 text-center text-sm font-semibold tabular-nums text-white outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="0"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => startEditing(index, 'reps')}
+                    className={`min-w-0 w-full rounded-xl px-2.5 py-2 text-center text-sm font-semibold tabular-nums outline-none transition-all ${
+                      isEditingReps
+                        ? 'bg-blue-600 text-white ring-2 ring-blue-300'
+                        : 'bg-neutral-950/70 text-white hover:bg-neutral-800 focus:ring-1 focus:ring-blue-500'
+                    }`}
+                  >
+                    {set.reps || 0} {isHold ? 'sec' : 'reps'}
+                  </button>
                   <div
                     className={`text-right text-[11px] font-semibold ${
                       set.completed
@@ -377,24 +384,110 @@ const SetPlanSheet = ({ exercise, currentSet, onSave, onClose }: SetPlanSheetPro
               );
             })}
           </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onAddSet}
+              className="rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-200 hover:bg-blue-500/20 transition-colors"
+            >
+              + Add set
+            </button>
+            <button
+              type="button"
+              onClick={onRemoveLastSet}
+              disabled={setDetails.length <= 1}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm font-semibold text-neutral-200 hover:bg-neutral-800 disabled:opacity-35 disabled:hover:bg-neutral-900 transition-colors"
+            >
+              − Remove last
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 border-t border-neutral-800 p-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-2xl bg-neutral-800 px-4 py-3 text-sm font-semibold text-neutral-200 hover:bg-neutral-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => onSave(draftSets.map((set) => ({ ...set })))}
-            className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
-          >
-            Save changes
-          </button>
-        </div>
+        {editingTarget && (
+          <div className="border-t border-neutral-800 bg-neutral-950 p-4 shadow-2xl">
+            <div className="mb-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-widest text-blue-300">
+                  {activeLabel}
+                </div>
+                <div className="text-2xl font-bold tabular-nums text-white">
+                  {keypadValue || '0'}
+                  <span className="ml-1 text-sm text-neutral-500">
+                    {editingTarget.field === 'weight' ? 'kg' : isHold ? 'sec' : 'reps'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-[1fr_76px] gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => pressKeypadDigit(key)}
+                    className="h-12 rounded-2xl bg-neutral-800 text-xl font-bold text-white hover:bg-neutral-700 active:scale-95 transition-all"
+                  >
+                    {key}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => pressKeypadDigit('.')}
+                  disabled={editingTarget.field !== 'weight'}
+                  className="h-12 rounded-2xl bg-neutral-800 text-xl font-bold text-white hover:bg-neutral-700 disabled:opacity-25 disabled:hover:bg-neutral-800 active:scale-95 transition-all"
+                >
+                  .
+                </button>
+                <button
+                  type="button"
+                  onClick={() => pressKeypadDigit('0')}
+                  className="h-12 rounded-2xl bg-neutral-800 text-xl font-bold text-white hover:bg-neutral-700 active:scale-95 transition-all"
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  onClick={backspaceKeypad}
+                  className="h-12 rounded-2xl bg-neutral-800 text-sm font-bold text-neutral-200 hover:bg-neutral-700 active:scale-95 transition-all"
+                >
+                  Del
+                </button>
+              </div>
+              <div className="grid grid-rows-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => adjustKeypadValue(5)}
+                  className="rounded-2xl bg-blue-500/20 text-sm font-bold text-blue-200 hover:bg-blue-500/30 active:scale-95 transition-all"
+                >
+                  +5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => adjustKeypadValue(-5)}
+                  className="rounded-2xl bg-blue-500/20 text-sm font-bold text-blue-200 hover:bg-blue-500/30 active:scale-95 transition-all"
+                >
+                  −5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKeypadValueAndApply('')}
+                  className="rounded-2xl bg-neutral-800 text-xs font-bold text-neutral-300 hover:bg-neutral-700 active:scale-95 transition-all"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={closeKeypad}
+                  aria-label="Confirm set value"
+                  className="rounded-2xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-500 active:scale-95 transition-all"
+                >
+                  <Check className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -648,13 +741,15 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
     });
   };
 
-  const saveCurrentExerciseSetPlan = (setDetails: ExerciseSet[]) => {
+  const updateCurrentExerciseSet = (setIndex: number, field: EditableSetField, value: number) => {
     if (!currentExercise) return;
 
     setExercises((previousExercises) =>
       previousExercises.map((exercise, index) => {
         if (index !== currentExerciseIndex) return exercise;
-        const nextSetDetails = setDetails.map((set) => ({ ...set }));
+        const nextSetDetails = getMutableSetDetails(exercise).map((set, detailIndex) =>
+          detailIndex === setIndex ? { ...set, [field]: value } : set,
+        );
         return {
           ...exercise,
           sets: nextSetDetails.length,
@@ -663,7 +758,52 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         };
       }),
     );
-    setShowSetPlan(false);
+  };
+
+  const addSetToCurrentExercise = () => {
+    if (!currentExercise) return;
+
+    setExercises((previousExercises) =>
+      previousExercises.map((exercise, index) => {
+        if (index !== currentExerciseIndex) return exercise;
+        const setDetails = getMutableSetDetails(exercise);
+        const previousSet = setDetails[setDetails.length - 1];
+        const nextSetDetails = [
+          ...setDetails,
+          {
+            weight: previousSet?.weight ?? 0,
+            reps: previousSet?.reps ?? exercise.reps,
+            completed: false,
+            setType: 'normal' as const,
+          },
+        ];
+        return {
+          ...exercise,
+          sets: nextSetDetails.length,
+          reps: nextSetDetails[0]?.reps ?? exercise.reps,
+          setDetails: nextSetDetails,
+        };
+      }),
+    );
+  };
+
+  const removeLastSetFromCurrentExercise = () => {
+    if (!currentExercise || currentExercise.sets <= 1) return;
+
+    const nextSetCount = Math.max(1, currentExercise.sets - 1);
+    setExercises((previousExercises) =>
+      previousExercises.map((exercise, index) => {
+        if (index !== currentExerciseIndex) return exercise;
+        const nextSetDetails = getMutableSetDetails(exercise).slice(0, nextSetCount);
+        return {
+          ...exercise,
+          sets: nextSetDetails.length,
+          reps: nextSetDetails[0]?.reps ?? exercise.reps,
+          setDetails: nextSetDetails,
+        };
+      }),
+    );
+    setCurrentSet((set) => Math.min(set, nextSetCount));
   };
 
   const completeSession = (finalExercises: Exercise[], finalEvents: WorkoutSessionEvent[]) => {
@@ -1340,7 +1480,9 @@ export function WorkoutSession({ plan, onComplete, onBack }: WorkoutSessionProps
         <SetPlanSheet
           exercise={currentExercise}
           currentSet={currentSet}
-          onSave={saveCurrentExerciseSetPlan}
+          onUpdateSet={updateCurrentExerciseSet}
+          onAddSet={addSetToCurrentExercise}
+          onRemoveLastSet={removeLastSetFromCurrentExercise}
           onClose={() => setShowSetPlan(false)}
         />
       )}
