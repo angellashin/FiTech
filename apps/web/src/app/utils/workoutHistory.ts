@@ -1,12 +1,10 @@
 import type {
   Exercise,
-  ExerciseReview,
   ExerciseSet,
   MuscleGroup,
   WorkoutGoal,
   WorkoutPlan,
   WorkoutSessionAnalytics,
-  WorkoutSessionReview,
 } from '../domain/workout';
 
 export interface WorkoutHistory {
@@ -52,8 +50,6 @@ export interface WorkoutSessionRecord {
   totalSets: number;
   completedSets: number;
   totalVolume: number;
-  review?: WorkoutSessionReview;
-  exerciseReviews?: ExerciseReview[];
   analytics?: WorkoutSessionAnalytics;
 }
 
@@ -70,14 +66,6 @@ const MUSCLE_GROUPS: MuscleGroup[] = [
   'core',
   'lower-body',
 ];
-
-const FACE_RATING_VALUES = [1, 2, 3, 4, 5];
-
-const assertFaceRating = (rating: number): void => {
-  if (!FACE_RATING_VALUES.includes(rating)) {
-    throw new Error('Review rating must use the 1-5 face scale.');
-  }
-};
 
 export interface SavedRoutine {
   id: string;
@@ -159,10 +147,6 @@ const normalizeSession = (
         : exercises.reduce((sum, exercise) => sum + exercise.sets, 0),
     completedSets,
     totalVolume,
-    review: session.review as WorkoutSessionReview | undefined,
-    exerciseReviews: Array.isArray(session.exerciseReviews)
-      ? (session.exerciseReviews as ExerciseReview[])
-      : [],
     analytics: session.analytics as WorkoutSessionAnalytics | undefined,
   };
 };
@@ -287,7 +271,6 @@ export const saveWorkoutHistory = (
       totalSets: exercises.reduce((sum, exercise) => sum + exercise.sets, 0),
       completedSets,
       totalVolume: calculateTotalVolume(exercises),
-      exerciseReviews: [],
     };
     sessions.push(sessionRecord);
 
@@ -351,26 +334,6 @@ export const updateWorkoutSession = (
   sessions[index] = updated;
   writeSessions(sessions);
   return updated;
-};
-
-export const saveWorkoutSessionReview = (
-  sessionId: string,
-  review: Omit<WorkoutSessionReview, 'reviewedAt'>,
-): WorkoutSessionRecord | null => {
-  assertFaceRating(review.rating);
-  return updateWorkoutSession(sessionId, {
-    review: { ...review, reviewedAt: new Date().toISOString() },
-  });
-};
-
-export const saveExerciseReviews = (
-  sessionId: string,
-  reviews: Array<Omit<ExerciseReview, 'reviewedAt'>>,
-): WorkoutSessionRecord | null => {
-  reviews.forEach((review) => assertFaceRating(review.rating));
-  return updateWorkoutSession(sessionId, {
-    exerciseReviews: reviews.map((review) => ({ ...review, reviewedAt: new Date().toISOString() })),
-  });
 };
 
 export const deleteWorkoutSession = (sessionId: string): void => {
@@ -491,42 +454,16 @@ const getMuscleGroupReferenceWeight = (
   return Math.max(2.5, Math.round((referenceStrength * targetFactor) / 2.5) * 2.5);
 };
 
-const getLastSessionWithExercise = (exerciseName: string): WorkoutSessionRecord | null =>
-  getAllSessions()
-    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
-    .find((session) =>
-      session.exercises.some((ex) => ex.name.toLowerCase() === exerciseName.toLowerCase()),
-    ) ?? null;
-
 export const getRecommendedSets = (
   exerciseName: string,
   defaultSets: number,
   defaultReps: number,
   muscleGroup?: string,
 ): ExerciseSet[] => {
-  // 1. Specific exercise history → carry forward the latest completed working sets,
-  // then apply a small progression bump if the last session was well-reviewed.
+  // 1. Specific exercise history → carry forward the latest completed working sets.
   const history = exerciseName ? getExerciseHistory(exerciseName) : null;
   if (history && history.setDetails.length > 0) {
-    const baseSets = carryForwardWorkingSets(history.setDetails);
-
-    // Review-based progression: if last session felt good AND completion was strong,
-    // nudge weight up by one standard increment (2.5 kg).
-    const lastSession = getLastSessionWithExercise(exerciseName);
-    const rating = lastSession?.review?.rating ?? 0;
-    const completionRate =
-      lastSession && lastSession.totalSets > 0
-        ? lastSession.completedSets / lastSession.totalSets
-        : 0;
-
-    if (rating >= 4 && completionRate >= 0.9 && !isBodyweightExercise(exerciseName)) {
-      return baseSets.map((set) => ({
-        ...set,
-        weight: set.weight > 0 ? Math.round((set.weight + 2.5) / 2.5) * 2.5 : set.weight,
-      }));
-    }
-
-    return baseSets;
+    return carryForwardWorkingSets(history.setDetails);
   }
 
   // 2. Same muscle group fallback → start near a familiar recent working load.

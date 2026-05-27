@@ -54,8 +54,6 @@ export const syncWorkoutSessionToSupabase = async (
     completed_sets: session.completedSets,
     total_volume: session.totalVolume,
     plan_snapshot: session.planSnapshot ?? null,
-    review: session.review ?? null,
-    exercise_reviews: session.exerciseReviews ?? [],
     analytics,
   };
 

@@ -9,25 +9,16 @@ import {
   BarChart3,
   Bookmark,
   BookmarkCheck,
-  Sparkles,
   Edit3,
 } from 'lucide-react';
-import {
-  WORKOUT_REVIEW_FACE_OPTIONS,
-  type Exercise,
-  type ExerciseSet,
-  type WorkoutReviewRating,
-} from '../domain/workout';
+import { type Exercise, type ExerciseSet } from '../domain/workout';
 import {
   calculateTotalVolume,
   getPreviousExerciseHistory,
-  getWorkoutSession,
   saveRoutine,
-  saveWorkoutSessionReview,
   updateWorkoutSession,
 } from '../utils/workoutHistory';
 import { buildSessionAnalytics } from '../services/workoutAnalytics';
-import { WorkoutReviewFaceIcon } from './WorkoutReviewFaceIcon';
 
 interface WorkoutCompleteProps {
   sessionId: string;
@@ -86,9 +77,6 @@ const buildComparisons = (exercises: Exercise[]): ExerciseComparison[] => {
 export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutCompleteProps) {
   const [routineName, setRoutineName] = useState('');
   const [saved, setSaved] = useState(false);
-  const [sessionRating, setSessionRating] = useState<WorkoutReviewRating | null>(null);
-  const [reviewNotes, setReviewNotes] = useState('');
-  const [reviewSaved, setReviewSaved] = useState(false);
 
   // Actual weight correction
   const [editedExercises, setEditedExercises] = useState<Exercise[]>(() =>
@@ -126,24 +114,6 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
     setSaved(true);
   };
 
-  const handleSaveReview = () => {
-    if (!sessionId || !sessionRating) return;
-    const reviewedSession = saveWorkoutSessionReview(sessionId, {
-      rating: sessionRating,
-      notes: reviewNotes.trim() || undefined,
-    });
-    const latestSession = reviewedSession ?? getWorkoutSession(sessionId);
-    const enrichedSession = latestSession
-      ? (updateWorkoutSession(latestSession.id, {
-          analytics: buildSessionAnalytics(latestSession),
-        }) ?? latestSession)
-      : null;
-    void import('../services/supabaseWorkoutSync')
-      .then(({ syncWorkoutSessionToSupabase }) => syncWorkoutSessionToSupabase(enrichedSession))
-      .catch((error) => console.warn('Unable to sync workout review:', error));
-    setReviewSaved(true);
-  };
-
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
   const completedSets = exercises.reduce(
     (sum, ex) => sum + getTrackedSets(ex).filter((set) => set.completed).length,
@@ -164,15 +134,8 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
         totalSets,
         completedSets,
         totalVolume,
-        review: sessionRating
-          ? {
-              rating: sessionRating,
-              notes: reviewNotes.trim() || undefined,
-              reviewedAt: new Date().toISOString(),
-            }
-          : undefined,
       }),
-    [completedSets, exercises, reviewNotes, sessionId, sessionRating, totalSets, totalVolume],
+    [completedSets, exercises, sessionId, totalSets, totalVolume],
   );
 
   const stats = [
@@ -329,50 +292,6 @@ export function WorkoutComplete({ sessionId, exercises, onBackToHome }: WorkoutC
                 </div>
               </>
             )}
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-950/40 to-neutral-950 rounded-3xl p-6 mb-6 shadow-2xl border border-blue-500/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-blue-300" />
-              <div className="text-sm text-blue-200">Quick Review</div>
-            </div>
-            <h3 className="text-lg font-semibold mb-2">How did this workout feel?</h3>
-            <p className="text-xs text-neutral-400 mb-4">
-              One face captures the overall feel — difficulty, condition, energy, and satisfaction.
-            </p>
-            <div className="grid grid-cols-5 gap-2 mb-4">
-              {WORKOUT_REVIEW_FACE_OPTIONS.map((item) => (
-                <button
-                  key={item.rating}
-                  type="button"
-                  aria-label={item.ariaLabel}
-                  aria-pressed={sessionRating === item.rating}
-                  onClick={() => setSessionRating(item.rating)}
-                  className={`rounded-2xl p-2 border transition-all ${
-                    sessionRating === item.rating
-                      ? 'border-blue-400 bg-blue-500/20 scale-105'
-                      : 'border-neutral-800 bg-neutral-900/70 hover:bg-neutral-800'
-                  }`}
-                >
-                  <WorkoutReviewFaceIcon rating={item.rating} className="w-8 h-8 mx-auto" />
-                </button>
-              ))}
-            </div>
-            <textarea
-              value={reviewNotes}
-              onChange={(event) => setReviewNotes(event.target.value)}
-              placeholder="Optional note: pain, form, energy, or anything to remember"
-              maxLength={160}
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 outline-none focus:ring-2 focus:ring-blue-500 min-h-20 mb-4"
-            />
-            <button
-              type="button"
-              onClick={handleSaveReview}
-              disabled={!sessionRating || reviewSaved}
-              className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-500 py-3 text-sm font-semibold transition-all"
-            >
-              {reviewSaved ? 'Review saved for future plans' : 'Save Review'}
-            </button>
           </div>
 
           {hasComparisons && (

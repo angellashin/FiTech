@@ -152,7 +152,6 @@ describe('generateWorkoutPlan', () => {
         },
       },
       exercisePreferences: { avoid: [] },
-      recentReviewAverage: 2,
       summary: [],
     });
 
@@ -184,7 +183,6 @@ describe('generateWorkoutPlan', () => {
         },
       },
       exercisePreferences: { avoid: [] },
-      recentReviewAverage: 1,
       summary: [],
     });
 
@@ -227,7 +225,6 @@ describe('generateWorkoutPlan', () => {
     const plan = generateWorkoutPlan('strength', ['chest'], 60, 'normal', {
       muscleFatigue: {},
       exercisePreferences: { avoid: ['Cable Fly'] },
-      recentReviewAverage: null,
       summary: [],
     });
 

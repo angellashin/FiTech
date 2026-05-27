@@ -55,34 +55,6 @@ export interface Exercise {
   isSuperset?: boolean;
 }
 
-export type WorkoutReviewRating = 1 | 2 | 3 | 4 | 5;
-
-export const WORKOUT_REVIEW_FACE_OPTIONS: ReadonlyArray<{
-  rating: WorkoutReviewRating;
-  ariaLabel: string;
-}> = [
-  { rating: 1, ariaLabel: 'Face rating 1 of 5' },
-  { rating: 2, ariaLabel: 'Face rating 2 of 5' },
-  { rating: 3, ariaLabel: 'Face rating 3 of 5' },
-  { rating: 4, ariaLabel: 'Face rating 4 of 5' },
-  { rating: 5, ariaLabel: 'Face rating 5 of 5' },
-];
-
-export interface WorkoutSessionReview {
-  /** One intuitive face rating that captures the user's overall feeling after the session. */
-  rating: WorkoutReviewRating;
-  notes?: string;
-  reviewedAt: string;
-}
-
-export interface ExerciseReview {
-  exerciseId: string;
-  exerciseName: string;
-  rating: WorkoutReviewRating;
-  notes?: string;
-  reviewedAt: string;
-}
-
 export type TrainingDecisionType = 'increase' | 'maintain' | 'reduce' | 'deload';
 
 export interface TrainingDecision {
@@ -113,7 +85,6 @@ export interface MuscleRecoveryStatus {
   recentSets: number;
   recentVolume: number;
   daysSinceLastTrained: number | null;
-  reviewInfluence: 'positive' | 'neutral' | 'negative';
 }
 
 export interface WorkoutSessionAnalytics {

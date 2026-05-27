@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Exercise, WorkoutReviewRating } from '../domain/workout';
+import type { Exercise } from '../domain/workout';
 import {
   applyProgressiveOverload,
   calculateTotalVolume,
@@ -7,9 +7,7 @@ import {
   getAllSessions,
   getRecommendedSets,
   getWorkoutSession,
-  saveExerciseReviews,
   saveWorkoutHistory,
-  saveWorkoutSessionReview,
 } from './workoutHistory';
 
 const storage = new Map<string, string>();
@@ -153,52 +151,6 @@ describe('workout history utilities', () => {
     expect(session?.completedSets).toBe(0);
     expect(getAllHistory()).toHaveLength(0);
     expect(getAllSessions()).toHaveLength(1);
-  });
-
-  it.each([1, 2, 3, 4, 5] as WorkoutReviewRating[])(
-    'persists workout review rating %i on the matching session',
-    (rating) => {
-      const session = saveWorkoutHistory([buildExercise()]);
-      const updated = saveWorkoutSessionReview(session!.id, {
-        rating,
-        notes: `face ${rating}`,
-      });
-
-      expect(updated?.review).toMatchObject({
-        rating,
-        notes: `face ${rating}`,
-      });
-      expect(getWorkoutSession(session!.id)?.review).toEqual(updated?.review);
-    },
-  );
-
-  it('persists exercise face ratings on the matching session', () => {
-    const session = saveWorkoutHistory([buildExercise()]);
-    const updated = saveExerciseReviews(session!.id, [
-      {
-        exerciseId: 'bench-press',
-        exerciseName: 'Bench Press',
-        rating: 4,
-      },
-    ]);
-
-    expect(updated?.exerciseReviews).toHaveLength(1);
-    expect(updated?.exerciseReviews?.[0]).toMatchObject({
-      exerciseId: 'bench-press',
-      rating: 4,
-    });
-  });
-
-  it('rejects out-of-range face ratings before writing review data', () => {
-    const session = saveWorkoutHistory([buildExercise()]);
-
-    expect(() =>
-      saveWorkoutSessionReview(session!.id, {
-        rating: 6 as WorkoutReviewRating,
-      }),
-    ).toThrow('Review rating must use the 1-5 face scale.');
-
-    expect(getWorkoutSession(session!.id)?.review).toBeUndefined();
   });
 
   it('carries forward previous working sets without automatic one-session increases', () => {

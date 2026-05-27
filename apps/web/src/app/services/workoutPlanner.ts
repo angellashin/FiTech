@@ -248,7 +248,7 @@ const getContextAdjustment = (group: MuscleGroup, trainingContext?: TrainingCont
     multiplier: signal.recommendedIntensityMultiplier,
     rationale: `${label}: ${
       signal.decision?.type ?? signal.level
-    } recommendation from recent completion, review, and recovery signals.`,
+    } recommendation from recent completion and recovery signals.`,
   };
 };
 

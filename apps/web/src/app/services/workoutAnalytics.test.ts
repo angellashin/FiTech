@@ -33,7 +33,6 @@ const buildSession = (overrides: Partial<WorkoutSessionRecord> = {}): WorkoutSes
       ],
     },
   ],
-  exerciseReviews: [],
   ...overrides,
 });
 

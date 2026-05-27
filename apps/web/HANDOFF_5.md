@@ -348,3 +348,48 @@
 
 - 12번 기록의 명시적 `Save changes` 흐름은 이번 변경으로 대체됨. 현재는 값 변경/세트 추가/세트 삭제가 모두 즉시 반영된다.
 - 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.
+
+## 14. Workout Complete / Progress Report — 컨디션 리뷰 제거 + 리포트 중복 정리
+
+**사용자 의도:** 운동 후 컨디션 리뷰는 플랜이나 무게 추천에 반영하지 말고, 기능 자체를 제거한다. Progress Report도 중복되거나 굳이 필요하지 않은 내용은 줄여 더 간단하게 본다.
+
+**업데이트 내용:**
+
+- Workout Complete 화면의 `Quick Review` 카드, 얼굴 1~5점 선택, 메모 입력, `Save Review` 동작을 제거.
+- 세션 기록 타입과 localStorage 유틸에서 `review`, `exerciseReviews`, review 저장 함수, face rating 검증 로직을 제거.
+- 기존 리뷰가 다음 플랜에 영향을 주던 경로 제거:
+  - `trainingContext`의 review fatigue 점수 제거.
+  - LLM 프롬프트의 `Recent face-scale average` 제거.
+  - 같은 운동의 긍정 리뷰 기반 `+2.5kg` 자동 증량 제거.
+- Supabase 동기화 payload에서 `review`, `exercise_reviews` 전송을 중단. 기존 DB 컬럼은 마이그레이션 호환성 때문에 삭제하지 않음.
+- Workout History에서 과거 face review 아이콘/메모 표시와 note 검색을 제거.
+- Profile FAQ에서 리뷰가 미래 플랜에 영향을 준다는 설명을 삭제하고, AI 플랜 설명을 현재 로직에 맞게 수정.
+- Progress Report에서 `This week’s progress`와 내용이 겹치던 6주 버블형 `Workout Progress` 섹션과 관련 데이터(`weekBubbles`)를 제거.
+
+**수정 파일:**
+
+- `src/app/components/WorkoutComplete.tsx`
+- `src/app/components/WorkoutHistory.tsx`
+- `src/app/components/ProgressReport.tsx`
+- `src/app/components/Profile.tsx`
+- `src/app/components/WorkoutReviewFaceIcon.tsx` 삭제
+- `src/app/domain/workout.ts`
+- `src/app/utils/workoutHistory.ts`
+- `src/app/services/trainingContext.ts`
+- `src/app/services/workoutPlanner.ts`
+- `src/app/services/progressReport.ts`
+- `src/app/services/supabaseWorkoutSync.ts`
+- 관련 테스트 파일들
+
+**검증:**
+
+- `npm run typecheck` ✅
+- `npm run lint` ✅
+- `npm run test` ✅ — 8 files / 49 tests passed
+- `npm run format:check` ✅
+- `npm run build` ✅
+
+**참고:**
+
+- `supabase/migrations/002_workout_session_experience_fields.sql`의 review 관련 JSONB 컬럼은 이미 배포된 DB 호환성을 위해 그대로 둔다.
+- 로컬에 기존 미추적 파일 `reference 1.png`, `reference 2.png`가 남아 있음. 이번 수정과 무관.

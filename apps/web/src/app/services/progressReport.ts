@@ -26,12 +26,6 @@ export interface ProgressDailyPoint {
   isToday: boolean;
 }
 
-export interface ProgressWeekBubble {
-  weekLabel: string;
-  totalWork: number;
-  days: ProgressDailyPoint[];
-}
-
 export interface ExerciseTrendPoint {
   date: string;
   label: string;
@@ -60,7 +54,6 @@ export interface ProgressReport {
   thisMonthSessions: number;
   totalWork: number;
   averageCompletionRate: number;
-  averageReviewRating: number | null;
   weeklyWork: {
     current: number;
     previous: number;
@@ -68,7 +61,6 @@ export interface ProgressReport {
     direction: 'up' | 'down' | 'stable' | 'baseline';
   };
   dailyWork: ProgressDailyPoint[];
-  weekBubbles: ProgressWeekBubble[];
   muscleGroups: ProgressReportGroup[];
   exerciseTrends: ExerciseTrend[];
   topRecords: ReturnType<typeof getPersonalRecords>;
@@ -162,37 +154,6 @@ const buildDailyWork = (
       };
     },
   );
-};
-
-const buildWeekBubbles = (
-  sessions: WorkoutSessionRecord[],
-  now: Date,
-  weeks = 6,
-): ProgressWeekBubble[] => {
-  const today = startOfDay(now);
-  const firstDay = addDays(today, -(weeks * 7 - 1));
-  return Array.from({ length: weeks }, (_, weekIndex) => {
-    const days = Array.from({ length: 7 }, (_, dayIndex) => {
-      const date = addDays(firstDay, weekIndex * 7 + dayIndex);
-      const key = dateKey(date);
-      const daySessions = sessions.filter((session) => dayKey(session.completedAt) === key);
-      return {
-        date: key,
-        dayLabel: weekdayLabel(date),
-        work: Math.round(sumWork(daySessions)),
-        completedSets: daySessions.reduce((sum, session) => sum + session.completedSets, 0),
-        sessions: daySessions.length,
-        isToday: key === dateKey(today),
-      };
-    });
-    return {
-      weekLabel: `${shortDateLabel(addDays(firstDay, weekIndex * 7))} - ${shortDateLabel(
-        addDays(firstDay, weekIndex * 7 + 6),
-      )}`,
-      totalWork: days.reduce((sum, day) => sum + day.work, 0),
-      days,
-    };
-  });
 };
 
 const completedExerciseSets = (exercise: WorkoutSessionRecord['exercises'][number]) =>
@@ -383,7 +344,6 @@ export const buildProgressReport = ({
   const thisMonthSessions = sessionsSince(sortedSessions, now, 30);
   const totalSets = sortedSessions.reduce((sum, session) => sum + session.totalSets, 0);
   const completedSets = sortedSessions.reduce((sum, session) => sum + session.completedSets, 0);
-  const reviews = sortedSessions.flatMap((session) => session.review?.rating ?? []);
 
   const reportWithoutRecommendations = {
     totalSessions: sortedSessions.length,
@@ -393,13 +353,8 @@ export const buildProgressReport = ({
     thisMonthSessions: thisMonthSessions.length,
     totalWork: Math.round(sumWork(sortedSessions)),
     averageCompletionRate: totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0,
-    averageReviewRating:
-      reviews.length > 0
-        ? Math.round((reviews.reduce((sum, rating) => sum + rating, 0) / reviews.length) * 10) / 10
-        : null,
     weeklyWork: buildWeeklyWork(sortedSessions, now),
     dailyWork: buildDailyWork(sortedSessions, now),
-    weekBubbles: buildWeekBubbles(sortedSessions, now),
     muscleGroups: buildMuscleGroupReport(sortedSessions),
     exerciseTrends: buildExerciseTrends(sortedSessions).slice(0, 8),
     topRecords: getPersonalRecords(sortedSessions).slice(0, 3),

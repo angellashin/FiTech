@@ -28,7 +28,6 @@ const buildSession = (overrides: Partial<WorkoutSessionRecord> = {}): WorkoutSes
       ],
     },
   ],
-  exerciseReviews: [],
   ...overrides,
 });
 
@@ -53,7 +52,6 @@ describe('buildProgressReport', () => {
           totalSets: 4,
           completedSets: 2,
           totalVolume: 400,
-          review: { rating: 2, reviewedAt: '2026-05-10T12:00:00.000Z' },
         }),
       ],
     });
@@ -73,7 +71,6 @@ describe('buildProgressReport', () => {
       work: 800,
       sessions: 1,
     });
-    expect(report.weekBubbles).toHaveLength(6);
     expect(report.exerciseTrends[0]).toMatchObject({
       exercise: 'Bench Press',
       sessions: 2,

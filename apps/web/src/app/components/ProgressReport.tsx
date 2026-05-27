@@ -47,11 +47,6 @@ const directionColor = (direction: string) => {
   return 'text-neutral-300';
 };
 
-const bubbleSize = (work: number, maxWork: number) => {
-  if (work <= 0 || maxWork <= 0) return 6;
-  return Math.max(10, Math.min(36, 10 + (work / maxWork) * 26));
-};
-
 const trendDirectionCopy = (trend: ExerciseTrend | undefined) => {
   if (!trend || trend.points.length < 2) return 'More repeated logs will unlock a reliable trend.';
   const first = trend.points[0].estimatedOneRepMax;
@@ -75,10 +70,6 @@ export function ProgressReport({ onBack }: ProgressReportProps) {
     [activeExercise, report.exerciseTrends],
   );
   const maxDayWork = Math.max(...report.dailyWork.map((day) => day.work), 1);
-  const maxBubbleWork = Math.max(
-    ...report.weekBubbles.flatMap((week) => week.days.map((day) => day.work)),
-    1,
-  );
 
   return (
     <div className="size-full flex flex-col bg-neutral-950 text-white overflow-auto">
@@ -256,50 +247,6 @@ export function ProgressReport({ onBack }: ProgressReportProps) {
               </div>
             </>
           )}
-        </div>
-
-        <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-5 border border-neutral-800/50">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-semibold">Workout Progress</h2>
-              <p className="text-xs text-neutral-500">Last 6 weeks by training day</p>
-            </div>
-            <div className="text-xs text-neutral-500">Work</div>
-          </div>
-          <div className="grid grid-cols-[76px_repeat(7,1fr)] gap-y-4 text-xs">
-            <div />
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-              <div key={`${day}-${index}`} className="text-center text-neutral-600">
-                {day}
-              </div>
-            ))}
-            {report.weekBubbles.map((week) => (
-              <div key={week.weekLabel} className="contents">
-                <div className="flex flex-col justify-center text-neutral-500">
-                  <span>{week.weekLabel}</span>
-                  <span className="text-[10px] text-neutral-700">{formatWork(week.totalWork)}</span>
-                </div>
-                {week.days.map((day) => {
-                  const size = bubbleSize(day.work, maxBubbleWork);
-                  return (
-                    <div key={day.date} className="h-10 flex items-center justify-center">
-                      {day.work > 0 ? (
-                        <div
-                          className={`flex items-center justify-center rounded-full bg-blue-500 text-[9px] font-semibold text-white shadow-lg shadow-blue-900/30 ${day.isToday ? 'ring-2 ring-white/70' : ''}`}
-                          style={{ width: size, height: size }}
-                          title={`${day.date}: ${formatNumber(day.work)} work`}
-                        >
-                          {size > 24 ? formatWork(day.work) : ''}
-                        </div>
-                      ) : (
-                        <span className="text-neutral-700">-</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 rounded-3xl p-5 border border-neutral-800/50">

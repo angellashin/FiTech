@@ -6,7 +6,6 @@ import {
   ChevronRight,
   RotateCcw,
   Search,
-  Star,
   Trash2,
   X,
 } from 'lucide-react';
@@ -18,7 +17,6 @@ import {
   type WorkoutSessionRecord,
 } from '../utils/workoutHistory';
 import { buildSessionAnalytics } from '../services/workoutAnalytics';
-import { WorkoutReviewFaceIcon } from './WorkoutReviewFaceIcon';
 
 interface WorkoutHistoryProps {
   onBack: () => void;
@@ -88,7 +86,6 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
     const haystack = [
       getSessionTitle(session),
       session.exercises.map((exercise) => exercise.name).join(' '),
-      session.review?.notes ?? '',
     ]
       .join(' ')
       .toLowerCase();
@@ -229,7 +226,7 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search exercise, muscle, or note"
+            placeholder="Search exercise or muscle"
             className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl pl-10 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -287,13 +284,6 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
                       {session.completedSets}/{session.totalSets} sets ·{' '}
                       {Math.round(session.totalVolume).toLocaleString()} volume
                     </div>
-                  </div>
-                  <div className="text-neutral-200">
-                    {session.review ? (
-                      <WorkoutReviewFaceIcon rating={session.review.rating} className="w-7 h-7" />
-                    ) : (
-                      '—'
-                    )}
                   </div>
                 </button>
 
@@ -362,24 +352,6 @@ export function WorkoutHistory({ onBack, onLoadPlan }: WorkoutHistoryProps) {
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-
-                    {session.review && (
-                      <div className="glass-dark rounded-xl p-3 mb-4 text-sm">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Star className="w-4 h-4 text-yellow-300" />
-                          <span className="flex items-center gap-2">
-                            Face review
-                            <WorkoutReviewFaceIcon
-                              rating={session.review.rating}
-                              className="w-5 h-5"
-                            />
-                          </span>
-                        </div>
-                        {session.review.notes && (
-                          <div className="text-neutral-400">{session.review.notes}</div>
-                        )}
                       </div>
                     )}
 

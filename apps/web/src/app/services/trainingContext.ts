@@ -1,4 +1,4 @@
-import type { MuscleGroup, TrainingDecision, WorkoutSessionReview } from '../domain/workout';
+import type { MuscleGroup, TrainingDecision } from '../domain/workout';
 import {
   getAllSessions,
   normalizeMuscleGroups,
@@ -24,7 +24,6 @@ export interface TrainingContext {
   exercisePreferences: {
     avoid: string[];
   };
-  recentReviewAverage: number | null;
   summary: string[];
 }
 
@@ -47,29 +46,13 @@ const labelForGroup = (group: MuscleGroup) =>
 const daysBetween = (from: Date, to: Date) =>
   Math.max(0, Math.floor((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000)));
 
-const scoreReview = (review: WorkoutSessionReview | undefined) => {
-  if (!review) return 0;
-  // Lower face ratings represent a worse/tougher session and increase fatigue.
-  if (review.rating <= 2) return 2;
-  if (review.rating === 3) return 1;
-  return -1;
-};
-
-const reviewInfluenceLabel = (score: number) => {
-  if (score > 0) return 'Recent face-scale review felt tough.';
-  if (score < 0) return 'Recent face-scale review was positive.';
-  return 'No strong review signal yet.';
-};
-
 const buildTrainingDecision = ({
   level,
   averageAdherence,
-  reviewScore,
   daysSinceLastTrained,
 }: {
   level: FatigueLevel;
   averageAdherence: number;
-  reviewScore: number;
   daysSinceLastTrained: number | null;
 }): TrainingDecision => {
   const reasons: string[] = [];
@@ -82,9 +65,8 @@ const buildTrainingDecision = ({
   } else if (averageAdherence >= 90) {
     reasons.push(`recent completion rate was strong at ${averageAdherence}%`);
   }
-  if (reviewScore !== 0) reasons.push(reviewInfluenceLabel(reviewScore));
 
-  if (level === 'high' && (reviewScore > 0 || averageAdherence < 75)) {
+  if (level === 'high' && averageAdherence < 75) {
     return {
       type: 'deload',
       multiplier: 0.85,
@@ -130,7 +112,6 @@ export const buildTrainingContext = ({
   );
   const summary: string[] = [];
   const muscleFatigue: TrainingContext['muscleFatigue'] = {};
-  const ratings = recentSessions.flatMap((session) => session.review?.rating ?? []);
 
   MUSCLE_GROUPS.forEach((group) => {
     const groupSessions = recentSessions.filter((session) =>
@@ -186,14 +167,6 @@ export const buildTrainingContext = ({
       reasons.push('Recently trained within three days.');
     }
 
-    const reviewScore = groupSessions.reduce(
-      (sum, session) => sum + scoreReview(session.review),
-      0,
-    );
-    if (reviewScore > 0) reasons.push('Recent face-scale reviews indicate the session felt tough.');
-    if (reviewScore < 0) reasons.push('Recent face-scale reviews were positive.');
-    score += reviewScore;
-
     if (averageAdherence < 70) {
       score += 1;
       reasons.push(`Recent completion rate was ${averageAdherence}%.`);
@@ -203,7 +176,6 @@ export const buildTrainingContext = ({
     const decision = buildTrainingDecision({
       level,
       averageAdherence,
-      reviewScore,
       daysSinceLastTrained,
     });
     const recommendedIntensityMultiplier = decision.multiplier;
@@ -245,10 +217,6 @@ export const buildTrainingContext = ({
   return {
     muscleFatigue,
     exercisePreferences: { avoid },
-    recentReviewAverage:
-      ratings.length > 0
-        ? Math.round((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) * 10) / 10
-        : null,
     summary,
   };
 };
@@ -262,8 +230,5 @@ export const formatTrainingContextForPrompt = (context: TrainingContext): string
       `- ${labelForGroup(group as MuscleGroup)}: ${signal.decision.type} recommendation, load multiplier ${signal.recommendedIntensityMultiplier}. Reasons: ${signal.decision.reasons.join('; ')}.`,
     );
   });
-  if (context.recentReviewAverage) {
-    lines.push(`- Recent face-scale average: ${context.recentReviewAverage}/5.`);
-  }
   return lines.length > 0 ? lines.join('\n') : '- No strong fatigue or preference signals yet.';
 };

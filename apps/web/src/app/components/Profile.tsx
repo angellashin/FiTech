@@ -138,11 +138,7 @@ export function Profile({ onBackToHome, onLogout }: ProfileProps) {
     },
     {
       q: 'How does AI plan my workout?',
-      a: 'FiTech uses Gemini 2.5 Flash to select exercises based on your chosen muscle groups, session duration, and intensity. It also factors in your recent training history — fatigue levels, completion rates, and face-scale reviews — to adjust exercise selection and recommended weights. If there is no internet connection, a local algorithm is used automatically.',
-    },
-    {
-      q: 'Does my post-workout review affect future plans?',
-      a: 'Yes. The face-scale rating you give after each session is used to estimate muscle fatigue. Tougher ratings increase the fatigue score for that muscle group, which can trigger a deload (×0.85) or reduce (×0.90) multiplier on recommended weights in your next plan.',
+      a: 'FiTech uses Gemini 2.5 Flash to select exercises based on your chosen muscle groups, session duration, intensity, recent training load, completion rates, recovery timing, and equipment availability. If there is no internet connection, a local algorithm is used automatically.',
     },
     {
       q: 'How do I set my gym equipment?',

@@ -15,7 +15,6 @@ const buildSession = (overrides: Partial<WorkoutSessionRecord> = {}): WorkoutSes
   totalVolume: 1200,
   events: [],
   exercises: [],
-  exerciseReviews: [],
   ...overrides,
 });
 
@@ -33,20 +32,23 @@ describe('trainingContext', () => {
     expect(context.muscleFatigue['lower-body']?.recommendedIntensityMultiplier).toBeLessThan(1);
   });
 
-  it('uses low face-scale reviews as negative training feedback', () => {
+  it('ignores legacy face-scale reviews when calculating fatigue', () => {
+    const legacyReviewedSession = {
+      ...buildSession({
+        muscleGroup: ['chest'],
+        totalSets: 10,
+        completedSets: 4,
+        totalVolume: 800,
+      }),
+      review: { rating: 1, notes: 'rough', reviewedAt: '2026-05-18T12:00:00.000Z' },
+    } as WorkoutSessionRecord;
     const context = buildTrainingContext({
-      sessions: [
-        buildSession({
-          muscleGroup: ['chest'],
-          completedSets: 4,
-          review: { rating: 1, notes: 'rough', reviewedAt: '2026-05-18T12:00:00.000Z' },
-        }),
-      ],
+      sessions: [legacyReviewedSession],
       now: new Date('2026-05-18T12:00:00.000Z'),
     });
 
-    expect(context.muscleFatigue.chest?.level).toBe('high');
-    expect(context.muscleFatigue.chest?.decision.type).toBe('deload');
+    expect(context.muscleFatigue.chest?.level).toBe('moderate');
+    expect(context.muscleFatigue.chest?.decision.type).toBe('maintain');
   });
 
   it('does not create an automatic increase after one positive session', () => {
@@ -57,7 +59,6 @@ describe('trainingContext', () => {
           totalSets: 4,
           completedSets: 4,
           totalVolume: 800,
-          review: { rating: 5, reviewedAt: '2026-05-18T12:00:00.000Z' },
         }),
       ],
       now: new Date('2026-05-20T12:00:00.000Z'),
